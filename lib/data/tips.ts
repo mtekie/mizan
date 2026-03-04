@@ -1,0 +1,148 @@
+import { TrendingUp, Lightbulb, Shield, Wallet, Heart, GraduationCap, Briefcase, type LucideIcon } from 'lucide-react';
+
+export type Tip = {
+    id: string;
+    title: string;
+    preview: string;
+    body: string;
+    readTime: string;
+    topic: string;
+    audience: string[];
+    difficulty: 'beginner' | 'intermediate' | 'advanced';
+    icon: LucideIcon;
+    color: string;
+    bg: string;
+};
+
+export const tips: Tip[] = [
+    {
+        id: 'maximize-savings',
+        title: 'How to Maximize Your Savings Account Returns',
+        preview: 'Ethiopian banks offer varied rates. Here\'s how to pick the best one for your goals.',
+        body: 'Compare interest rates across CBE, Awash, and Dashen for savings. Consider time deposits for higher yields if you can lock funds for 1+ years.',
+        readTime: '3 min',
+        topic: 'Savings',
+        audience: ['student', 'professional', 'family'],
+        difficulty: 'beginner',
+        icon: Wallet,
+        color: 'text-emerald-600',
+        bg: 'bg-emerald-50',
+    },
+    {
+        id: 'inflation-hedge',
+        title: 'Hedging Against Inflation in Ethiopia',
+        preview: 'With inflation fluctuating, protecting your purchasing power is essential.',
+        body: 'Diversify into real estate, gold, or USD-denominated savings. Consider diaspora housing loans for property investment.',
+        readTime: '5 min',
+        topic: 'Investing',
+        audience: ['professional', 'family'],
+        difficulty: 'intermediate',
+        icon: Shield,
+        color: 'text-blue-600',
+        bg: 'bg-blue-50',
+    },
+    {
+        id: 'budget-50-30-20',
+        title: 'The 50/30/20 Rule — Adapted for Ethiopia',
+        preview: 'A simple budgeting framework adjusted for Ethiopian living costs.',
+        body: '50% needs (rent, food, transport), 30% wants (entertainment, dining out), 20% savings. Adjust based on Addis Ababa vs regional costs.',
+        readTime: '2 min',
+        topic: 'Budgeting',
+        audience: ['student', 'professional'],
+        difficulty: 'beginner',
+        icon: Lightbulb,
+        color: 'text-amber-600',
+        bg: 'bg-amber-50',
+    },
+    {
+        id: 'first-loan',
+        title: 'Applying for Your First Loan: What to Know',
+        preview: 'Documentation, collateral, and approval tips for first-time borrowers.',
+        body: 'Start with your payroll bank. Prepare your ID, employment letter, and 3 months of bank statements. Collateral-free options exist for small amounts.',
+        readTime: '4 min',
+        topic: 'Debt',
+        audience: ['student', 'professional'],
+        difficulty: 'beginner',
+        icon: Briefcase,
+        color: 'text-indigo-600',
+        bg: 'bg-indigo-50',
+    },
+    {
+        id: 'emergency-fund',
+        title: 'Building a 3-Month Emergency Fund',
+        preview: 'Most Ethiopians have less than 1 month of expenses saved. Here\'s how to change that.',
+        body: 'Save 10% of income automatically. Use a separate savings account you don\'t touch. Target 3 months of essential expenses.',
+        readTime: '3 min',
+        topic: 'Savings',
+        audience: ['student', 'professional', 'family'],
+        difficulty: 'beginner',
+        icon: Heart,
+        color: 'text-red-600',
+        bg: 'bg-red-50',
+    },
+    {
+        id: 'mfi-vs-bank',
+        title: 'MFI vs Banks: Which Is Right for Your Business?',
+        preview: 'Microfinance institutions offer unique advantages for small businesses.',
+        body: 'MFIs often require less collateral and have faster approvals. Banks offer larger amounts and lower rates. Choose based on your business stage.',
+        readTime: '4 min',
+        topic: 'Debt',
+        audience: ['professional', 'family'],
+        difficulty: 'intermediate',
+        icon: TrendingUp,
+        color: 'text-purple-600',
+        bg: 'bg-purple-50',
+    },
+    {
+        id: 'diaspora-remittance',
+        title: 'Smart Remittance: Getting the Best FX Rate',
+        preview: 'Tips for diaspora Ethiopians sending money home efficiently.',
+        body: 'Compare rates between CBE, telebirr, and commercial banks. Consider timing your transfers when the ETB rate is favorable. Avoid informal channels.',
+        readTime: '3 min',
+        topic: 'Investing',
+        audience: ['professional'],
+        difficulty: 'intermediate',
+        icon: Wallet,
+        color: 'text-emerald-600',
+        bg: 'bg-emerald-50',
+    },
+    {
+        id: 'insurance-basics',
+        title: 'Insurance in Ethiopia: What You Actually Need',
+        preview: 'Life, health, and property — which policies make sense for you?',
+        body: 'Start with health insurance (CBHI or private). Add life insurance if you have dependents. Property insurance is essential for homeowners.',
+        readTime: '5 min',
+        topic: 'Investing',
+        audience: ['family'],
+        difficulty: 'intermediate',
+        icon: Shield,
+        color: 'text-blue-600',
+        bg: 'bg-blue-50',
+    },
+    {
+        id: 'student-finance',
+        title: 'Student Finance 101: Living on a Tight Budget',
+        preview: 'Practical tips for university students managing limited funds.',
+        body: 'Track every birr with expense logging. Cook at home. Use student discounts. Start saving even ETB 100/month — the habit matters more than the amount.',
+        readTime: '2 min',
+        topic: 'Budgeting',
+        audience: ['student'],
+        difficulty: 'beginner',
+        icon: GraduationCap,
+        color: 'text-teal-600',
+        bg: 'bg-teal-50',
+    },
+    {
+        id: 'interest-free-banking',
+        title: 'Interest-Free Banking in Ethiopia Explained',
+        preview: 'How Sharia-compliant products work and who they benefit.',
+        body: 'All major Ethiopian banks now offer interest-free windows. Products include Mudaraba savings, Murabaha financing, and Qard al-Hasan. Available regardless of religion.',
+        readTime: '4 min',
+        topic: 'Savings',
+        audience: ['student', 'professional', 'family'],
+        difficulty: 'beginner',
+        icon: Lightbulb,
+        color: 'text-amber-600',
+        bg: 'bg-amber-50',
+    },
+];
