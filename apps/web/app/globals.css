@@ -1,0 +1,151 @@
+@import "tailwindcss";
+
+@theme {
+  /* ── Legacy Pro Mode tokens (preserved) ── */
+  --color-mizan-green-start: #6ED063;
+  --color-mizan-green-end: #3EA63B;
+  --color-mizan-charcoal: #0F172A;
+  --color-mizan-yellow: #FFC836;
+  --color-mizan-terracotta: #D84315;
+  --color-mizan-bg: #F8FAFC;
+
+  /* ── Mizan Mint Design System ── */
+  --color-mint-primary: #45BFA0;
+  --color-mint-dark: #2D9E82;
+  --color-mint-deep: #1A7A64;
+  --color-mint-light: #7DD4BE;
+  --color-mint-bg: #F0FAF7;
+  --color-mint-surface: #FFFFFF;
+  --color-mint-coral: #E8734A;
+  --color-mint-gold: #F5A623;
+  --color-mint-pastel-green: #D4EDDA;
+  --color-mint-pastel-purple: #E8DFEE;
+  --color-mint-text: #1E293B;
+  --color-mint-text-muted: #94A3B8;
+  --color-mint-text-on-mint: #FFFFFF;
+}
+
+@layer utilities {
+  /* ── Pro Mode gradients (preserved) ── */
+  .mizan-gradient-bg {
+    background: linear-gradient(135deg, var(--color-mizan-green-start), var(--color-mizan-green-end));
+  }
+  .mizan-gradient-text {
+    background: linear-gradient(135deg, var(--color-mizan-green-start), var(--color-mizan-green-end));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* ── Simple Mode: Mint-Inspired Utilities ── */
+  .mint-gradient-bg {
+    background: linear-gradient(180deg, #2D9E82 0%, #45BFA0 100%);
+  }
+  .mint-gradient-hero {
+    background: linear-gradient(180deg, #1A7A64 0%, #45BFA0 100%);
+    border-radius: 0 0 28px 28px;
+  }
+  .mint-card {
+    background: #FFFFFF;
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  }
+  .mint-card-pressed {
+    transform: scale(0.98);
+    transition: transform 0.15s ease;
+  }
+  .mint-segment {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 9999px;
+    padding: 4px;
+    display: inline-flex;
+    gap: 2px;
+  }
+  .mint-segment-item {
+    border-radius: 9999px;
+    padding: 6px 16px;
+    font-size: 12px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.7);
+    transition: all 0.2s ease;
+  }
+  .mint-segment-active {
+    background: white;
+    color: #1A7A64;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  }
+  .mint-tx-row {
+    display: flex;
+    align-items: center;
+    padding: 14px 0;
+    gap: 12px;
+    border-bottom: 1px solid #f1f5f9;
+    min-height: 56px;
+  }
+  .mint-fab {
+    width: 56px;
+    height: 56px;
+    border-radius: 9999px;
+    background: linear-gradient(135deg, #45BFA0, #2D9E82);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(69, 191, 160, 0.4);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .mint-fab:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(69, 191, 160, 0.5);
+  }
+  .mint-fab:active {
+    transform: scale(0.95);
+  }
+
+  /* ── Scrollbar utilities ── */
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* ── Simple mode body overrides ── */
+body.mode-simple {
+  background-color: #F0FAF7;
+}
+
+/* ── Animations ── */
+@keyframes ticker {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-100%); }
+}
+
+@keyframes count-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-count-up {
+  animation: count-up 0.5s ease-out forwards;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.4s ease-out forwards;
+}

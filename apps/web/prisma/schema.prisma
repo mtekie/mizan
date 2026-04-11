@@ -1,0 +1,203 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                 String         @id @default(uuid()) @db.Uuid
+  name               String?
+  email              String?        @unique
+  emailVerified      DateTime?
+  image              String?
+  // Profile Fields
+  gender             String?
+  dateOfBirth        DateTime?
+  educationLevel     String?
+  employmentStatus   String?
+  monthlyIncomeRange String?
+  familyStatus       String?
+  
+  // Smart Profile Enrichment
+  financialPriority  String?        // 'SAVE', 'INVEST', 'DEBT', 'TRACK'
+  riskAppetite       String?        // 'SAFE', 'BALANCED', 'AGGRESSIVE'
+  interestFree       Boolean        @default(false)
+  dependents         Int            @default(0)
+  housingStatus      String?        // 'RENT', 'OWN_MORTGAGE', 'OWN_OUTRIGHT'
+  incomeStability    String?        // 'FIXED', 'VARIABLE', 'SEASONAL'
+  digitalAdoption    String?        // 'CASH', 'MOBILE', 'BANK'
+  behavioralStyle    String?        // 'SAVE_FIRST', 'SPEND_FIRST'
+  
+  onboardingPhase    String         @default("signup") // 'signup', 'accounts', 'profile', 'complete'
+  isProfileComplete  Boolean        @default(false)
+  
+  currency           String         @default("ETB")
+  language           String         @default("en")
+
+  mizanAccounts      Account[]
+  transactions       Transaction[]
+  assets             Asset[]
+  goals              Goal[]
+  budgets            Budget[]
+  bills              Bill[]
+  notifications      Notification[]
+  mizanScore         Int            @default(600)
+  role               Role           @default(USER)
+  theme              String?        @default("light")
+  notificationPreferences Json?
+  createdAt          DateTime       @default(now())
+}
+
+enum Role {
+  USER
+  ADMIN
+  MODERATOR
+}
+
+model Account {
+  id        String   @id @default(cuid())
+  userId    String   @db.Uuid
+  name      String
+  nameAmh   String?
+  type      String // e.g., 'Savings', 'Wallet', 'Equb'
+  number    String?
+  balance   Float    @default(0)
+  color     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+}
+
+model Transaction {
+  id       String   @id @default(cuid())
+  userId   String   @db.Uuid
+  accountId String?
+  title    String
+  titleAmh String?
+  amount   Float
+  source   String // e.g., 'telebirr', 'CBE'
+  category String? // e.g., 'Coffee', 'Transfer'
+  date     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account Account? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+}
+
+model Asset {
+  id       String  @id @default(cuid())
+  userId   String  @db.Uuid
+  name     String
+  value    Float
+  category String // e.g., 'Real Estate', 'Vehicles'
+  imageUrl String?
+  
+  // Historical & Valuation
+  purchasePrice Float?
+  purchasedAt   DateTime?
+  
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Goal {
+  id        String    @id @default(cuid())
+  userId    String    @db.Uuid
+  name      String
+  emoji     String    @default("🎯")
+  target    Float
+  saved     Float     @default(0)
+  deadline  DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Budget {
+  id         String           @id @default(cuid())
+  userId     String           @db.Uuid
+  month      Int              // 1-12
+  year       Int
+  totalLimit Float
+  createdAt  DateTime         @default(now())
+  categories BudgetCategory[]
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([userId, month, year])
+}
+
+model BudgetCategory {
+  id        String  @id @default(cuid())
+  budgetId  String
+  name      String
+  allocated Float
+  spent     Float   @default(0)
+  icon      String?
+  color     String?
+  budget    Budget  @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+}
+
+model Bill {
+  id        String    @id @default(cuid())
+  userId    String    @db.Uuid
+  name      String
+  amount    Float
+  dueDay    Int       // Day of month
+  category  String    // 'Utilities', 'Subscription', 'Rent'
+  isPaid    Boolean   @default(false)
+  lastPaid  DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String   @db.Uuid
+  type      String   // 'actionable', 'info'
+  title     String
+  titleAmh  String?
+  subtitle  String?
+  icon      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Product {
+  id                     String   @id @default(cuid())
+  category               String   // 'Banks', 'BNPL', 'Insurance', 'MFIs', 'SACCOs'
+  bankId                 String?
+  bankName               String?
+  bankLogo               String?
+  bankIconBg             String?
+  title                  String
+  matchScore             Int?
+  highlight              String?
+  description            String
+  interestRate           Float?
+  interestMax            Float?
+  features               String[]
+  eligibility            String[]
+  requirements           String[]
+  maxAmount              Float?
+  term                   String?
+  fees                   String?
+  loanCategory           String?
+  minBalance             Float?
+  digital                Boolean? @default(false)
+  interestFree           Boolean? @default(false)
+  genderBased            Boolean? @default(false)
+  currency               String?  @default("ETB")
+  repaymentFrequency     String?
+  disbursementTime       String?
+  collateralRequirements String?
+  prepaymentPenalties    String?
+  latePaymentPenalties   String?
+  insuranceRequirements  String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+}

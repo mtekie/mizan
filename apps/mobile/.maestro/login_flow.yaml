@@ -1,0 +1,13 @@
+appId: com.mizan.mobile
+---
+- launchApp
+- assertVisible: "Log In"
+- tapOn: "Email address"
+- inputText: "test@example.com"
+- tapOn: "Password"
+- inputText: "password123"
+- tapOn: "Log In"
+- assertVisible: "Good morning"
+- assertVisible: "Total Net Worth"
+- tapOn: "Ledger"
+- assertVisible: "Recent Transactions"
