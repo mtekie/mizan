@@ -366,7 +366,7 @@ export default function WealthClient({ initialAssets = [] }: { initialAssets: an
                                     {loading ? 'Processing...' : 'Securely Add Asset'}
                                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                                 </button>
-                            </div>
+                            </form>
                         </div>
                     </motion.div>
                 </div>
