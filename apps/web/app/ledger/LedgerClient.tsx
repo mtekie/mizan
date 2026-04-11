@@ -32,6 +32,8 @@ export default function LedgerClient({ accounts, initialTransactions, summary }:
   const [showUSD, setShowUSD] = useState(false);
   const [transactions, setTransactions] = useState<any[]>(initialTransactions);
   const [loading, setLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   // Add flow state
   const [addMode, setAddMode] = useState<AddMode>(null);
@@ -350,15 +352,17 @@ export default function LedgerClient({ accounts, initialTransactions, summary }:
                 </h3>
                 <div className="flex items-center gap-4 mb-4">
                   <div className="w-24 h-24 shrink-0">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie data={summary.spendingData} dataKey="value" cx="50%" cy="50%" innerRadius={28} outerRadius={46} paddingAngle={2}>
-                          {summary.spendingData.map((entry: any, i: number) => (
-                            <Cell key={i} fill={entry.color} />
-                          ))}
-                        </Pie>
-                      </PieChart>
-                    </ResponsiveContainer>
+                    {mounted && (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie data={summary.spendingData} dataKey="value" cx="50%" cy="50%" innerRadius={28} outerRadius={46} paddingAngle={2}>
+                            {summary.spendingData.map((entry: any, i: number) => (
+                              <Cell key={i} fill={entry.color} />
+                            ))}
+                          </Pie>
+                        </PieChart>
+                      </ResponsiveContainer>
+                    )}
                   </div>
                   <div>
                     <p className="text-xl font-black text-slate-900">{(summary.totalSpending / 1000).toFixed(0)}K ETB</p>

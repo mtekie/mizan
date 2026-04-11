@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Bell, ArrowRight, Building2, Car, Plus, Home, TrendingUp, MapPin, Fuel, Calendar, ShieldCheck, Bed, Bath, Maximize, X } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import Link from 'next/link';
@@ -31,6 +31,9 @@ export default function WealthClient({ initialAssets = [] }: { initialAssets: an
   const [activeTab, setActiveTab] = useState<typeof tabs[number]>('Stocks');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
   
   const portfolioData = initialAssets.length > 0 ? initialAssets.reduce((acc: any[], asset: any) => {
     const existing = acc.find(a => a.name === asset.category);
@@ -107,13 +110,15 @@ export default function WealthClient({ initialAssets = [] }: { initialAssets: an
             <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider mb-4">Your Portfolio</h3>
             <div className="flex items-center gap-4">
               <div className="w-24 h-24">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={portfolioData} dataKey="value" cx="50%" cy="50%" innerRadius={25} outerRadius={42} paddingAngle={2}>
-                      {portfolioData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
+                {mounted && (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={portfolioData} dataKey="value" cx="50%" cy="50%" innerRadius={25} outerRadius={42} paddingAngle={2}>
+                        {portfolioData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
               </div>
               <div>
                 <p className="text-2xl font-black text-slate-900">ETB {(totalPortfolio / 1000).toFixed(0)}K</p>

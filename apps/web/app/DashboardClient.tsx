@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Bell, TrendingUp, PiggyBank, Send, ArrowRight, DollarSign, Globe, BarChart3, Wallet, ArrowUpRight, ArrowDownRight, Clock, Activity, ShieldCheck, Target, ShoppingBasket, Play, Sparkles, Book, CreditCard, Smartphone } from 'lucide-react';
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { AIAutopilot } from '@/components/AIAutopilot';
@@ -35,6 +36,12 @@ const cashFlowData = [
 export default function DashboardClient({ user, accounts, transactions, summary, featuredProducts }: { user: any, accounts: any[], transactions: any[], summary: any, featuredProducts: any[] }) {
   const uiMode = useStore((s) => s.uiMode);
   const isMobile = useIsMobile();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const { activeNudge } = useNudges({ 
     user, 
     accounts, 
@@ -248,32 +255,34 @@ export default function DashboardClient({ user, accounts, transactions, summary,
                 <h3 className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Cash Flow Projection</h3>
                 <span className="text-[10px] font-bold text-[#3EA63B] bg-[#3EA63B]/10 px-2 py-0.5 rounded">+15.2% M/M</span>
               </div>
-              <div className="flex-1 w-full -ml-4 mt-2">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={summary.cashFlowData || []} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#3EA63B" stopOpacity={0.2} />
-                        <stop offset="100%" stopColor="#3EA63B" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <XAxis dataKey="day" hide />
-                    <YAxis hide domain={['dataMin - 2000', 'dataMax + 5000']} />
-                    <Tooltip
-                      contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '10px', fontWeight: 'bold' }}
-                      formatter={(val: any) => [`${Number(val).toLocaleString()} ETB`, 'Predicted']}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="amount"
-                      stroke="#3EA63B"
-                      strokeWidth={3}
-                      fillOpacity={1}
-                      fill="url(#colorAmount)"
-                      activeDot={{ r: 4, fill: '#3EA63B', stroke: '#fff', strokeWidth: 2 }}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
+              <div className="flex-1 w-full -ml-4 mt-2 min-h-0 relative">
+                {mounted && (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={summary.cashFlowData || []} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#3EA63B" stopOpacity={0.2} />
+                          <stop offset="100%" stopColor="#3EA63B" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <XAxis dataKey="day" hide />
+                      <YAxis hide domain={['dataMin - 2000', 'dataMax + 5000']} />
+                      <Tooltip
+                        contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '10px', fontWeight: 'bold' }}
+                        formatter={(val: any) => [`${Number(val).toLocaleString()} ETB`, 'Predicted']}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="amount"
+                        stroke="#3EA63B"
+                        strokeWidth={3}
+                        fillOpacity={1}
+                        fill="url(#colorAmount)"
+                        activeDot={{ r: 4, fill: '#3EA63B', stroke: '#fff', strokeWidth: 2 }}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                )}
               </div>
             </div>
 
