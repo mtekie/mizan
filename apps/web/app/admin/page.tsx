@@ -59,6 +59,9 @@ export default function AdminPage() {
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
+                        <Link href="/admin/products" className="text-[10px] font-black text-white bg-white/10 px-3 py-2 rounded-lg hover:bg-white/15 transition">
+                            Products
+                        </Link>
                         <Link href="/admin/providers" className="text-[10px] font-black text-white bg-white/10 px-3 py-2 rounded-lg hover:bg-white/15 transition">
                             Providers
                         </Link>
