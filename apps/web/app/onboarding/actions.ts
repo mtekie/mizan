@@ -29,7 +29,6 @@ export async function performUpdateOnboardingPhase(phase: string, data: any) {
     
     // Core profile updates
     if (data.name) payload.name = data.name;
-    if (data.username) payload.username = data.username;
     if (data.gender) payload.gender = data.gender;
     if (data.dateOfBirth) payload.dateOfBirth = new Date(data.dateOfBirth);
     if (data.educationLevel) payload.educationLevel = data.educationLevel;
@@ -53,6 +52,20 @@ export async function performUpdateOnboardingPhase(phase: string, data: any) {
        ...(existingUser || {}),
        ...payload,
     });
+
+    // Check for username uniqueness if provided
+    if (data.username) {
+      const usernameExists = await prisma.user.findFirst({
+        where: { 
+          username: data.username,
+          NOT: { id: user.id }
+        },
+      });
+      if (usernameExists) {
+        return { error: 'Username is already taken' };
+      }
+      payload.username = data.username;
+    }
 
     await prisma.user.update({
       where: { id: user.id },

@@ -2,16 +2,26 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, ReceiptText, Compass, Target, User } from 'lucide-react';
+import { Home, ReceiptText, Compass, Target, User, Gauge, Settings, Bell } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { appSections } from '@mizan/shared';
 
-const navItems = [
-  { name: 'Home', href: '/', icon: Home },
-  { name: 'Money', href: '/ledger', icon: ReceiptText },
-  { name: 'Find', href: '/catalogue', icon: Compass },
-  { name: 'Plan', href: '/dreams', icon: Target },
-  { name: 'Me', href: '/profile', icon: User },
-];
+const iconMap = {
+  home: Home,
+  receipt: ReceiptText,
+  compass: Compass,
+  target: Target,
+  user: User,
+  gauge: Gauge,
+  settings: Settings,
+  bell: Bell,
+};
+
+const navItems = appSections.map(s => ({
+  name: s.label,
+  href: s.webHref,
+  icon: iconMap[s.icon as keyof typeof iconMap] || Compass
+}));
 
 export function BottomNav() {
   const pathname = usePathname();

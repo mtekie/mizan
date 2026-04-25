@@ -10,7 +10,7 @@ import { ReactNode } from 'react';
  */
 const routeLabels: Record<string, string> = {
   '/catalogue': 'Find',
-  '/dreams': 'Plan',
+  '/dreams': 'Goals',
   '/transfer': 'Transfer Log',
   '/score': 'Mizan Score',
   '/settings': 'Settings',

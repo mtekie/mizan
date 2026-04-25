@@ -16,7 +16,10 @@
     "db:push": "npm exec --workspace apps/web prisma -- db push --schema prisma/schema.prisma",
     "db:migrate:deploy": "npm exec --workspace apps/web prisma -- migrate deploy --schema prisma/schema.prisma",
     "db:seed:taxonomy": "npm exec --workspace apps/web tsx -- scripts/seed_taxonomy.ts",
-    "db:seed:providers": "npm exec --workspace apps/web tsx -- scripts/seed_providers.ts"
+    "db:seed:providers": "npm exec --workspace apps/web tsx -- scripts/seed_providers.ts",
+    "sms:profile": "node apps/web/scripts/sms-import/profile.mjs",
+    "sms:dry-run": "node apps/web/scripts/sms-import/dry-run.mjs",
+    "sms:import": "node apps/web/scripts/sms-import/import.mjs"
   },
   "dependencies": {
     "anser": "^2.3.5",

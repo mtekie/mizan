@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { getAuthUser } from '@/lib/supabase/auth-adapter';
+import { getOrCreateDbUser } from '@/lib/supabase/auth-adapter';
 import { z } from 'zod';
 
 const notificationSchema = z.object({
@@ -14,7 +14,8 @@ const notificationSchema = z.object({
 
 export async function GET(req: Request) {
     try {
-        const user = await getAuthUser(req);
+        const userContext = await getOrCreateDbUser(req);
+        const user = userContext?.dbUser;
 
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -33,7 +34,8 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
     try {
-        const user = await getAuthUser(req);
+        const userContext = await getOrCreateDbUser(req);
+        const user = userContext?.dbUser;
 
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -61,7 +63,8 @@ export async function POST(req: Request) {
 
 export async function PATCH(req: Request) {
     try {
-        const user = await getAuthUser(req);
+        const userContext = await getOrCreateDbUser(req);
+        const user = userContext?.dbUser;
 
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -100,7 +103,8 @@ export async function PATCH(req: Request) {
 
 export async function DELETE(req: Request) {
     try {
-        const user = await getAuthUser(req);
+        const userContext = await getOrCreateDbUser(req);
+        const user = userContext?.dbUser;
 
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

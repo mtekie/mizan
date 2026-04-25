@@ -12,6 +12,7 @@ import { AccountStep } from '@/components/onboarding/AccountStep';
 import { performUpdateOnboardingPhase } from '@/app/onboarding/actions';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/PageHeader';
+import { AppPageShell } from '@/components/AppPageShell';
 
 type AddMode = 'transaction' | 'transfer' | null;
 type TxType = 'expense' | 'income';
@@ -80,26 +81,6 @@ export default function LedgerClient({ accounts, initialTransactions, summary }:
     return acc;
   }, {} as Record<string, any[]>);
 
-  // On mobile, always show the clean Mint-style ledger
-  if (isMobile) {
-    return <SimpleLedger accounts={accounts} transactions={transactions} summary={summary} />;
-  }
-
-  const getIconForCategory = (cat: string) => {
-    if (cat === 'Food & Drink') return Coffee;
-    if (cat === 'Income') return ArrowDownToLine;
-    if (cat === 'Groceries') return ShoppingCart;
-    if (cat === 'Entertainment') return Tv;
-    return CircleDollarSign;
-  };
-  const getColorForCategory = (cat: string) => {
-    if (cat === 'Food & Drink') return 'text-orange-600 bg-orange-100';
-    if (cat === 'Income') return 'text-[#3EA63B] bg-[#3EA63B]/10';
-    if (cat === 'Groceries') return 'text-blue-600 bg-blue-100';
-    if (cat === 'Entertainment') return 'text-purple-600 bg-purple-100';
-    return 'text-slate-600 bg-slate-100';
-  };
-
   const activeFilters = (selectedCategory !== 'All' ? 1 : 0) + (selectedSource !== 'All' ? 1 : 0);
 
   const openAdd = (mode: AddMode) => {
@@ -158,27 +139,26 @@ export default function LedgerClient({ accounts, initialTransactions, summary }:
   };
 
   return (
-    <div className="flex flex-col min-h-full bg-slate-50 md:bg-transparent">
-      {/* Header */}
-      <PageHeader 
-        title="Money"
-        description="Track your spending and manage your accounts"
-        actions={
-          <div className="flex items-center gap-3">
-            <button className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg hover:bg-slate-200 transition flex items-center gap-1">
-              <Download className="w-3 h-3" /> Export
-            </button>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-slate-400">ETB</span>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" className="sr-only peer" checked={showUSD} onChange={() => setShowUSD(v => !v)} />
-                <div className="w-9 h-5 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#3EA63B]"></div>
-              </label>
-              <span className="text-xs font-semibold text-slate-400">USD</span>
-            </div>
+    <AppPageShell
+      title="Money"
+      subtitle="Track your spending and manage your accounts"
+      variant="hero"
+      actions={
+        <div className="flex items-center gap-3">
+          <button className="hidden md:flex text-xs font-bold text-white bg-white/20 px-3 py-1.5 rounded-lg hover:bg-white/30 transition items-center gap-1">
+            <Download className="w-3 h-3" /> Export
+          </button>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-white/60">ETB</span>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" className="sr-only peer" checked={showUSD} onChange={() => setShowUSD(v => !v)} />
+              <div className="w-9 h-5 bg-white/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#3EA63B]"></div>
+            </label>
+            <span className="text-xs font-semibold text-white/60">USD</span>
           </div>
-        }
-      />
+        </div>
+      }
+    >
 
       <main className="flex-1 px-8 py-8 pb-24 md:pb-8 max-w-6xl mx-auto w-full">
 
@@ -684,6 +664,6 @@ export default function LedgerClient({ accounts, initialTransactions, summary }:
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
-  );
+      </AppPageShell>
+    );
 }

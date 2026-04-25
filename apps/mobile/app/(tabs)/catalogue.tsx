@@ -3,18 +3,17 @@ import {
   View, 
   Text, 
   StyleSheet, 
-  SafeAreaView, 
   ScrollView, 
   TouchableOpacity, 
   TextInput,
   ActivityIndicator,
   FlatList,
-  RefreshControl
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { MizanColors, MizanTypography, MizanSpacing, MizanRadii } from '@mizan/ui-tokens';
+import { MizanColors, MizanRadii } from '@mizan/ui-tokens';
 import { Search, SlidersHorizontal, Bell } from 'lucide-react-native';
 import { api } from '../../lib/api';
+import { AppScreenShell } from '../../components/ui/AppScreenShell';
 
 // Marketplace Components
 import { CategoryPill } from '../../components/marketplace/CategoryPill';
@@ -32,47 +31,54 @@ const CATEGORIES = [
 
 export default function CatalogueScreen() {
   const router = useRouter();
+  const initialLoadDone = useRef(false);
   const [activeCategory, setActiveCategory] = useState('all');
   const [search, setSearch] = useState('');
+  const [providers, setProviders] = useState<any[]>([]);
+  const [activeProvider, setActiveProvider] = useState<string | null>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
-  const [completeness, setCompleteness] = useState(1);
+  const [completeness, setCompleteness] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const [skip, setSkip] = useState(0);
   const [hasMore, setHasMore] = useState(true);
-  const PAGE_SIZE = 20;
-  const initialLoadDone = useRef(false);
+  const PAGE_SIZE = 10;
 
-  // Fetch profile + featured once on mount
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([fetchInitialData(), fetchProducts(activeCategory, search, activeProvider, 0)]);
+    setRefreshing(false);
+  }, [activeCategory, search, activeProvider]);
+
+  // Fetch profile + featured + providers once on mount
   const fetchInitialData = useCallback(async () => {
-    // 1. Profile (skip if guest)
     try {
-      const user = await api.profile.get();
-      if (user) {
-        const fields = ['gender', 'employmentStatus', 'monthlyIncomeRange', 'financialPriority'];
-        const filled = fields.filter(f => !!(user as any)[f]).length;
-        setCompleteness(filled / fields.length);
-      }
-    } catch (e) {
-      console.log('Guest mode - no personalization');
-      setCompleteness(0);
-    }
+      const [profile, featured, allProviders] = await Promise.all([
+        api.profile.get().catch(() => null),
+        api.products.list({ take: '10' }).catch(() => []),
+        api.providers.list().catch(() => [])
+      ]);
 
-    // 2. Featured products (unfiltered)
-    try {
-      const featured = await api.products.list({ take: '10' });
+      if (profile) {
+        const fields = ['gender', 'employmentStatus', 'monthlyIncomeRange', 'financialPriority'];
+        const filled = fields.filter(f => !!(profile as any)[f]).length;
+        setCompleteness(filled / fields.length);
+      } else {
+        setCompleteness(0);
+      }
+
       setFeaturedProducts(featured);
+      setProviders(allProviders);
     } catch (e) {
-      console.log('Failed to fetch featured products:', e);
-      setFeaturedProducts([]);
+      console.error('Failed to fetch initial catalogue data:', e);
     }
   }, []);
 
-  // Fetch filtered products whenever category or search changes
-  const fetchProducts = useCallback(async (category: string, searchTerm: string, currentSkip: number = 0) => {
+  // Fetch filtered products whenever category, search, or provider changes
+  const fetchProducts = useCallback(async (category: string, searchTerm: string, providerId: string | null, currentSkip: number = 0) => {
     try {
       if (currentSkip === 0) {
         setLoading(true);
@@ -87,19 +93,20 @@ export default function CatalogueScreen() {
       };
       if (category !== 'all') params.class = category;
       if (searchTerm) params.search = searchTerm;
+      if (providerId) params.providerId = providerId;
       
       const all = await api.products.list(params);
+      const allArray = Array.isArray(all) ? all : [];
       
       if (currentSkip === 0) {
-        setProducts(all);
+        setProducts(allArray);
       } else {
-        setProducts(prev => [...prev, ...all]);
+        setProducts(prev => [...(Array.isArray(prev) ? prev : []), ...allArray]);
       }
       
-      setHasMore(all.length === PAGE_SIZE);
+      setHasMore(allArray.length === PAGE_SIZE);
       setSkip(currentSkip);
     } catch (e: any) {
-      console.error('Failed to fetch products:', e);
       setError('Could not load products. Make sure the server is running.');
     } finally {
       setLoading(false);
@@ -111,54 +118,37 @@ export default function CatalogueScreen() {
   useEffect(() => {
     const init = async () => {
       await fetchInitialData();
-      await fetchProducts('all', '', 0);
+      await fetchProducts('all', '', null, 0);
       initialLoadDone.current = true;
     };
     init();
-  }, []);
+  }, [fetchInitialData, fetchProducts]);
 
-  // Re-fetch products when category changes (after initial load)
+  // Re-fetch products when filters change (after initial load)
   useEffect(() => {
     if (!initialLoadDone.current) return;
-    fetchProducts(activeCategory, search, 0);
-  }, [activeCategory]);
+    fetchProducts(activeCategory, search, activeProvider, 0);
+  }, [activeCategory, activeProvider, fetchProducts, search]);
 
   const loadMore = () => {
     if (loadingMore || !hasMore) return;
-    fetchProducts(activeCategory, search, skip + PAGE_SIZE);
+    fetchProducts(activeCategory, search, activeProvider, skip + PAGE_SIZE);
   };
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await fetchInitialData();
-    await fetchProducts(activeCategory, search, 0);
-    setRefreshing(false);
-  };
 
   const handleSearch = () => {
-    fetchProducts(activeCategory, search, 0);
+    fetchProducts(activeCategory, search, activeProvider, 0);
   };
 
   const handleSeeAllFeatured = () => {
-    // For now, just scroll to all products or we could implement a featured-only filter
-    // Let's reset search and category to 'all' to show everything
     setActiveCategory('all');
+    setActiveProvider(null);
     setSearch('');
-    fetchProducts('all', '', 0);
+    fetchProducts('all', '', null, 0);
   };
 
   const renderHeader = () => (
     <View style={styles.header}>
-      <View style={styles.titleRow}>
-        <View>
-          <Text style={styles.title}>Marketplace</Text>
-          <Text style={styles.subtitle}>Smart financial choices for you</Text>
-        </View>
-        <TouchableOpacity style={styles.iconButton}>
-          <Bell size={24} color={MizanColors.textPrimary} />
-        </TouchableOpacity>
-      </View>
-
       <View style={styles.searchBarContainer}>
         <View style={styles.searchBar}>
           <Search size={20} color={MizanColors.textMuted} style={styles.searchIcon} />
@@ -193,6 +183,33 @@ export default function CatalogueScreen() {
           />
         ))}
       </ScrollView>
+
+      {/* Institution Filter Strip */}
+      <View style={styles.institutionSection}>
+        <Text style={styles.institutionTitle}>Institutions</Text>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          style={styles.institutionScroll}
+          contentContainerStyle={styles.institutionContent}
+        >
+          <TouchableOpacity 
+            style={[styles.institutionCard, !activeProvider && styles.institutionCardActive]}
+            onPress={() => setActiveProvider(null)}
+          >
+            <Text style={[styles.institutionLabel, !activeProvider && styles.institutionLabelActive]}>All Banks</Text>
+          </TouchableOpacity>
+          {providers.map(p => (
+            <TouchableOpacity 
+              key={p.id}
+              style={[styles.institutionCard, activeProvider === p.id && styles.institutionCardActive]}
+              onPress={() => setActiveProvider(p.id)}
+            >
+              <Text style={[styles.institutionLabel, activeProvider === p.id && styles.institutionLabelActive]}>{p.name}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
     </View>
   );
 
@@ -211,7 +228,7 @@ export default function CatalogueScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.featuredContent}
         >
-          {featuredProducts.slice(0, 5).map(p => (
+          {(Array.isArray(featuredProducts) ? featuredProducts : []).slice(0, 5).map(p => (
             <ProductCard 
               key={p.id} 
               product={p} 
@@ -244,7 +261,17 @@ export default function CatalogueScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <AppScreenShell
+      title="Find"
+      scrollable={false}
+      onRefresh={onRefresh}
+      refreshing={refreshing}
+      actions={
+        <TouchableOpacity style={styles.iconButtonHeader} onPress={() => router.push('/notifications')}>
+          <Bell size={24} color={MizanColors.textPrimary} />
+        </TouchableOpacity>
+      }
+    >
       <FlatList
         data={products}
         keyExtractor={(item) => item.id}
@@ -257,9 +284,6 @@ export default function CatalogueScreen() {
               />
           </View>
         )}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={MizanColors.mintPrimary} />
-        }
         onEndReached={loadMore}
         onEndReachedThreshold={0.5}
         ListFooterComponent={
@@ -284,40 +308,19 @@ export default function CatalogueScreen() {
         }
         contentContainerStyle={styles.scrollContent}
       />
-    </SafeAreaView>
+    </AppScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: MizanColors.mintBg,
-  },
   scrollContent: {
-    paddingBottom: 100,
+    paddingBottom: 40,
   },
   header: {
     padding: 24,
     paddingBottom: 12,
   },
-  titleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  title: {
-    fontSize: 28,
-    fontFamily: 'Inter_900Black',
-    color: MizanColors.textPrimary,
-  },
-  subtitle: {
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
-    color: MizanColors.textSecondary,
-    marginTop: 2,
-  },
-  iconButton: {
+  iconButtonHeader: {
     width: 44,
     height: 44,
     borderRadius: 22,
@@ -325,7 +328,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: MizanColors.borderMuted,
+    borderColor: '#E2E8F0',
   },
   searchBarContainer: {
     flexDirection: 'row',
@@ -341,7 +344,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 48,
     borderWidth: 1,
-    borderColor: MizanColors.borderMuted,
+    borderColor: '#E2E8F0',
   },
   searchIcon: {
     marginRight: 8,
@@ -351,7 +354,7 @@ const styles = StyleSheet.create({
     height: '100%',
     fontFamily: 'Inter_400Regular',
     fontSize: 14,
-    color: MizanColors.textPrimary,
+    color: '#0F172A',
   },
   filterButton: {
     width: 48,
@@ -361,7 +364,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: MizanColors.borderMuted,
+    borderColor: '#E2E8F0',
   },
   categoryScroll: {
     marginHorizontal: -24,
@@ -383,7 +386,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontFamily: 'Inter_700Bold',
-    color: MizanColors.textPrimary,
+    color: '#0F172A',
   },
   seeAll: {
     fontSize: 14,
@@ -393,7 +396,7 @@ const styles = StyleSheet.create({
   countText: {
     fontSize: 13,
     fontFamily: 'Inter_400Regular',
-    color: MizanColors.textMuted,
+    color: '#64748B',
   },
   featuredContent: {
     paddingHorizontal: 24,
@@ -414,13 +417,13 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontFamily: 'Inter_700Bold',
-    color: MizanColors.textPrimary,
+    color: '#0F172A',
     marginBottom: 8,
   },
   emptyText: {
     fontSize: 14,
     fontFamily: 'Inter_400Regular',
-    color: MizanColors.textMuted,
+    color: '#64748B',
     textAlign: 'center',
   },
   errorBanner: {
@@ -437,5 +440,41 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     color: '#DC2626',
     textAlign: 'center',
-  }
+  },
+  institutionSection: {
+    marginTop: 20,
+  },
+  institutionTitle: {
+    fontSize: 14,
+    fontFamily: 'Inter_700Bold',
+    color: '#0F172A',
+    marginBottom: 12,
+  },
+  institutionScroll: {
+    marginHorizontal: -24,
+  },
+  institutionContent: {
+    paddingHorizontal: 24,
+    gap: 8,
+  },
+  institutionCard: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  institutionCardActive: {
+    backgroundColor: MizanColors.mintPrimary,
+    borderColor: MizanColors.mintPrimary,
+  },
+  institutionLabel: {
+    fontSize: 12,
+    fontFamily: 'Inter_600SemiBold',
+    color: '#64748B',
+  },
+  institutionLabelActive: {
+    color: '#fff',
+  },
 });

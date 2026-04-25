@@ -11,7 +11,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { GoalStep } from '@/components/onboarding/GoalStep';
 import { performUpdateOnboardingPhase } from '@/app/onboarding/actions';
 import { toast } from 'sonner';
-import { SimplePageShell } from '@/components/SimplePageShell';
+import { AppPageShell } from '@/components/AppPageShell';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 
 const mockBudgets = [
@@ -269,10 +269,11 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
 
   return (
     <>
-      <SimplePageShell
-        title="Plan"
-        description="Budgets, bills, and savings goals in one place"
-        headerAction={
+      <AppPageShell
+        title="Goals"
+        subtitle="Budgets, bills, and savings goals in one place"
+        variant="plain"
+        actions={
           <div className="flex gap-2">
            <button
               onClick={() => setShowExpenseLogger(true)}
@@ -292,7 +293,7 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
         }
       >
         {content}
-      </SimplePageShell>
+      </AppPageShell>
 
       {/* Add Goal Modal */}
       {showNewGoal && (

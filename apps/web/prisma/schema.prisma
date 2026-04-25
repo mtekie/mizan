@@ -43,6 +43,7 @@ model User {
 
   mizanAccounts Account[]
   transactions  Transaction[]
+  importBatches ImportBatch[]
   assets        Asset[]
   goals         Goal[]
   budgets       Budget[]
@@ -102,6 +103,48 @@ model Transaction {
 
   user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   account Account? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  importedMessage ImportedMessage?
+}
+
+model ImportBatch {
+  id                 String            @id @default(cuid())
+  userId             String            @db.Uuid
+  sourcePath         String
+  status             String            @default("DRY_RUN")
+  totalMessages      Int               @default(0)
+  importableMessages Int               @default(0)
+  importedMessages   Int               @default(0)
+  skippedMessages    Int               @default(0)
+  minConfidence      Int               @default(75)
+  senderAllowlist    Json?
+  createdAt          DateTime          @default(now())
+  completedAt        DateTime?
+
+  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages ImportedMessage[]
+
+  @@index([userId, createdAt])
+}
+
+model ImportedMessage {
+  id            String   @id @default(cuid())
+  batchId       String
+  userId        String   @db.Uuid
+  transactionId String?  @unique
+  fingerprint   String   @unique
+  sender        String
+  timestamp     DateTime?
+  parserVersion String
+  confidence    Int
+  status        String
+  reason        String?
+  createdAt     DateTime @default(now())
+
+  batch       ImportBatch  @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  transaction Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+
+  @@index([userId, sender])
+  @@index([batchId])
 }
 
 model Asset {

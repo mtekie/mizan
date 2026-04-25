@@ -14,6 +14,8 @@ export async function GET(req: Request) {
         const digitalOnly = searchParams.get('digital') === 'true';
         const interestFree = searchParams.get('interestFree') === 'true';
         const scored = searchParams.get('scored') === 'true';
+        const mode = searchParams.get('mode') || 'detail';
+        const skip = parseInt(searchParams.get('skip') || '0');
         const take = parseInt(searchParams.get('take') || '50');
 
         const where: any = { isActive: true };
@@ -58,23 +60,59 @@ export async function GET(req: Request) {
             }
         }
 
-        const skip = parseInt(searchParams.get('skip') || '0');
+        const total = await prisma.product.count({ where });
 
-        const products = await prisma.product.findMany({
-            where,
-            include: {
-                provider: true,
-                tags: {
-                    include: { tag: true }
-                }
-            },
-            skip,
-            take,
-            orderBy: [
-                { isFeatured: 'desc' },
-                { matchScore: 'desc' },
-            ]
-        });
+        const products = await (mode === 'list' 
+            ? prisma.product.findMany({
+                where,
+                select: {
+                    id: true,
+                    name: true,
+                    title: true,
+                    bankName: true,
+                    productClass: true,
+                    productType: true,
+                    minBalance: true,
+                    maxAmount: true,
+                    interestRate: true,
+                    term: true,
+                    matchScore: true,
+                    isFeatured: true,
+                    features: true,
+                    eligibility: true,
+                    requirements: true,
+                    description: true,
+                    provider: {
+                        select: {
+                            id: true,
+                            name: true,
+                            logoUrl: true
+                        }
+                    }
+                },
+                skip,
+                take,
+                orderBy: [
+                    { isFeatured: 'desc' },
+                    { matchScore: 'desc' },
+                ]
+            })
+            : prisma.product.findMany({
+                where,
+                include: {
+                    provider: true,
+                    tags: {
+                        include: { tag: true }
+                    }
+                },
+                skip,
+                take,
+                orderBy: [
+                    { isFeatured: 'desc' },
+                    { matchScore: 'desc' },
+                ]
+            })
+        );
 
         // Enrich with match scores
         const eligibleProducts = user
@@ -91,7 +129,13 @@ export async function GET(req: Request) {
             results.sort((a, b) => b.personalizedScore - a.personalizedScore);
         }
 
-        return NextResponse.json(results);
+        return NextResponse.json({
+            data: results,
+            total,
+            skip,
+            take,
+            hasMore: skip + take < total
+        });
     } catch (e: any) {
         console.error('Products API Error:', e);
         return NextResponse.json({ error: e.message }, { status: 500 });

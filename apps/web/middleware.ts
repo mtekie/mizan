@@ -1,7 +1,24 @@
 import { type NextRequest } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 
+import { NextResponse } from 'next/server'
+
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
+  
+  // Public APIs that don't need session refresh overhead
+  const publicApiPaths = [
+    '/api/v1/products',
+    '/api/v1/providers',
+    '/api/v1/product-types',
+    '/api/v1/catalogue/bootstrap',
+    '/api/v1/tags'
+  ]
+
+  if (publicApiPaths.some(path => pathname.startsWith(path))) {
+    return NextResponse.next()
+  }
+
   return await updateSession(request)
 }
 

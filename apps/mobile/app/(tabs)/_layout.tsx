@@ -1,6 +1,7 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { BottomTabBar } from '../../components/ui/BottomTabBar';
+import { appSections } from '@mizan/shared';
 
 export default function TabLayout() {
   return (
@@ -10,36 +11,15 @@ export default function TabLayout() {
         headerShown: false,
       }}
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          tabBarLabel: 'Home',
-        }}
-      />
-      <Tabs.Screen
-        name="ledger"
-        options={{
-          tabBarLabel: 'Money',
-        }}
-      />
-      <Tabs.Screen
-        name="catalogue"
-        options={{
-          tabBarLabel: 'Find',
-        }}
-      />
-      <Tabs.Screen
-        name="goals"
-        options={{
-          tabBarLabel: 'Goals',
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          tabBarLabel: 'Me',
-        }}
-      />
+      {appSections.map((section) => (
+        <Tabs.Screen
+          key={section.key}
+          name={section.nativeRoute}
+          options={{
+            tabBarLabel: section.label,
+          }}
+        />
+      ))}
     </Tabs>
   );
 }

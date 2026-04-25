@@ -11,7 +11,7 @@ import { PersonaStep } from '@/components/onboarding/PersonaStep';
 import { performUpdateOnboardingPhase } from '@/app/onboarding/actions';
 import { toast } from 'sonner';
 import { X } from 'lucide-react';
-import { SimplePageShell } from '@/components/SimplePageShell';
+import { AppPageShell } from '@/components/AppPageShell';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 
 export default function ScoreClient({ initialScore = 600, initialProfile = {} }: { initialScore: number, initialProfile?: any }) {
@@ -176,16 +176,18 @@ export default function ScoreClient({ initialScore = 600, initialProfile = {} }:
 
   return (
     <>
-      <SimplePageShell
-        title="Mizan Score"
-        headerAction={
+      <AppPageShell
+        title="Me"
+        subtitle="Your financial health and profile"
+        variant="hero"
+        actions={
           <button className="flex items-center justify-center w-10 h-10 rounded-full bg-white/20 text-white transition-transform active:scale-95">
             <MoreHorizontal className="w-5 h-5" />
           </button>
         }
       >
         {content}
-      </SimplePageShell>
+      </AppPageShell>
 
       {/* ── Contextual Profile Overlay ── */}
       <AnimatePresence>

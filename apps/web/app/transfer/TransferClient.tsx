@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { ArrowLeft, Plus, Send, Building2, Smartphone, Users, ArrowDownUp, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { EmptyState } from '@/components/EmptyState';
-import { SimplePageShell } from '@/components/SimplePageShell';
+import { AppPageShell } from '@/components/AppPageShell';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 
 type Transfer = {
@@ -111,19 +111,24 @@ export default function TransferClient({ initialTransfers, initialAccounts }: { 
 
   return (
     <>
-      <SimplePageShell
-        title="Transfer Log"
-        headerAction={
+      <AppPageShell
+        title="Transfers"
+        subtitle="Track money movement between accounts"
+        variant="plain"
+        actions={
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center justify-center w-10 h-10 rounded-full bg-white/20 text-white transition-colors hover:bg-white/30"
+            className="flex items-center justify-center w-8 h-8 rounded-full bg-[var(--color-mint-primary)] text-white hover:opacity-90 transition-colors"
+            title="Log Transfer"
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="w-4 h-4" />
           </button>
         }
       >
-        {content}
-      </SimplePageShell>
+        <div className="space-y-6 pt-4">
+          {content}
+        </div>
+      </AppPageShell>
 
       {/* Log Transfer Modal */}
       {showForm && (

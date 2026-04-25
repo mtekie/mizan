@@ -25,6 +25,12 @@ tmp_*.json
 *.xls
 /Old Docs/
 
+# Private SMS/import analysis outputs
+sms-lab-output/
+*.sms-private.json
+*.sms-private.csv
+imessage_export/
+
 # Vercel
 .vercel
 tmp_env/
