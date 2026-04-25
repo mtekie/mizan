@@ -6,9 +6,9 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 import { defineConfig, env } from "prisma/config";
 
 export default defineConfig({
-  schema: "prisma/schema.prisma",
+  schema: "apps/web/prisma/schema.prisma",
   migrations: {
-    path: "prisma/migrations",
+    path: "apps/web/prisma/migrations",
   },
   engine: "classic",
   datasource: {
@@ -16,4 +16,3 @@ export default defineConfig({
     directUrl: env("DIRECT_URL"),
   },
 });
-

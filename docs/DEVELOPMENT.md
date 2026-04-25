@@ -110,7 +110,14 @@ Generate Prisma client:
 npm exec --workspace apps/web prisma -- generate
 ```
 
-Current caution: root `prisma.config.ts` points to `prisma/schema.prisma`, but the checked-in schema lives at `apps/web/prisma/schema.prisma`. Fix the config before relying on root-level Prisma commands.
+Root Prisma scripts are available for the web schema:
+
+```bash
+npm run db:generate
+npm run db:validate
+npm run db:push
+npm run db:migrate:deploy
+```
 
 ## Verification
 

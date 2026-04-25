@@ -8,7 +8,7 @@ This audit reflects the current workspace, including uncommitted changes already
 
 Mizan is now a real monorepo rather than the AI Studio starter described by the old README. The core direction is clear: Next.js provides the web product and API, Expo provides mobile clients, Prisma models the data, Supabase handles auth, and shared packages connect the apps.
 
-The project is not release-ready yet. The main blockers are database/migration readiness, Android SMS compliance, iOS transaction-ingestion strategy, store metadata, and final end-to-end product QA. Android has the most native-specific work because of SMS permissions and the local Expo module. iOS is structurally possible but needs a feature decision around SMS-dependent flows, since iOS does not allow the same SMS inbox access model.
+The project is not release-ready yet. The main blockers are production environment setup, database deployment decision, Android SMS compliance, iOS transaction-ingestion strategy, store metadata, and final end-to-end product QA. Android has the most native-specific work because of SMS permissions and the local Expo module. iOS is structurally possible but needs a feature decision around SMS-dependent flows, since iOS does not allow the same SMS inbox access model.
 
 ## Current Architecture
 
@@ -58,6 +58,8 @@ Commands run from `/Users/tykers/Downloads/mizan`:
 npm run lint
 npm exec --workspace apps/web tsc -- --noEmit
 npm exec --workspace apps/mobile tsc -- --noEmit
+npm run build --workspace apps/web
+npm run db:validate
 ```
 
 ### Lint
@@ -92,8 +94,8 @@ Primary categories:
 
 ## Release Blockers
 
-1. Local Prisma config is inconsistent. Root `prisma.config.ts` points at `prisma/schema.prisma`, while the schema lives at `apps/web/prisma/schema.prisma`.
-2. No migrations directory exists under `apps/web/prisma`; production database changes need a migration policy.
+1. Production environment variables must be set in the hosting provider.
+2. Production database deployment must be chosen: `db:push` for a disposable beta database, reviewed migrations for durable production data.
 3. Android SMS functionality requires product, privacy, and store compliance decisions before release.
 4. iOS needs a substitute for Android-only SMS inbox functionality.
 5. App Store and Play Store metadata, privacy disclosures, screenshots, and permission explanations are not documented yet.
@@ -123,6 +125,10 @@ The mobile app has a local Expo module. That means full native testing needs dev
 ### Generated Artifacts
 
 The workspace currently contains generated directories and files such as `.expo`, `.next`, and mobile native module build outputs. These should stay out of commits unless intentionally needed.
+
+### Production Database
+
+Root Prisma commands now point at `apps/web/prisma/schema.prisma`, and `npm run db:validate` passes. There is a migrations directory placeholder, but no reviewed production migrations yet. For a tonight web beta, only run `npm run db:push` if the target Supabase database is disposable or explicitly approved for direct schema sync.
 
 ## Documentation Gaps Closed In This Pass
 

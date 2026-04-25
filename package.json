@@ -10,7 +10,13 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
-    "lint": "turbo run lint"
+    "lint": "turbo run lint",
+    "db:generate": "npm exec --workspace apps/web prisma -- generate --schema prisma/schema.prisma",
+    "db:validate": "npm exec --workspace apps/web prisma -- validate --schema prisma/schema.prisma",
+    "db:push": "npm exec --workspace apps/web prisma -- db push --schema prisma/schema.prisma",
+    "db:migrate:deploy": "npm exec --workspace apps/web prisma -- migrate deploy --schema prisma/schema.prisma",
+    "db:seed:taxonomy": "npm exec --workspace apps/web tsx -- scripts/seed_taxonomy.ts",
+    "db:seed:providers": "npm exec --workspace apps/web tsx -- scripts/seed_providers.ts"
   },
   "dependencies": {
     "anser": "^2.3.5",

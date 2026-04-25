@@ -36,7 +36,8 @@ Primary tasks:
 Status:
 
 - Typecheck, lint, and shared auth-helper coverage are complete.
-- Remaining Phase 1 work is Prisma command/migration readiness.
+- Prisma command validation is complete.
+- Remaining Phase 1 decision is whether tonight uses `db:push` against a disposable beta database or a reviewed migration flow.
 
 ## Phase 2: Web MVP Completion
 
