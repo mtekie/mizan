@@ -1,22 +1,27 @@
 import { NextResponse } from 'next/server';
+import { getAuthUser } from '@/lib/supabase/auth-adapter';
+import { z } from 'zod';
+
+const receiptSchema = z.object({
+    image: z.string().min(1),
+    mimeType: z.string().regex(/^image\/[a-z0-9.+-]+$/i).optional(),
+});
 
 export async function POST(request: Request) {
     try {
-        const { image, mimeType } = await request.json();
+        const user = await getAuthUser(request);
+        if (!user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
 
-        if (!image) {
-            return NextResponse.json({ error: 'No image data provided' }, { status: 400 });
+        const result = receiptSchema.safeParse(await request.json());
+        if (!result.success) {
+            return NextResponse.json({ error: 'Invalid input', details: result.error.format() }, { status: 400 });
         }
 
         const apiKey = process.env.GEMINI_API_KEY;
         if (!apiKey) {
-            // Fallback: return demo data
-            return NextResponse.json({
-                amount: '450',
-                merchant: 'Unknown Merchant',
-                date: new Date().toISOString().split('T')[0],
-                category: 'Other',
-            });
+            return NextResponse.json({ error: 'Receipt scanning is not configured.' }, { status: 503 });
         }
 
         const response = await fetch(
@@ -32,8 +37,8 @@ export async function POST(request: Request) {
                             },
                             {
                                 inline_data: {
-                                    mime_type: mimeType || 'image/jpeg',
-                                    data: image,
+                                    mime_type: result.data.mimeType || 'image/jpeg',
+                                    data: result.data.image,
                                 },
                             },
                         ],
@@ -59,12 +64,8 @@ export async function POST(request: Request) {
             date: parsed.date || new Date().toISOString().split('T')[0],
             category: parsed.category || 'Other',
         });
-    } catch {
-        return NextResponse.json({
-            amount: '0',
-            merchant: 'Unknown',
-            date: new Date().toISOString().split('T')[0],
-            category: 'Other',
-        });
+    } catch (error) {
+        console.error('Receipt route error:', error);
+        return NextResponse.json({ error: 'Failed to analyze receipt.' }, { status: 500 });
     }
 }

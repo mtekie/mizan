@@ -1,27 +1,22 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/db';
+import { z } from 'zod';
+
+const trackSchema = z.object({
+    action: z.enum(['VIEW', 'CLICK']),
+});
 
 export async function POST(
     req: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { id } = await params;
-        const body = await req.json();
-        const { action } = body; // 'VIEW' or 'CLICK'
+        await params;
+        const result = trackSchema.safeParse(await req.json());
+        if (!result.success) {
+            return NextResponse.json({ error: 'Invalid input', details: result.error.format() }, { status: 400 });
+        }
 
-        // Increment counts in Product model (using the legacy or new fields)
-        // For now, we'll just track it in a simple way. 
-        // In a real app, this would go to an analytics table.
-        
-        await prisma.product.update({
-            where: { id },
-            data: {
-                matchScore: { increment: action === 'CLICK' ? 1 : 0 } // Mocking popularity boost
-            }
-        });
-
-        return NextResponse.json({ success: true });
+        return NextResponse.json({ success: true, tracked: false });
     } catch (e: any) {
         return NextResponse.json({ error: e.message }, { status: 500 });
     }

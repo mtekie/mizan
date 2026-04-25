@@ -39,7 +39,7 @@ export function ReceiptScanner({ onExtracted }: Props) {
         r.readAsDataURL(file);
       });
 
-      const res = await fetch('/api/receipt', {
+      const res = await fetch('/api/v1/receipt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ image: base64, mimeType: file.type }),

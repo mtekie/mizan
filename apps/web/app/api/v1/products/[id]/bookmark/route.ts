@@ -46,12 +46,10 @@ export async function DELETE(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        await prisma.productBookmark.delete({
+        await prisma.productBookmark.deleteMany({
             where: {
-                userId_productId: {
-                    userId: user.id,
-                    productId: id
-                }
+                userId: user.id,
+                productId: id
             }
         });
 

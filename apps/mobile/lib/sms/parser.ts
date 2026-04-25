@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import { PermissionsAndroid, Platform } from 'react-native';
 import { readSmsAsync } from '../../modules/mizan-sms';
 import { parseSmsBody, ETHIOPIAN_BANK_PATTERNS } from './patterns';
 
@@ -12,16 +12,24 @@ export interface ParsedTransaction {
 
 export async function checkSmsPermission(): Promise<boolean> {
   if (Platform.OS !== 'android') return false;
-  return false; // Stub until we add android.permission.READ_SMS request via expo-modules core or permissions api
+  return PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.READ_SMS);
 }
 
 export async function requestSmsPermission(): Promise<boolean> {
   if (Platform.OS !== 'android') return false;
-  return false; // Stub
+  const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.READ_SMS, {
+    title: 'Allow bank SMS scan',
+    message: 'Mizan can read bank and wallet SMS messages on this device to find transactions. Personal messages are not sent to Mizan.',
+    buttonPositive: 'Allow',
+    buttonNegative: 'Not now',
+  });
+  return result === PermissionsAndroid.RESULTS.GRANTED;
 }
 
 export async function syncBankSmsMessages(): Promise<ParsedTransaction[]> {
   if (Platform.OS !== 'android') return [];
+  const hasPermission = await checkSmsPermission();
+  if (!hasPermission) return [];
   
   try {
     // 1. Get all known sender IDs

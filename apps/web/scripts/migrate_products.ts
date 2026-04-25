@@ -98,6 +98,15 @@ function makeSlug(bankId: string | null, title: string | null): string {
   return base.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80);
 }
 
+function normalizeProviderSlug(value: string | null | undefined): string {
+  return (value || '')
+    .toLowerCase()
+    .replace(/microfinance|micro finance|mfi/g, '')
+    .replace(/ocssco.*siinqee.*/, 'ocssco')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
 async function main() {
   // 1. Load all providers for lookup
   const allProviders = await prisma.provider.findMany();
@@ -115,7 +124,7 @@ async function main() {
     // Skip if already migrated
     if (p.slug && p.providerId) { skipped++; continue; }
 
-    const bankId = p.bankId || '';
+    const bankId = normalizeProviderSlug(p.bankId) || normalizeProviderSlug(p.bankName);
     const providerId = providerMap.get(bankId) || null;
     const productClass = inferProductClass(p);
     const productType = inferProductType(p);

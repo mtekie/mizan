@@ -17,6 +17,7 @@ async function main() {
   console.log(`📦 Found ${products.length} products and ${tagDefinitions.length} tag definitions.`);
 
   let totalTagsApplied = 0;
+  const rowsToCreate: Array<{ productId: string; tagId: string }> = [];
 
   for (const product of products) {
     const appliedTagIds: string[] = [];
@@ -60,28 +61,56 @@ async function main() {
       if (tagMap.has('low_income')) appliedTagIds.push(tagMap.get('low_income')!);
     }
 
-    // Apply tags
-    if (appliedTagIds.length > 0) {
-      for (const tagId of appliedTagIds) {
-        await prisma.productTag.upsert({
-          where: {
-            productId_tagId: {
-              productId: product.id,
-              tagId: tagId,
-            },
-          },
-          update: {},
-          create: {
-            productId: product.id,
-            tagId: tagId,
-          },
-        });
+    if (product.category === 'MFIs' || product.category === 'Banks') {
+      if (tagMap.has('nbe_regulated')) appliedTagIds.push(tagMap.get('nbe_regulated')!);
+    }
+
+    if (product.productClass === 'CREDIT') {
+      if (tagMap.has('general_sector')) appliedTagIds.push(tagMap.get('general_sector')!);
+      if (product.productType === 'business_loan' && tagMap.has('self_employed')) {
+        appliedTagIds.push(tagMap.get('self_employed')!);
       }
-      totalTagsApplied += appliedTagIds.length;
+      if ((product.collateralRequirements || '').toLowerCase().includes('collateral') && tagMap.has('requires_collateral')) {
+        appliedTagIds.push(tagMap.get('requires_collateral')!);
+      }
+    }
+
+    if (product.productClass === 'SAVINGS') {
+      if (tagMap.has('first_time_saver')) appliedTagIds.push(tagMap.get('first_time_saver')!);
+      if (tagMap.has('deposit_insured')) appliedTagIds.push(tagMap.get('deposit_insured')!);
+      if (product.productType === 'compulsory_savings' && tagMap.has('requires_membership')) {
+        appliedTagIds.push(tagMap.get('requires_membership')!);
+      }
+    }
+
+    if (product.productClass === 'PAYMENT') {
+      if (tagMap.has('mobile_accessible')) appliedTagIds.push(tagMap.get('mobile_accessible')!);
+      if (tagMap.has('digital_only')) appliedTagIds.push(tagMap.get('digital_only')!);
+    }
+
+    if (product.productClass === 'COMMUNITY' && tagMap.has('requires_membership')) {
+      appliedTagIds.push(tagMap.get('requires_membership')!);
+    }
+
+    // Queue tags
+    const uniqueTagIds = Array.from(new Set(appliedTagIds));
+    if (uniqueTagIds.length > 0) {
+      for (const tagId of uniqueTagIds) {
+        rowsToCreate.push({ productId: product.id, tagId });
+      }
+      totalTagsApplied += uniqueTagIds.length;
     }
   }
 
-  console.log(`✅ Auto-tagging complete. Applied ${totalTagsApplied} tags across products.`);
+  const batchSize = 500;
+  for (let i = 0; i < rowsToCreate.length; i += batchSize) {
+    await prisma.productTag.createMany({
+      data: rowsToCreate.slice(i, i + batchSize),
+      skipDuplicates: true,
+    });
+  }
+
+  console.log(`✅ Auto-tagging complete. Queued ${totalTagsApplied} tags across products.`);
 }
 
 main()

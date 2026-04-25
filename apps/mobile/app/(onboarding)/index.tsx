@@ -6,7 +6,7 @@ import { useStore } from '../../lib/store';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MizanCard } from '../../components/ui/MizanCard';
 import { Landmark, Sparkles, Target, User, ShieldCheck } from 'lucide-react-native';
-import { readSmsAsync } from '../../modules/mizan-sms';
+import { requestSmsPermission, syncBankSmsMessages } from '../../lib/sms/parser';
 
 const BANKS = [
   { id: 'CBE', name: 'CBE', color: '#7B1FA2' },
@@ -42,10 +42,16 @@ export default function OnboardingScreen() {
 
     try {
       setIsScanning(true);
-      const messages = await readSmsAsync(['CBE', 'Awash', 'telebirr', 'Dashen']);
+      const granted = await requestSmsPermission();
+      if (!granted) {
+        setIsScanning(false);
+        setScanResult('SMS scan is optional. Manual entry is ready, and you can enable scanning later from settings.');
+        return;
+      }
+      const messages = await syncBankSmsMessages();
       setIsScanning(false);
       if (messages.length > 0) {
-        setScanResult(`Found ${messages.length} bank messages! Your ledger will be automatically populated.`);
+        setScanResult(`Found ${messages.length} bank transactions! Your ledger will be automatically populated.`);
       } else {
         setScanResult('No recent bank messages found. You can still add transactions manually.');
       }

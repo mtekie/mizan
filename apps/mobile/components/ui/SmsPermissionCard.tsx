@@ -2,20 +2,23 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { MizanColors, MizanSpacing, MizanRadii } from '@mizan/ui-tokens';
 import { Sparkles, CheckCircle2 } from 'lucide-react-native';
-import { syncBankSmsMessages } from '../../lib/sms/parser';
+import { requestSmsPermission, syncBankSmsMessages } from '../../lib/sms/parser';
 
 export function SmsPermissionCard() {
-  const [step, setStep] = useState<'PROMPT' | 'SCANNING' | 'SUCCESS'>('PROMPT');
+  const [step, setStep] = useState<'PROMPT' | 'SCANNING' | 'SUCCESS' | 'DENIED'>('PROMPT');
   const [foundBanks, setFoundBanks] = useState<string[]>([]);
   const [txCount, setTxCount] = useState(0);
 
   const handleMagicScan = async () => {
     setStep('SCANNING');
     
-    // In a real device, this would request permissions first
-    // For now, it will trigger our Native Module (which requires permissions to be granted via App Settings currently, 
-    // or we can add Expo's permission logic later)
     try {
+      const granted = await requestSmsPermission();
+      if (!granted) {
+        setStep('DENIED');
+        return;
+      }
+
       const transactions = await syncBankSmsMessages();
       
       // Extract unique banks found
@@ -26,7 +29,7 @@ export function SmsPermissionCard() {
       setStep('SUCCESS');
     } catch (e) {
       console.error(e);
-      setStep('PROMPT'); // Revert on failure
+      setStep('DENIED');
     }
   };
 
@@ -39,6 +42,20 @@ export function SmsPermissionCard() {
         </View>
         <Text style={styles.subtitle}>
           We found {txCount} transactions from {foundBanks.length > 0 ? foundBanks.join(', ') : 'your banks'}. Your ledger is now up to date.
+        </Text>
+      </View>
+    );
+  }
+
+  if (step === 'DENIED') {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Sparkles color={MizanColors.mintGold} size={24} />
+          <Text style={styles.title}>Manual tracking is ready</Text>
+        </View>
+        <Text style={styles.subtitle}>
+          SMS scan is optional. You can add transactions manually now and enable bank SMS scanning later from settings.
         </Text>
       </View>
     );

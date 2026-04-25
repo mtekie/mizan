@@ -14,14 +14,23 @@ export async function POST(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // Create application
-        const application = await prisma.productApplication.create({
-            data: {
-                userId: user.id,
-                productId: id,
-                status: 'PENDING'
-            }
+        const existingApplication = await prisma.productApplication.findFirst({
+            where: { userId: user.id, productId: id },
+            orderBy: { createdAt: 'desc' },
         });
+
+        const application = existingApplication
+            ? await prisma.productApplication.update({
+                where: { id: existingApplication.id },
+                data: { status: 'PENDING' },
+            })
+            : await prisma.productApplication.create({
+                data: {
+                    userId: user.id,
+                    productId: id,
+                    status: 'PENDING',
+                },
+            });
 
         // Trigger notification logic here if needed
 
