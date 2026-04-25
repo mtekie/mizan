@@ -62,6 +62,12 @@ export default function AdminPage() {
                         <Link href="/admin/products" className="text-[10px] font-black text-white bg-white/10 px-3 py-2 rounded-lg hover:bg-white/15 transition">
                             Products
                         </Link>
+                        <Link href="/admin/users" className="text-[10px] font-black text-white bg-white/10 px-3 py-2 rounded-lg hover:bg-white/15 transition">
+                            Users
+                        </Link>
+                        <Link href="/admin/moderation" className="text-[10px] font-black text-white bg-white/10 px-3 py-2 rounded-lg hover:bg-white/15 transition">
+                            Moderation
+                        </Link>
                         <Link href="/admin/providers" className="text-[10px] font-black text-white bg-white/10 px-3 py-2 rounded-lg hover:bg-white/15 transition">
                             Providers
                         </Link>
