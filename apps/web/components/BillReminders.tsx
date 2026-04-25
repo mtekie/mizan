@@ -27,16 +27,26 @@ const categoryMap = [
     { label: 'Subscription', icon: CreditCard, color: 'text-purple-600', bg: 'bg-purple-50' },
 ];
 
-const demoBills: Bill[] = [
-    { id: '1', name: 'Apartment Rent', amount: 8000, category: 'Rent', icon: Home, color: 'text-blue-600', bg: 'bg-blue-50', dueDay: 1, frequency: 'Monthly', isPaid: false },
-    { id: '2', name: 'Ethio Telecom', amount: 500, category: 'Phone', icon: Phone, color: 'text-sky-600', bg: 'bg-sky-50', dueDay: 5, frequency: 'Monthly', isPaid: false },
-    { id: '3', name: 'Electric (EELPA)', amount: 350, category: 'Utilities', icon: Zap, color: 'text-amber-600', bg: 'bg-amber-50', dueDay: 10, frequency: 'Monthly', isPaid: true },
-    { id: '4', name: 'Internet - Safaricom', amount: 1200, category: 'Internet', icon: Wifi, color: 'text-indigo-600', bg: 'bg-indigo-50', dueDay: 15, frequency: 'Monthly', isPaid: false },
-];
+function hydrateBill(rawBill: any): Bill {
+    const category = categoryMap.find(c => c.label === rawBill.category);
+
+    return {
+        id: rawBill.id,
+        name: rawBill.name,
+        amount: Number(rawBill.amount) || 0,
+        category: rawBill.category || 'Utilities',
+        icon: category?.icon || Bell,
+        color: category?.color || 'text-slate-600',
+        bg: category?.bg || 'bg-slate-50',
+        dueDay: Number(rawBill.dueDay) || 1,
+        frequency: rawBill.frequency || 'Monthly',
+        isPaid: Boolean(rawBill.isPaid),
+    };
+}
 
 export function BillReminders({ initialBills }: { initialBills?: any[] }) {
     const [bills, setBills] = useState<Bill[]>(() => {
-        if (initialBills && initialBills.length > 0) return initialBills as Bill[];
+        if (initialBills && initialBills.length > 0) return initialBills.map(hydrateBill);
         return [];
     });
     const [showAdd, setShowAdd] = useState(false);
