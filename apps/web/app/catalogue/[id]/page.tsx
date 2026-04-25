@@ -1,6 +1,5 @@
 import { notFound } from 'next/navigation';
-import { allProducts as products } from '@/lib/data/products';
-import { banks } from '@/lib/data/banks';
+import prisma from '@/lib/db';
 import Link from 'next/link';
 import { ArrowLeft, CheckCircle2, ShieldCheck, Building2, Calendar, FileText, BadgePercent, Zap, Globe, AlertTriangle, Clock, Banknote } from 'lucide-react';
 import ApplyButton from '@/components/CatalogueApplyButton';
@@ -10,13 +9,19 @@ import { LoanCalculator } from '@/components/LoanCalculator';
 
 export default async function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const resolvedParams = await params;
-    const product = products.find(p => p.id === resolvedParams.id);
-
+    
+    const product = await prisma.product.findUnique({
+        where: { id: resolvedParams.id }
+    });
+    
     if (!product) {
         notFound();
     }
 
-    const bank = banks.find(b => b.id === (product.bankId || product.instituteId));
+    const bank = product.bankId || product.instituteId 
+        ? await prisma.bank.findUnique({ where: { id: product.bankId || product.instituteId || '' } })
+        : null;
+
     const formatInterest = (val: number) => val < 1 ? (val * 100).toFixed(0) : val.toFixed(0);
     const interestDisplay = product.interestMax && product.interestMax > (product.interestRate || 0)
         ? `${formatInterest(product.interestRate || 0)}–${formatInterest(product.interestMax)}%`
@@ -136,24 +141,24 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                     {/* Requirements & Eligibility */}
                     <section className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
                         <h3 className="text-sm font-black text-slate-900 mb-4 flex items-center gap-2 uppercase tracking-wide">
-                            <FileText className="w-4 h-4 text-slate-400" /> Requirements
+                                <FileText className="w-4 h-4 text-slate-400" /> Requirements
                         </h3>
                         <div className="space-y-4">
-                            {(product.eligibility || []).length > 0 && (
+                            {product.eligibility && (Array.isArray(product.eligibility) ? product.eligibility.length > 0 : true) && (
                                 <div>
                                     <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">Eligibility</h4>
                                     <ul className="space-y-2">
-                                        {(product.eligibility || []).map((item: string, i: number) => (
+                                        {(Array.isArray(product.eligibility) ? product.eligibility : [product.eligibility]).map((item: any, i: number) => (
                                             <li key={i} className="text-xs text-slate-600 border-l-2 border-[#3EA63B] pl-3 py-1">{item}</li>
                                         ))}
                                     </ul>
                                 </div>
                             )}
-                            {(product.requirements || []).length > 0 && (
+                            {product.requirements && (Array.isArray(product.requirements) ? product.requirements.length > 0 : true) && (
                                 <div>
                                     <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">Documents</h4>
                                     <ul className="space-y-2">
-                                        {(product.requirements || []).map((item: string, i: number) => (
+                                        {(Array.isArray(product.requirements) ? product.requirements : [product.requirements]).map((item: any, i: number) => (
                                             <li key={i} className="text-xs text-slate-600 border-l-2 border-blue-300 pl-3 py-1">{item}</li>
                                         ))}
                                     </ul>

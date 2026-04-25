@@ -35,22 +35,28 @@ export default function ProductDetailScreen() {
   const router = useRouter();
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchDetail = async () => {
       try {
+        setLoading(true);
+        setError(null);
+        console.log('Fetching product detail for:', id);
         const data = await api.products.get(id as string);
+        if (!data) throw new Error('No product data returned');
         setProduct(data);
         setIsBookmarked(data.isBookmarked);
-      } catch (error) {
-        console.error('Failed to fetch product detail:', error);
+      } catch (err: any) {
+        console.error('Failed to fetch product detail:', err);
+        setError(err.message || 'Failed to load product details');
       } finally {
         setLoading(false);
       }
     };
-    fetchDetail();
+    if (id) fetchDetail();
   }, [id]);
 
   const toggleBookmark = async () => {
@@ -94,7 +100,21 @@ export default function ProductDetailScreen() {
     );
   }
 
-  if (!product) return null;
+  if (error || !product) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Info size={48} color={MizanColors.textMuted} />
+        <Text style={styles.errorTitle}>Oops!</Text>
+        <Text style={styles.errorText}>{error || 'Product not found'}</Text>
+        <TouchableOpacity 
+          style={styles.retryButton} 
+          onPress={() => router.replace('/(tabs)/catalogue')}
+        >
+          <Text style={styles.retryText}>Back to Catalogue</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -120,12 +140,15 @@ export default function ProductDetailScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.hero}>
-          <View style={styles.providerRow}>
+          <TouchableOpacity 
+            style={styles.providerRow}
+            onPress={() => product.provider?.id && router.push(`/provider/${product.provider.id}`)}
+          >
              {product.provider?.logoUrl && (
                <Image source={{ uri: product.provider.logoUrl }} style={styles.providerLogo} />
              )}
              <Text style={styles.providerName}>{product.provider?.name}</Text>
-          </View>
+          </TouchableOpacity>
           <Text style={styles.title}>{product.name}</Text>
           
           <View style={styles.badgeRow}>
@@ -404,5 +427,31 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontFamily: 'Inter_700Bold',
+  },
+  errorTitle: {
+    fontSize: 24,
+    fontFamily: 'Inter_900Black',
+    color: MizanColors.textPrimary,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  errorText: {
+    fontSize: 16,
+    fontFamily: 'Inter_400Regular',
+    color: MizanColors.textSecondary,
+    textAlign: 'center',
+    paddingHorizontal: 40,
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: MizanColors.mintPrimary,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: MizanRadii.md,
+  },
+  retryText: {
+    color: '#fff',
+    fontFamily: 'Inter_700Bold',
+    fontSize: 14,
   }
 });

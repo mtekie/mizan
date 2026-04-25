@@ -2,12 +2,15 @@
 
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { PageHeader } from './PageHeader';
 
 interface SimplePageShellProps {
   title: string;
   children: React.ReactNode;
   /** Optional right-side header action button */
   headerAction?: React.ReactNode;
+  /** Optional description */
+  description?: string;
   /** Show back button (default: true) */
   showBack?: boolean;
   /** Back button href (default: /) */
@@ -27,14 +30,23 @@ interface SimplePageShellProps {
  */
 export function SimplePageShell({
   title,
+  description,
   children,
   headerAction,
   showBack = true,
   backHref = '/',
 }: SimplePageShellProps) {
   return (
-    <div className="flex flex-col min-h-screen bg-[var(--color-mint-bg)] pb-24 md:pb-0 md:max-w-lg md:mx-auto">
-      <header className="mint-gradient-hero px-6 pt-12 pb-6 flex items-center justify-between text-white sticky top-0 z-20">
+    <div className="flex flex-col min-h-screen bg-[var(--color-mint-bg)] pb-24 md:pb-0 w-full">
+      {/* Desktop Header */}
+      <PageHeader 
+        title={title}
+        description={description}
+        actions={headerAction}
+      />
+
+      {/* Mobile Header */}
+      <header className="md:hidden mint-gradient-hero px-6 pt-12 pb-6 flex items-center justify-between text-white sticky top-0 z-20">
         <div className="flex items-center gap-3">
           {showBack && (
             <Link
@@ -50,7 +62,7 @@ export function SimplePageShell({
         {headerAction}
       </header>
 
-      <main className="px-6 -mt-4 relative z-10 space-y-4 flex-1">
+      <main className="px-6 md:px-8 -mt-4 md:mt-0 relative z-10 space-y-4 flex-1">
         {children}
       </main>
     </div>

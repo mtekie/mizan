@@ -22,7 +22,7 @@ export default function OnboardingScreen() {
   const [scanResult, setScanResult] = useState<string | null>(null);
 
   const handleNext = () => {
-    if (step < 4) {
+    if (step < 3) {
       setStep(step + 1);
     } else {
       setProfile({ isComplete: true });
@@ -91,79 +91,126 @@ export default function OnboardingScreen() {
           </View>
         );
       case 2:
+        const goalPresets = [
+          { id: '1', name: 'Emergency Fund', emoji: '🛡️', defaultTarget: '50000' },
+          { id: '2', name: 'Education', emoji: '🎓', defaultTarget: '100000' },
+          { id: '3', name: 'Travel', emoji: '✈️', defaultTarget: '150000' },
+          { id: '4', name: 'Home', emoji: '🏠', defaultTarget: '2000000' },
+        ];
         return (
           <View style={styles.stepContent}>
             <View style={styles.iconCircle}>
-              <Landmark size={32} color={MizanColors.mintPrimary} />
+              <Target size={32} color={MizanColors.mintPrimary} />
             </View>
-            <Text style={styles.title}>Your Banks</Text>
-            <Text style={styles.subtitle}>Select your primary banks so we can recognize their messages.</Text>
-            <View style={styles.optionsGrid}>
-              {BANKS.map((bank) => (
-                <TouchableOpacity
-                  key={bank.id}
-                  style={[
-                    styles.bankButton,
-                    profile.primaryBank === bank.id && { borderColor: bank.color, backgroundColor: bank.color + '10' },
-                  ]}
-                  onPress={() => setProfile({ primaryBank: bank.id })}
-                >
-                  <View style={[styles.bankIndicator, { backgroundColor: bank.color }]} />
-                  <Text style={[
-                    styles.bankText,
-                    profile.primaryBank === bank.id && { color: bank.color },
-                  ]}>
-                    {bank.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            <Text style={styles.title}>Your Goals</Text>
+            <Text style={styles.subtitle}>Select what you're saving for. We'll help you track them.</Text>
+            <ScrollView style={{ maxHeight: 400 }}>
+              {goalPresets.map((preset) => {
+                const isSelected = profile.goals.find(g => g.name === preset.name);
+                return (
+                  <View key={preset.id} style={{ marginBottom: 12 }}>
+                    <TouchableOpacity
+                      style={[
+                        styles.bankButton,
+                        { width: '100%' },
+                        isSelected && { borderColor: MizanColors.mintPrimary, backgroundColor: MizanColors.mintPrimary + '10' }
+                      ]}
+                      onPress={() => {
+                        if (isSelected) {
+                          setProfile({ goals: profile.goals.filter(g => g.name !== preset.name) });
+                        } else {
+                          setProfile({ goals: [...profile.goals, { name: preset.name, target: preset.defaultTarget, emoji: preset.emoji }] });
+                        }
+                      }}
+                    >
+                      <Text style={{ fontSize: 24, marginRight: 12 }}>{preset.emoji}</Text>
+                      <Text style={[styles.bankText, isSelected && { color: MizanColors.mintPrimary }]}>{preset.name}</Text>
+                    </TouchableOpacity>
+                    {isSelected && (
+                      <MizanCard style={{ marginTop: 8, padding: 12 }}>
+                        <Text style={styles.label}>Target Amount (ETB)</Text>
+                        <TextInput
+                          style={[styles.input, { padding: 10 }]}
+                          keyboardType="numeric"
+                          value={isSelected.target}
+                          onChangeText={(text) => {
+                            setProfile({
+                              goals: profile.goals.map(g => g.name === preset.name ? { ...g, target: text } : g)
+                            });
+                          }}
+                        />
+                      </MizanCard>
+                    )}
+                  </View>
+                );
+              })}
+            </ScrollView>
           </View>
         );
       case 3:
         return (
           <View style={styles.stepContent}>
             <View style={styles.iconCircle}>
-              <Sparkles size={32} color={MizanColors.mintPrimary} />
+              <Landmark size={32} color={MizanColors.mintPrimary} />
             </View>
-            <Text style={styles.title}>Magic Scan</Text>
-            <Text style={styles.subtitle}>Mizan can automatically track your expenses by scanning bank SMS messages. It's secure and stays on your device.</Text>
-            
-            <MizanCard style={styles.magicCard}>
-              {isScanning ? (
-                <Text style={styles.scanningText}>Scanning your inbox...</Text>
-              ) : scanResult ? (
-                <View style={styles.scanResultBox}>
-                  <ShieldCheck size={24} color={MizanColors.mintPrimary} />
-                  <Text style={styles.scanResultText}>{scanResult}</Text>
-                </View>
-              ) : (
-                <TouchableOpacity style={styles.scanBtn} onPress={startMagicScan}>
-                  <Sparkles size={20} color="#FFF" style={{ marginRight: 8 }} />
-                  <Text style={styles.scanBtnText}>Enable Magic Scan</Text>
-                </TouchableOpacity>
-              )}
-            </MizanCard>
-            <Text style={styles.disclaimer}>* We only read messages from selected banks. No personal messages are ever accessed.</Text>
-          </View>
-        );
-      case 4:
-        return (
-          <View style={styles.stepContent}>
-            <View style={styles.iconCircle}>
-              <Target size={32} color={MizanColors.mintPrimary} />
+            <Text style={styles.title}>Accounts</Text>
+            <Text style={styles.subtitle}>Select your primary banks and add details if you have them.</Text>
+            <View style={styles.optionsGrid}>
+              {BANKS.map((bank) => {
+                const isSelected = profile.primaryBanks.find(b => b.bankId === bank.id);
+                return (
+                  <View key={bank.id} style={{ width: '100%', marginBottom: 12 }}>
+                    <TouchableOpacity
+                      style={[
+                        styles.bankButton,
+                        { width: '100%' },
+                        isSelected && { borderColor: bank.color, backgroundColor: bank.color + '10' },
+                      ]}
+                      onPress={() => {
+                        if (isSelected) {
+                          setProfile({ primaryBanks: profile.primaryBanks.filter(b => b.bankId !== bank.id) });
+                        } else {
+                          setProfile({ primaryBanks: [...profile.primaryBanks, { bankId: bank.id, accountNumber: '', balance: '' }] });
+                        }
+                      }}
+                    >
+                      <View style={[styles.bankIndicator, { backgroundColor: bank.color }]} />
+                      <Text style={[styles.bankText, isSelected && { color: bank.color }]}>{bank.name}</Text>
+                    </TouchableOpacity>
+                    {isSelected && (
+                      <MizanCard style={{ marginTop: 8, padding: 12 }}>
+                        <TextInput
+                          style={[styles.input, { padding: 10, marginBottom: 8 }]}
+                          placeholder="Account Number (Optional)"
+                          value={isSelected.accountNumber}
+                          onChangeText={(text) => {
+                            setProfile({
+                              primaryBanks: profile.primaryBanks.map(b => b.bankId === bank.id ? { ...b, accountNumber: text } : b)
+                            });
+                          }}
+                        />
+                        <TextInput
+                          style={[styles.input, { padding: 10 }]}
+                          placeholder="Current Balance (Optional)"
+                          keyboardType="numeric"
+                          value={isSelected.balance}
+                          onChangeText={(text) => {
+                            setProfile({
+                              primaryBanks: profile.primaryBanks.map(b => b.bankId === bank.id ? { ...b, balance: text } : b)
+                            });
+                          }}
+                        />
+                      </MizanCard>
+                    )}
+                  </View>
+                );
+              })}
             </View>
-            <Text style={styles.title}>Your Goal</Text>
-            <Text style={styles.subtitle}>What's your biggest financial goal right now? This helps us keep you motivated.</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              placeholder="e.g. Save for a new house, pay off debt, or start a business..."
-              value={profile.goals}
-              onChangeText={(text) => setProfile({ goals: text })}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
+            <TouchableOpacity style={[styles.scanBtn, { marginTop: 20 }]} onPress={startMagicScan}>
+              <Sparkles size={20} color="#FFF" style={{ marginRight: 8 }} />
+              <Text style={styles.scanBtnText}>Scan SMS for Auto-Setup</Text>
+            </TouchableOpacity>
+            {scanResult && <Text style={[styles.scanResultText, { marginTop: 12 }]}>{scanResult}</Text>}
           </View>
         );
       default:
@@ -179,7 +226,7 @@ export default function OnboardingScreen() {
       >
         <View style={styles.header}>
           <View style={styles.progressContainer}>
-            {[1, 2, 3, 4].map(i => (
+            {[1, 2, 3].map(i => (
               <View key={i} style={[styles.progressDot, i <= step && styles.progressActive]} />
             ))}
           </View>
@@ -191,7 +238,7 @@ export default function OnboardingScreen() {
 
         <View style={styles.footer}>
           <TouchableOpacity style={styles.button} onPress={handleNext}>
-            <Text style={styles.buttonText}>{step === 4 ? 'Get Started' : 'Continue'}</Text>
+            <Text style={styles.buttonText}>{step === 3 ? 'Get Started' : 'Continue'}</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>

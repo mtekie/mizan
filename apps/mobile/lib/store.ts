@@ -28,10 +28,16 @@ interface MizanStore {
   profile: {
     fullName: string;
     username: string;
-    primaryBank: string;
+    primaryBanks: { bankId: string; accountNumber?: string; balance?: string }[];
     currency: string;
-    goals: string;
+    goals: { name: string; specifics?: Record<string, string> }[];
     isComplete: boolean;
+    gender?: string;
+    monthlyIncomeRange?: string;
+    educationLevel?: string;
+    employmentStatus?: string;
+    housingStatus?: string;
+    riskAppetite?: string;
   };
   isGuest: boolean;
   setAiEnabled: (enabled: boolean) => void;
@@ -47,9 +53,9 @@ export const useStore = create<MizanStore>()(
       profile: {
         fullName: '',
         username: '',
-        primaryBank: '',
+        primaryBanks: [],
         currency: 'ETB',
-        goals: '',
+        goals: [],
         isComplete: false,
       },
       setAiEnabled: (enabled) => set({ aiEnabled: enabled }),

@@ -19,6 +19,7 @@ export default function Onboarding() {
 
   // State for all steps
   const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [accounts, setAccounts] = useState<any[]>([]);
   const [profile, setProfile] = useState({
     gender: '',
@@ -26,24 +27,25 @@ export default function Onboarding() {
     educationLevel: '',
     employmentStatus: '',
   });
-  const [goal, setGoal] = useState<any>(null);
+  const [goals, setGoals] = useState<any[]>([]);
 
-  const handleNextStep = async (currentPhase: 'identity' | 'accounts' | 'profile' | 'goal', data: any, nextStep: Step | 'done', isSkip = false) => {
+  const handleNextStep = async (currentPhase: 'identity' | 'accounts' | 'profile' | 'goals', data: any, nextStep: Step | 'done', isSkip = false) => {
     setLoading(true);
     setError(null);
     try {
       // If skip is true and it's not the final step, we just move state without saving to DB
       // But we map our local phase name to the API phase names ('identity', 'accounts', 'goals', 'complete')
       const apiPhase = nextStep === 'done' ? 'complete' :
-                       currentPhase === 'goal' ? 'goals' :
+                       currentPhase === 'goals' ? 'goals' :
                        currentPhase;
 
       if (!isSkip || nextStep === 'done') {
         const payload = {
             name,
+            username,
             ...profile,
             ...(currentPhase === 'accounts' ? { accounts: data.accounts } : {}),
-            ...(currentPhase === 'goal' ? { goal: data.goal } : {})
+            ...(currentPhase === 'goals' ? { goals: data.goals } : {})
         };
         const res = await performUpdateOnboardingPhase(apiPhase, payload);
         if (res.error) throw new Error(res.error);
@@ -76,9 +78,9 @@ export default function Onboarding() {
 
         {/* Multi-step progress indicator */}
         <div className="flex gap-2 mb-12 w-full max-w-xs">
-            {(['identity', 'accounts', 'profile', 'goal'] as Step[]).map((s, idx) => {
-                const steps = ['identity', 'accounts', 'profile', 'goal'];
-                const currentIdx = steps.indexOf(step);
+            {(['identity', 'goals', 'accounts'] as Step[]).map((s, idx) => {
+                const steps = ['identity', 'goals', 'accounts'];
+                const currentIdx = steps.indexOf(step as any);
                 const isPast = idx < currentIdx;
                 const isCurrent = idx === currentIdx;
                 
@@ -97,7 +99,20 @@ export default function Onboarding() {
               key="identity"
               name={name} 
               setName={setName} 
-              onNext={() => handleNextStep('identity', { name }, 'accounts')} 
+              username={username}
+              setUsername={setUsername}
+              onNext={() => handleNextStep('identity', { name, username }, 'goals' as any)} 
+            />
+          )}
+          {step === ('goals' as any) && (
+            <GoalStep 
+              key="goals"
+              goals={goals} 
+              setGoals={setGoals} 
+              onNext={() => handleNextStep('goals', { goals }, 'accounts')} 
+              onSkip={() => handleNextStep('goals', {}, 'accounts', true)}
+              onBack={() => setStep('identity')}
+              loading={loading}
             />
           )}
           {step === 'accounts' && (
@@ -105,30 +120,9 @@ export default function Onboarding() {
               key="accounts"
               accounts={accounts} 
               setAccounts={setAccounts} 
-              onNext={() => handleNextStep('accounts', { accounts }, 'profile')} 
-              onSkip={() => handleNextStep('accounts', {}, 'profile', true)}
-              onBack={() => setStep('identity')}
-            />
-          )}
-          {step === 'profile' && (
-            <ProfileStep 
-              key="profile"
-              data={profile} 
-              setData={setProfile} 
-              onNext={() => handleNextStep('profile', profile, 'goal')} 
-              onSkip={() => handleNextStep('profile', {}, 'goal', true)}
-              onBack={() => setStep('accounts')}
-            />
-          )}
-          {step === 'goal' && (
-            <GoalStep 
-              key="goal"
-              goal={goal} 
-              setGoal={setGoal} 
-              onNext={() => handleNextStep('goal', { goal }, 'done')} 
-              onSkip={() => handleNextStep('goal', {}, 'done', true)}
-              onBack={() => setStep('profile')}
-              loading={loading}
+              onNext={() => handleNextStep('accounts', { accounts }, 'done')} 
+              onSkip={() => handleNextStep('accounts', {}, 'done', true)}
+              onBack={() => setStep('goals' as any)}
             />
           )}
         </AnimatePresence>

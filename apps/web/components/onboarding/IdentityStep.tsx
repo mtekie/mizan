@@ -6,10 +6,14 @@ import { motion } from 'framer-motion';
 export function IdentityStep({ 
   name, 
   setName, 
+  username,
+  setUsername,
   onNext 
 }: { 
   name: string, 
   setName: (n: string) => void, 
+  username: string,
+  setUsername: (u: string) => void,
   onNext: () => void 
 }) {
   return (
@@ -24,22 +28,37 @@ export function IdentityStep({
       </div>
 
       <h1 className="text-3xl font-black mb-4">Welcome to Mizan</h1>
-      <p className="text-slate-400 mb-8 text-sm">Let&apos;s get your financial journey started. What should we call you?</p>
+      <p className="text-slate-400 mb-8 text-sm">Let&apos;s personalize your financial intelligence. What should we call you?</p>
 
       <div className="w-full flex flex-col gap-4">
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Your first name"
-          required
-          autoFocus
-          className="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-6 text-center text-2xl font-bold text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-[#3EA63B] transition-all"
-        />
+        <div className="space-y-1 text-left">
+           <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-2">Full Name</label>
+           <input
+             type="text"
+             value={name}
+             onChange={(e) => setName(e.target.value)}
+             placeholder="e.g. Dawit Abraham"
+             required
+             autoFocus
+             className="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-6 text-lg font-bold text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-[#3EA63B] transition-all"
+           />
+        </div>
+
+        <div className="space-y-1 text-left">
+           <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-2">Username</label>
+           <input
+             type="text"
+             value={username}
+             onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+             placeholder="e.g. dawit_mizan"
+             required
+             className="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-6 text-lg font-bold text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-[#3EA63B] transition-all"
+           />
+        </div>
         
         <button
           onClick={onNext}
-          disabled={!name.trim()}
+          disabled={!name.trim() || !username.trim()}
           className="w-full mt-4 bg-[#3EA63B] text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 hover:bg-[#2e7d2c] transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Continue <ArrowRight className="w-5 h-5" />

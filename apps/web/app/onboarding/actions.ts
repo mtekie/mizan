@@ -17,6 +17,7 @@ export async function performUpdateOnboardingPhase(phase: string, data: any) {
     
     // Core profile updates
     if (data.name) payload.name = data.name;
+    if (data.username) payload.username = data.username;
     if (data.gender) payload.gender = data.gender;
     if (data.dateOfBirth) payload.dateOfBirth = new Date(data.dateOfBirth);
     if (data.educationLevel) payload.educationLevel = data.educationLevel;
@@ -51,7 +52,8 @@ export async function performUpdateOnboardingPhase(phase: string, data: any) {
              data: {
                 userId: user.id,
                 name: acc.name,
-                type: acc.type,
+                type: acc.type || 'Savings',
+                number: acc.accountNumber || null,
                 balance: parseFloat(acc.balance) || 0,
                 color: acc.color || '#3EA63B'
              }
@@ -59,15 +61,17 @@ export async function performUpdateOnboardingPhase(phase: string, data: any) {
        }
     }
 
-    if (data.goal) {
-       await prisma.goal.create({
-          data: {
-             userId: user.id,
-             name: data.goal.name,
-             target: parseFloat(data.goal.target) || 0,
-             emoji: data.goal.emoji || '🎯'
-          }
-       });
+    if (data.goals && Array.isArray(data.goals)) {
+       for (const goal of data.goals) {
+          await prisma.goal.create({
+             data: {
+                userId: user.id,
+                name: goal.name,
+                target: parseFloat(goal.target) || 0,
+                emoji: goal.emoji || '🎯'
+             }
+          });
+       }
     }
 
     revalidatePath('/');

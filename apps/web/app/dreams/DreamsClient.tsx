@@ -110,11 +110,11 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
   };
 
   const content = (
-    <div className="flex-1 px-6 py-6 pb-24 md:pb-6 max-w-7xl mx-auto w-full">
+    <div className="flex-1 px-4 md:px-8 py-6 pb-24 md:pb-12 max-w-7xl mx-auto w-full">
         {/* Desktop: 12-col grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Budget Tracker (Left) */}
-          <div className="lg:col-span-7">
+          <div className="lg:col-span-8 space-y-8">
             {/* Monthly Overview */}
             <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 mb-6">
               <div className="flex items-center justify-between mb-4">
@@ -188,7 +188,7 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
           </div>
 
           {/* Goals & Tips (Right) */}
-          <div className="lg:col-span-5">
+          <div className="lg:col-span-4 space-y-8">
             {/* Savings Goals */}
             <section className="mb-6">
               <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider mb-4 flex items-center gap-2">
@@ -267,19 +267,20 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
   return (
     <>
       <SimplePageShell
-        title="Budget & Goals"
+        title="Goals"
+        description="Manage your financial life with ease"
         headerAction={
           <div className="flex gap-2">
            <button
               onClick={() => setShowExpenseLogger(true)}
-              className="flex items-center justify-center w-8 h-8 rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors"
+              className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors"
               title="Log Expense"
             >
               <ReceiptText className="w-4 h-4" />
             </button>
             <button
               onClick={() => setShowNewGoal(true)}
-              className="flex items-center justify-center w-8 h-8 rounded-full bg-white text-[var(--color-mint-primary)] hover:bg-white/90 transition-colors"
+              className="flex items-center justify-center w-8 h-8 rounded-full bg-[var(--color-mint-primary)] text-white hover:opacity-90 transition-colors"
               title="Add Goal"
             >
               <Plus className="w-4 h-4" />

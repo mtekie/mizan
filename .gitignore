@@ -27,3 +27,4 @@ tmp_*.json
 
 # Vercel
 .vercel
+tmp_env/

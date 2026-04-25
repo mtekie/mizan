@@ -11,6 +11,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { AccountStep } from '@/components/onboarding/AccountStep';
 import { performUpdateOnboardingPhase } from '@/app/onboarding/actions';
 import { toast } from 'sonner';
+import { PageHeader } from '@/components/PageHeader';
 
 type AddMode = 'transaction' | 'transfer' | null;
 type TxType = 'expense' | 'income';
@@ -159,12 +160,10 @@ export default function LedgerClient({ accounts, initialTransactions, summary }:
   return (
     <div className="flex flex-col min-h-full bg-slate-50 md:bg-transparent">
       {/* Header */}
-      <header className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-slate-100 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-black text-slate-900">Ledger & Transfer</h1>
-            <p className="text-sm text-slate-500">Track every birr · Send money across accounts</p>
-          </div>
+      <PageHeader 
+        title="Money"
+        description="Track your spending and manage your accounts"
+        actions={
           <div className="flex items-center gap-3">
             <button className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg hover:bg-slate-200 transition flex items-center gap-1">
               <Download className="w-3 h-3" /> Export
@@ -178,10 +177,10 @@ export default function LedgerClient({ accounts, initialTransactions, summary }:
               <span className="text-xs font-semibold text-slate-400">USD</span>
             </div>
           </div>
-        </div>
-      </header>
+        }
+      />
 
-      <main className="flex-1 px-6 py-6 pb-24 md:pb-6 max-w-7xl mx-auto w-full">
+      <main className="flex-1 px-8 py-8 pb-24 md:pb-8 max-w-6xl mx-auto w-full">
 
         {/* ── Stat Strip ── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
@@ -258,7 +257,7 @@ export default function LedgerClient({ accounts, initialTransactions, summary }:
           {/* Transaction List */}
           <div className="lg:col-span-8">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-black text-slate-900">Recent Activity</h2>
+              <h2 className="text-base font-bold text-slate-800">Recent Activity</h2>
               <button
                 onClick={() => setShowFilter(true)}
                 className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors relative ${activeFilters > 0 ? 'bg-[#3EA63B] text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}
@@ -284,53 +283,40 @@ export default function LedgerClient({ accounts, initialTransactions, summary }:
               </div>
             )}
 
-            <div className="space-y-4">
-              {(Object.entries(grouped) as [string, any[]][]).map(([date, txs]) => (
-                <div key={date}>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-4 mb-2">{date}</p>
-                  <div className="space-y-1">
+            <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
+              <div className="hidden md:grid grid-cols-12 gap-4 p-3 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
+                <div className="col-span-2">Date</div>
+                <div className="col-span-5">Description</div>
+                <div className="col-span-3">Category</div>
+                <div className="col-span-2 text-right">Amount</div>
+              </div>
+              <div className="divide-y divide-slate-100">
+                {(Object.entries(grouped) as [string, any[]][]).map(([date, txs]) => (
+                  <div key={date}>
+                    {/* On mobile we might show the date header, on desktop the date is in the row */}
                     {txs.map((tx) => {
-                      const TxIcon = getIconForCategory(tx.category);
-                      const txColor = getColorForCategory(tx.category);
                       return (
-                        <div key={tx.id}>
-                          <div
-                            className="flex items-center justify-between cursor-pointer hover:bg-white p-3 -mx-1 rounded-xl transition-colors"
-                            onClick={() => setExpandedTx(expandedTx === tx.id ? null : tx.id)}
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${txColor}`}>
-                                <TxIcon className="w-5 h-5" />
-                              </div>
-                              <div>
-                                <p className="text-sm font-bold text-slate-900">{tx.title}</p>
-                                <p className="text-[10px] text-slate-400">{tx.source}</p>
-                              </div>
-                            </div>
-                            <div className="text-right flex items-center gap-2">
-                              <div>
-                                <p className={`text-sm font-black ${tx.amount > 0 ? 'text-[#3EA63B]' : 'text-slate-900'}`}>
-                                  {tx.amount > 0 ? '+' : '-'} {fmt(tx.amount)}
-                                </p>
-                                <p className="text-[10px] text-slate-400 font-semibold">{tx.category}</p>
-                              </div>
-                              <ChevronDown className={`w-4 h-4 text-slate-300 transition-transform ${expandedTx === tx.id ? 'rotate-180' : ''}`} />
-                            </div>
+                        <div key={tx.id} className="grid grid-cols-1 md:grid-cols-12 gap-4 p-4 hover:bg-slate-50 transition-colors items-center text-sm">
+                          <div className="md:col-span-2 text-slate-500">
+                            {new Date(tx.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                           </div>
-                          {expandedTx === tx.id && (
-                            <div className="mx-2 mb-2 bg-white rounded-xl border border-slate-100 shadow-sm p-4 text-xs space-y-2">
-                              <div className="flex justify-between"><span className="text-slate-400">Category</span><span className="font-bold text-slate-800">{tx.category}</span></div>
-                              <div className="flex justify-between"><span className="text-slate-400">Account</span><span className="font-bold text-slate-800">{tx.source}</span></div>
-                              <div className="flex justify-between"><span className="text-slate-400">ETB</span><span className="font-bold text-slate-800">{Math.abs(tx.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
-                              <div className="flex justify-between"><span className="text-slate-400">USD</span><span className="font-bold text-slate-500">${(Math.abs(tx.amount) * ETB_TO_USD).toFixed(2)}</span></div>
-                            </div>
-                          )}
+                          <div className="md:col-span-5 font-medium text-slate-800">
+                            {tx.title}
+                          </div>
+                          <div className="md:col-span-3">
+                            <span className="inline-block px-2.5 py-1 bg-slate-100 text-slate-600 rounded-md text-xs">
+                              {tx.category}
+                            </span>
+                          </div>
+                          <div className={`md:col-span-2 text-right font-semibold ${tx.amount > 0 ? 'text-[#3EA63B]' : 'text-slate-700'}`}>
+                            {tx.amount > 0 ? '+' : ''}{fmt(tx.amount)}
+                          </div>
                         </div>
                       );
                     })}
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
               {filtered.length === 0 && !loading && (
                 <div className="text-center text-slate-400 py-12">
                   <CircleDollarSign className="w-12 h-12 mx-auto text-slate-200 mb-4" />

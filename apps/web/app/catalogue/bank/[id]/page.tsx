@@ -1,18 +1,21 @@
 import { notFound } from 'next/navigation';
-import { banks } from '@/lib/data/banks';
-import { allProducts as products } from '@/lib/data/products';
+import prisma from '@/lib/db';
 import Link from 'next/link';
 import { ArrowLeft, ArrowRight, Building2, Calendar, Globe, ShieldCheck, TrendingUp, BadgePercent, Zap } from 'lucide-react';
 
 export default async function BankDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const resolvedParams = await params;
-    const bank = banks.find(b => b.id === resolvedParams.id);
+    const bank = await prisma.bank.findUnique({
+        where: { id: resolvedParams.id }
+    });
 
     if (!bank) {
         notFound();
     }
 
-    const bankProducts = products.filter(p => p.bankId === bank.id || p.instituteId === bank.id);
+    const bankProducts = await prisma.product.findMany({
+        where: { OR: [{ bankId: bank.id }, { instituteId: bank.id }] }
+    });
     const loanProducts = bankProducts.filter(p => p.type === 'Loan');
     const savingsProducts = bankProducts.filter(p => p.type === 'Savings');
 

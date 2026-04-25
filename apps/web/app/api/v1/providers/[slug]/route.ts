@@ -6,14 +6,22 @@ export async function GET(
     { params }: { params: Promise<{ slug: string }> }
 ) {
     try {
-        const { slug } = await params;
+        const { slug: identifier } = await params;
 
-        const provider = await prisma.provider.findUnique({
-            where: { slug },
+        const provider = await prisma.provider.findFirst({
+            where: {
+                OR: [
+                    { id: identifier },
+                    { slug: identifier }
+                ]
+            },
             include: {
                 products: {
                     where: { isActive: true },
                     orderBy: { isFeatured: 'desc' }
+                },
+                _count: {
+                    select: { products: true }
                 }
             }
         });

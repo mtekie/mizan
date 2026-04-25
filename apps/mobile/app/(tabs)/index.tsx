@@ -9,6 +9,8 @@ import { router } from 'expo-router';
 import BottomSheet from '@gorhom/bottom-sheet';
 import { Bell, ChevronRight, Plus } from 'lucide-react-native';
 import { useStore } from '../../lib/store';
+import { SmartProfilePrompt } from '../../components/SmartProfilePrompt';
+import { ProfileCompleteness } from '../../components/ProfileCompleteness';
 
 import { api } from '../../lib/api';
 
@@ -85,6 +87,7 @@ export default function DashboardScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        <ProfileCompleteness user={profile} />
         <SmsPermissionCard />
         
         {/* Net Worth Summary */}
@@ -171,6 +174,7 @@ export default function DashboardScreen() {
           }
         }}
       />
+      <SmartProfilePrompt />
     </View>
   );
 }

@@ -58,6 +58,8 @@ export async function GET(req: Request) {
             }
         }
 
+        const skip = parseInt(searchParams.get('skip') || '0');
+
         const products = await prisma.product.findMany({
             where,
             include: {
@@ -66,12 +68,16 @@ export async function GET(req: Request) {
                     include: { tag: true }
                 }
             },
-            take: Math.min(take, 100),
+            skip,
+            take,
             orderBy: [
                 { isFeatured: 'desc' },
                 { matchScore: 'desc' },
             ]
         });
+
+        // Get total count for pagination info
+        const total = await prisma.product.count({ where });
 
         // Enrich with match scores
         let results = products.map(p => {

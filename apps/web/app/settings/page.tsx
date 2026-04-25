@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { User, Shield, Bell, Globe, Moon, Sun, Download, Trash2, LogOut, ChevronRight, Check, Languages, Banknote, Smartphone, Mail, TrendingUp, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { signOut, deleteAccount, exportData } from './actions';
+import { PageHeader } from '@/components/PageHeader';
 
 type ToggleProps = { enabled: boolean; onToggle: () => void };
 function Toggle({ enabled, onToggle }: ToggleProps) {
@@ -96,20 +97,30 @@ export default function SettingsPage() {
     const currencies = ['ETB', 'USD', 'EUR', 'GBP', 'AED'];
 
     return (
-        <div className="flex flex-col min-h-full bg-slate-50 md:bg-transparent">
-            <header className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-slate-100 px-6 py-4">
-                <div className="max-w-3xl mx-auto flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-black text-slate-900">Settings</h1>
-                        <p className="text-sm text-slate-500">Preferences, security, and data</p>
-                    </div>
-                    <Link href="/profile" className="text-xs font-bold text-[#3EA63B] border border-[#3EA63B]/30 bg-[#3EA63B]/5 px-3 py-1.5 rounded-lg hover:bg-[#3EA63B]/10 transition">
-                        View Profile
+        <div className="flex flex-col min-h-screen bg-[var(--color-mint-bg)] pb-24 md:pb-0">
+            {/* Desktop Header */}
+            <PageHeader 
+                title="Me Settings"
+                description="Preferences, security, and data"
+                actions={
+                    <Link href="/profile" className="flex items-center gap-2 bg-slate-100 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-slate-200 transition-colors">
+                        <User className="w-4 h-4" /> View Profile
                     </Link>
+                }
+            />
+
+            {/* Mobile Header */}
+            <header className="md:hidden sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-slate-100 px-6 py-4 flex items-center justify-between">
+                <div>
+                    <h1 className="text-xl font-black text-slate-900">Me Settings</h1>
+                    <p className="text-[10px] text-slate-500">Preferences & Security</p>
                 </div>
+                <Link href="/profile" className="text-xs font-bold text-[#3EA63B] border border-[#3EA63B]/30 bg-[#3EA63B]/5 px-3 py-1.5 rounded-lg hover:bg-[#3EA63B]/10 transition">
+                    Me
+                </Link>
             </header>
 
-            <main className="flex-1 px-6 py-6 pb-24 md:pb-6 max-w-3xl mx-auto w-full space-y-6">
+            <main className="flex-1 px-6 md:px-8 py-6 pb-24 md:pb-12 max-w-3xl mx-auto w-full space-y-6">
 
                 {/* ── Account ── */}
                 <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">

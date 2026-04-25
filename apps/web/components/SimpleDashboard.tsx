@@ -7,6 +7,8 @@ import { OnboardingPrompt } from '@/components/OnboardingPrompt';
 import { Nudge } from '@/components/Nudge';
 import { useNudges } from '@/hooks/useNudges';
 import { MintDonutChart, MintBudgetBar } from './MintCharts';
+import { SmartProfilePrompt } from './SmartProfilePrompt';
+import { ProfileCompleteness } from './ProfileCompleteness';
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -15,7 +17,7 @@ function getGreeting() {
   return { en: 'Good Evening', am: 'ደህና ዋሉ' };
 }
 
-export function SimpleDashboard({ user, accounts, transactions, summary }: { user: any, accounts: any[], transactions: any[], summary: any }) {
+export function SimpleDashboard({ user, accounts, transactions, summary, featuredProducts }: { user: any, accounts: any[], transactions: any[], summary: any, featuredProducts: any[] }) {
   const [tipIndex, setTipIndex] = useState(0);
   const { activeNudge } = useNudges({ 
     user, 
@@ -56,10 +58,9 @@ export function SimpleDashboard({ user, accounts, transactions, summary }: { use
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-[var(--color-mint-bg)]">
-
-      {/* ── Mint Hero Header ── */}
-      <div className="mint-gradient-hero px-6 pt-14 pb-8 relative overflow-hidden">
+    <div className="flex flex-col min-h-screen bg-[var(--color-mint-bg)] md:bg-slate-50 md:p-8">
+      {/* ── Mobile Hero Header (hidden on desktop) ── */}
+      <div className="md:hidden mint-gradient-hero px-6 pt-14 pb-8 relative overflow-hidden">
         {/* Decorative circles */}
         <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-white/5"></div>
         <div className="absolute -left-6 bottom-0 w-24 h-24 rounded-full bg-white/5"></div>
@@ -115,19 +116,44 @@ export function SimpleDashboard({ user, accounts, transactions, summary }: { use
         </div>
       </div>
 
+      {/* ── Desktop Header ── */}
+      <div className="hidden md:flex justify-between items-end mb-8 max-w-6xl mx-auto w-full">
+        <div>
+          <p className="text-sm font-semibold text-slate-500 mb-1">{greeting.en}</p>
+          <h1 className="text-3xl font-black text-slate-900 leading-none">
+            {user?.name?.split(' ')[0] || 'User'} <span className="font-ethiopic text-2xl text-slate-400">👋</span>
+          </h1>
+        </div>
+        <div className="text-right">
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Net Worth</p>
+          <h2 className="text-3xl font-black tracking-tight text-slate-900 leading-none">
+            {summary.netWorth.toLocaleString()}
+            <span className="text-lg font-bold text-slate-500 ml-2">ETB</span>
+          </h2>
+        </div>
+      </div>
+
       {/* ── Content Area ── */}
-      <div className="flex-1 px-5 -mt-4 relative z-10 pb-28 space-y-4">
+      <div className="flex-1 px-5 md:px-0 -mt-4 md:mt-0 relative z-10 pb-28 md:pb-8 max-w-6xl mx-auto w-full">
+        
+        {/* On desktop, use a CSS grid for the cards */}
+        <div className="space-y-4 md:space-y-0 md:grid md:grid-cols-12 md:gap-6">
+          
+          {/* Left Column (Main insights & transactions) */}
+          <div className="md:col-span-8 space-y-4 md:space-y-6">
+            
+            <ProfileCompleteness user={user} />
 
-        {activeNudge && (
-            <Nudge {...activeNudge} variant="card" />
-        )}
+            {activeNudge && (
+                <Nudge {...activeNudge} variant="card" />
+            )}
 
-        {accounts.length === 0 && !activeNudge && (
-            <OnboardingPrompt type="accounts" userName={user?.name?.split(' ')[0]} />
-        )}
+            {accounts.length === 0 && !activeNudge && (
+                <OnboardingPrompt type="accounts" userName={user?.name?.split(' ')[0]} />
+            )}
 
-        {/* Quick Actions */}
-        <div className="mint-card flex justify-around py-4 animate-slide-up" style={{ animationDelay: '0.1s' }}>
+            {/* Quick Actions (Mobile only, on desktop they use the sidebar/navbar) */}
+            <div className="md:hidden mint-card flex justify-around py-4 animate-slide-up" style={{ animationDelay: '0.1s' }}>
           {[
             { label: 'Add', icon: Plus, href: '/dreams', color: 'bg-[var(--color-mint-primary)]' },
             { label: 'Send', icon: ArrowUpRight, href: '/transfer', color: 'bg-blue-500' },
@@ -202,7 +228,11 @@ export function SimpleDashboard({ user, accounts, transactions, summary }: { use
             </div>
           )}
         </div>
+        </div>
 
+        {/* Right Column (Charts & Goals) */}
+        <div className="md:col-span-4 space-y-4 md:space-y-6">
+        
         {/* Spending Insights */}
         <div className="mint-card animate-slide-up" style={{ animationDelay: '0.25s' }}>
           <div className="flex justify-between items-center mb-4">
@@ -266,7 +296,38 @@ export function SimpleDashboard({ user, accounts, transactions, summary }: { use
           </div>
         </div>
 
+        {/* Featured Products Peek */}
+        {featuredProducts && featuredProducts.length > 0 && (
+          <div className="mint-card animate-slide-up" style={{ animationDelay: '0.6s' }}>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-sm font-bold text-[var(--color-mint-text)]">Featured for You</h3>
+              <Link href="/catalogue" className="text-xs font-bold text-[var(--color-mint-primary)] flex items-center gap-0.5 hover:underline">
+                See all <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 gap-3">
+              {featuredProducts.slice(0, 2).map((product: any) => (
+                <Link href={`/catalogue/${product.id}`} key={product.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
+                  <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center font-bold text-xs text-slate-400 border border-slate-100 shadow-sm">
+                    {product.bankLogo || '🏦'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-xs font-bold text-slate-800 truncate">{product.title || product.name}</h4>
+                    <p className="text-[10px] text-slate-400 truncate">{product.bankName || 'Financial Institution'}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-black text-[#3EA63B]">{product.interestRate}%</p>
+                    <p className="text-[9px] text-slate-400 font-bold uppercase">Interest</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+        </div>
+        </div>
       </div>
+      <SmartProfilePrompt user={user} />
     </div>
   );
 }

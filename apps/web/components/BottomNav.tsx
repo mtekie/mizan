@@ -17,7 +17,7 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 w-full bg-white border-t border-slate-100 py-2 px-4 flex justify-around items-center z-50 pb-safe md:hidden" role="navigation" aria-label="Bottom navigation">
+    <nav className="fixed bottom-0 w-full bg-white/80 backdrop-blur-lg border-t border-slate-100 py-3 px-4 flex justify-around items-center z-50 pb-safe md:hidden" role="navigation" aria-label="Bottom navigation">
       {navItems.map((item) => {
         const isActive = pathname === item.href || 
           (item.href !== '/' && pathname.startsWith(item.href));

@@ -38,8 +38,12 @@ export default function CatalogueScreen() {
   const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
   const [completeness, setCompleteness] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [skip, setSkip] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const PAGE_SIZE = 20;
   const initialLoadDone = useRef(false);
 
   // Fetch profile + featured once on mount
@@ -68,29 +72,46 @@ export default function CatalogueScreen() {
   }, []);
 
   // Fetch filtered products whenever category or search changes
-  const fetchProducts = useCallback(async (category: string, searchTerm: string) => {
+  const fetchProducts = useCallback(async (category: string, searchTerm: string, currentSkip: number = 0) => {
     try {
-      setError(null);
-      const params: Record<string, string> = {};
+      if (currentSkip === 0) {
+        setLoading(true);
+        setError(null);
+      } else {
+        setLoadingMore(true);
+      }
+
+      const params: Record<string, string> = {
+        skip: currentSkip.toString(),
+        take: PAGE_SIZE.toString()
+      };
       if (category !== 'all') params.class = category;
       if (searchTerm) params.search = searchTerm;
       
       const all = await api.products.list(params);
-      setProducts(all);
+      
+      if (currentSkip === 0) {
+        setProducts(all);
+      } else {
+        setProducts(prev => [...prev, ...all]);
+      }
+      
+      setHasMore(all.length === PAGE_SIZE);
+      setSkip(currentSkip);
     } catch (e: any) {
       console.error('Failed to fetch products:', e);
       setError('Could not load products. Make sure the server is running.');
-      // Don't clear existing products on error — keep stale data visible
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
     }
   }, []);
 
   // Initial load
   useEffect(() => {
     const init = async () => {
-      setLoading(true);
       await fetchInitialData();
-      await fetchProducts('all', '');
-      setLoading(false);
+      await fetchProducts('all', '', 0);
       initialLoadDone.current = true;
     };
     init();
@@ -99,18 +120,31 @@ export default function CatalogueScreen() {
   // Re-fetch products when category changes (after initial load)
   useEffect(() => {
     if (!initialLoadDone.current) return;
-    fetchProducts(activeCategory, search);
+    fetchProducts(activeCategory, search, 0);
   }, [activeCategory]);
+
+  const loadMore = () => {
+    if (loadingMore || !hasMore) return;
+    fetchProducts(activeCategory, search, skip + PAGE_SIZE);
+  };
 
   const onRefresh = async () => {
     setRefreshing(true);
     await fetchInitialData();
-    await fetchProducts(activeCategory, search);
+    await fetchProducts(activeCategory, search, 0);
     setRefreshing(false);
   };
 
   const handleSearch = () => {
-    fetchProducts(activeCategory, search);
+    fetchProducts(activeCategory, search, 0);
+  };
+
+  const handleSeeAllFeatured = () => {
+    // For now, just scroll to all products or we could implement a featured-only filter
+    // Let's reset search and category to 'all' to show everything
+    setActiveCategory('all');
+    setSearch('');
+    fetchProducts('all', '', 0);
   };
 
   const renderHeader = () => (
@@ -168,7 +202,7 @@ export default function CatalogueScreen() {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Featured for You</Text>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={handleSeeAllFeatured}>
             <Text style={styles.seeAll}>See All</Text>
           </TouchableOpacity>
         </View>
@@ -225,6 +259,13 @@ export default function CatalogueScreen() {
         )}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={MizanColors.mintPrimary} />
+        }
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={
+          loadingMore ? (
+            <ActivityIndicator size="small" color={MizanColors.mintPrimary} style={{ paddingVertical: 20 }} />
+          ) : null
         }
         ListEmptyComponent={
           loading ? (
