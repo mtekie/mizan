@@ -4,11 +4,12 @@ This checklist is for a fast web beta launch. Public App Store and Play Store la
 
 ## Tonight Scope
 
-Recommended launch scope:
+Confirmed launch scope:
 
 - Web production beta.
-- Android internal build only, if a development/preview build is needed for testing.
-- iOS internal/TestFlight preparation only, not public App Store release.
+- Fresh Supabase database with no real data.
+- Android internal validation build.
+- iOS internal/TestFlight preparation while App Store setup starts on the side.
 
 Do not promise public mobile-store availability tonight.
 
@@ -55,10 +56,13 @@ Mobile:
 Before web beta:
 
 1. Confirm the target Supabase project.
-2. Confirm whether the target database is empty or already has production data.
-3. For a beta database with no valuable data, `npm run db:push` is acceptable.
-4. For a production database with valuable data, create and review Prisma migrations before deploy.
-5. Seed taxonomy/providers only after the schema is in place.
+2. Confirm `DATABASE_URL` and `DIRECT_URL` point to the fresh database.
+3. Run `npm run db:validate`.
+4. Run `npm run db:push`.
+5. Run `npm run db:seed:taxonomy`.
+6. Run `npm run db:seed:providers`.
+7. Create a test user through Supabase Auth or the app signup flow.
+8. Promote one trusted test user to `ADMIN` if admin seeding/screens are needed.
 
 Useful commands:
 
@@ -70,6 +74,8 @@ npm run db:seed:taxonomy
 npm run db:seed:providers
 ```
 
+Because this launch targets a fresh database, direct `db:push` is acceptable. Move to reviewed migrations before protecting real production data.
+
 ## Web Deploy
 
 Before deploying:
@@ -80,23 +86,59 @@ Before deploying:
 - Deploy web.
 - Smoke test auth, onboarding, dashboard, ledger, profile, catalogue, and product details.
 
+Minimum web beta smoke test:
+
+- `/login`: email signup/login works.
+- `/onboarding`: user can complete required steps.
+- `/`: dashboard loads after onboarding.
+- `/ledger`: account/transaction views load.
+- `/catalogue`: products/providers load from seeded data.
+- `/catalogue/[id]`: product detail loads.
+- `/profile`: profile loads for authenticated user.
+- `/settings`: settings load and save.
+
 ## Mobile Reality Check
 
 Android:
 
 - SMS permission requires a clear user-facing reason and Play Store data safety answers.
 - Use internal testing until the permission story is reviewed.
+- Build internal/dev client first because the app includes local native code.
 
 iOS:
 
 - iOS cannot use Android-style SMS inbox ingestion.
 - Choose a v1 fallback before public launch: manual entry, statement upload, email import, or no auto-import.
+- Start App Store Connect/TestFlight setup on the side.
+
+Internal validation commands:
+
+```bash
+cd /Users/tykers/Downloads/mizan/apps/mobile
+npx eas-cli@latest build -p android --profile development
+npx eas-cli@latest build -p ios --profile development
+```
+
+For local native builds:
+
+```bash
+cd /Users/tykers/Downloads/mizan
+npm run android --workspace apps/mobile
+npm run ios --workspace apps/mobile
+```
+
+After installing a dev client, start Metro with:
+
+```bash
+cd /Users/tykers/Downloads/mizan
+npm run dev --workspace apps/mobile
+```
 
 ## Stop-Ship Items
 
 - Unknown production database state.
 - Missing Supabase env vars.
 - Broken login/signup callback.
-- No migration/seed decision.
+- Seed scripts fail against the fresh database.
 - Public Android release with unreviewed SMS permission claim.
 - Public iOS release with SMS-dependent core flow.

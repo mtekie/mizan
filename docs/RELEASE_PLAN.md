@@ -37,7 +37,8 @@ Status:
 
 - Typecheck, lint, and shared auth-helper coverage are complete.
 - Prisma command validation is complete.
-- Remaining Phase 1 decision is whether tonight uses `db:push` against a disposable beta database or a reviewed migration flow.
+- Tonight uses `db:push` against a fresh/disposable beta database.
+- Reviewed migrations should be introduced before protecting real production data.
 
 ## Phase 2: Web MVP Completion
 
