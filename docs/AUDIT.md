@@ -8,7 +8,7 @@ This audit reflects the current workspace, including uncommitted changes already
 
 Mizan is now a real monorepo rather than the AI Studio starter described by the old README. The core direction is clear: Next.js provides the web product and API, Expo provides mobile clients, Prisma models the data, Supabase handles auth, and shared packages connect the apps.
 
-The project is not release-ready yet. The main blockers are TypeScript errors, lint failures, Prisma schema/API drift, mobile auth mismatch across most API routes, and incomplete platform documentation. Android has the most native-specific work because of SMS permissions and the local Expo module. iOS is structurally possible but needs a feature decision around SMS-dependent flows, since iOS does not allow the same SMS inbox access model.
+The project is not release-ready yet. The main blockers are database/migration readiness, Android SMS compliance, iOS transaction-ingestion strategy, store metadata, and final end-to-end product QA. Android has the most native-specific work because of SMS permissions and the local Expo module. iOS is structurally possible but needs a feature decision around SMS-dependent flows, since iOS does not allow the same SMS inbox access model.
 
 ## Current Architecture
 
@@ -92,18 +92,17 @@ Primary categories:
 
 ## Release Blockers
 
-1. Mobile API authentication must be normalized. The mobile client sends a Bearer token, but many API routes use `createClient()` and cookie-based `supabase.auth.getUser()` instead of the existing `getAuthUser(req)` adapter.
-2. Local Prisma config is inconsistent. Root `prisma.config.ts` points at `prisma/schema.prisma`, while the schema lives at `apps/web/prisma/schema.prisma`.
-3. No migrations directory exists under `apps/web/prisma`; production database changes need a migration policy.
-4. Android SMS functionality requires product, privacy, and store compliance decisions before release.
-5. iOS needs a substitute for Android-only SMS inbox functionality.
-6. App Store and Play Store metadata, privacy disclosures, screenshots, and permission explanations are not documented yet.
+1. Local Prisma config is inconsistent. Root `prisma.config.ts` points at `prisma/schema.prisma`, while the schema lives at `apps/web/prisma/schema.prisma`.
+2. No migrations directory exists under `apps/web/prisma`; production database changes need a migration policy.
+3. Android SMS functionality requires product, privacy, and store compliance decisions before release.
+4. iOS needs a substitute for Android-only SMS inbox functionality.
+5. App Store and Play Store metadata, privacy disclosures, screenshots, and permission explanations are not documented yet.
 
 ## High-Risk Areas
 
 ### Auth Boundary
 
-Web SSR auth is cookie-based. Mobile auth is Bearer-token-based. Some routes already use `getAuthUser(req)`, but most protected routes do not. This likely causes authenticated mobile calls to fail with `401` even when Supabase has a valid mobile session.
+Protected `/api/v1` routes now use `getAuthUser(req)`, which supports both web cookie sessions and mobile `Authorization: Bearer <token>` sessions. Public product/provider/taxonomy routes remain callable without authentication, while optional personalization also uses the shared helper when a session is present.
 
 ### Schema Drift
 

@@ -33,6 +33,11 @@ Primary tasks:
 - Update all protected API routes to use a shared auth helper that supports cookies and Bearer tokens.
 - Tighten shared package types so mobile demo/fallback data cannot drift.
 
+Status:
+
+- Typecheck, lint, and shared auth-helper coverage are complete.
+- Remaining Phase 1 work is Prisma command/migration readiness.
+
 ## Phase 2: Web MVP Completion
 
 Exit criteria:

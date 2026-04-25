@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { getAuthUser } from '@/lib/supabase/auth-adapter';
 import prisma from '@/lib/db';
 import { z } from 'zod';
 
@@ -12,12 +12,11 @@ const ProfileSchema = z.object({
     familyStatus: z.string().optional(),
 });
 
-export async function GET() {
+export async function GET(req: Request) {
     try {
-        const supabase = await createClient();
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        const user = await getAuthUser(req);
 
-        if (authError || !user) {
+        if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
@@ -32,12 +31,11 @@ export async function GET() {
     }
 }
 
-export async function POST(req: Request) {
+async function updateProfile(req: Request) {
     try {
-        const supabase = await createClient();
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        const user = await getAuthUser(req);
 
-        if (authError || !user) {
+        if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
@@ -87,9 +85,17 @@ export async function POST(req: Request) {
             }
         });
 
-        return NextResponse.json({ success: true, user: updatedUser });
+        return NextResponse.json(updatedUser);
     } catch (error) {
         console.error('Profile Update Error:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
+}
+
+export async function POST(req: Request) {
+    return updateProfile(req);
+}
+
+export async function PATCH(req: Request) {
+    return updateProfile(req);
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { createClient } from '@/lib/supabase/server';
+import { getAuthUser } from '@/lib/supabase/auth-adapter';
 import { computeMatchScore } from '@/lib/engine/matching';
 
 export async function GET(
@@ -40,8 +40,7 @@ export async function GET(
         let personalizedScore = product.matchScore || 50;
 
         try {
-            const supabase = await createClient();
-            const { data: { user: authUser } } = await supabase.auth.getUser();
+            const authUser = await getAuthUser(req);
 
             if (authUser) {
                 const bookmark = await prisma.productBookmark.findUnique({

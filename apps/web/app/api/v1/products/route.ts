@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { createClient } from '@/lib/supabase/server';
+import { getAuthUser } from '@/lib/supabase/auth-adapter';
 import { computeMatchScore } from '@/lib/engine/matching';
 
 export async function GET(req: Request) {
@@ -49,8 +49,7 @@ export async function GET(req: Request) {
         let user: any = null;
         if (scored) {
             try {
-                const supabase = await createClient();
-                const { data: { user: authUser } } = await supabase.auth.getUser();
+                const authUser = await getAuthUser(req);
                 if (authUser) {
                     user = await prisma.user.findUnique({ where: { id: authUser.id } });
                 }

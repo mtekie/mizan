@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { createClient } from '@/lib/supabase/server';
 
 export async function POST(
     req: Request,
@@ -10,9 +9,6 @@ export async function POST(
         const { id } = await params;
         const body = await req.json();
         const { action } = body; // 'VIEW' or 'CLICK'
-
-        const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
 
         // Increment counts in Product model (using the legacy or new fields)
         // For now, we'll just track it in a simple way. 

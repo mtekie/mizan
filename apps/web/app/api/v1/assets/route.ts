@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { createClient } from '@/lib/supabase/server';
+import { getAuthUser } from '@/lib/supabase/auth-adapter';
 import { z } from 'zod';
 
 const assetSchema = z.object({
@@ -10,12 +10,11 @@ const assetSchema = z.object({
     imageUrl: z.string().optional(),
 });
 
-export async function GET() {
+export async function GET(req: Request) {
     try {
-        const supabase = await createClient();
-        const { data: { user }, error } = await supabase.auth.getUser();
+        const user = await getAuthUser(req);
 
-        if (error || !user) {
+        if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
@@ -32,10 +31,9 @@ export async function GET() {
 
 export async function POST(req: Request) {
     try {
-        const supabase = await createClient();
-        const { data: { user }, error } = await supabase.auth.getUser();
+        const user = await getAuthUser(req);
 
-        if (error || !user) {
+        if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
@@ -60,10 +58,9 @@ export async function POST(req: Request) {
 
 export async function PATCH(req: Request) {
     try {
-        const supabase = await createClient();
-        const { data: { user }, error } = await supabase.auth.getUser();
+        const user = await getAuthUser(req);
 
-        if (error || !user) {
+        if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
@@ -92,10 +89,9 @@ export async function PATCH(req: Request) {
 
 export async function DELETE(req: Request) {
     try {
-        const supabase = await createClient();
-        const { data: { user }, error } = await supabase.auth.getUser();
+        const user = await getAuthUser(req);
 
-        if (error || !user) {
+        if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 

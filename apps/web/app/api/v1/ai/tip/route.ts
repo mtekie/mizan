@@ -1,12 +1,11 @@
 import { GoogleGenAI } from '@google/genai';
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { getAuthUser } from '@/lib/supabase/auth-adapter';
 import prisma from '@/lib/db';
 
 export async function POST(request: Request) {
     try {
-        const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = await getAuthUser(request);
 
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
