@@ -26,6 +26,8 @@ export default function Onboarding() {
     monthlyIncomeRange: '',
     educationLevel: '',
     employmentStatus: '',
+    employmentSector: '',
+    residencyStatus: 'RESIDENT',
   });
   const [goals, setGoals] = useState<any[]>([]);
 

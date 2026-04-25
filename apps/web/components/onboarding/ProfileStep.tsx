@@ -1,7 +1,18 @@
 'use client';
 
-import { UserCircle, ArrowRight, ArrowLeft, GraduationCap, Briefcase, TrendingUp } from 'lucide-react';
+import { UserCircle, ArrowRight, ArrowLeft, GraduationCap, Briefcase, MapPin } from 'lucide-react';
 import { motion } from 'framer-motion';
+
+const EMPLOYMENT_SECTORS = [
+    { label: 'Agriculture', value: 'AGRICULTURE' },
+    { label: 'Trade', value: 'TRADE' },
+    { label: 'Technology', value: 'TECHNOLOGY' },
+    { label: 'Manufacturing', value: 'MANUFACTURING' },
+    { label: 'Construction', value: 'CONSTRUCTION' },
+    { label: 'Transport', value: 'TRANSPORT' },
+    { label: 'Hospitality', value: 'HOSPITALITY' },
+    { label: 'Other', value: 'GENERAL' },
+];
 
 export function ProfileStep({ 
   data, 
@@ -98,6 +109,39 @@ export function ProfileStep({
                             {e}
                         </button>
                     ))}
+                </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-1.5">
+                        <Briefcase className="w-3 h-3" /> Sector
+                    </label>
+                    <select
+                        value={data.employmentSector || ''}
+                        onChange={(e) => update('employmentSector', e.target.value)}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-3 text-xs font-bold text-white focus:outline-none focus:ring-1 focus:ring-purple-500 appearance-none"
+                    >
+                        <option value="">General</option>
+                        {EMPLOYMENT_SECTORS.map((sector) => (
+                            <option key={sector.value} value={sector.value}>{sector.label}</option>
+                        ))}
+                    </select>
+                </div>
+
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-1.5">
+                        <MapPin className="w-3 h-3" /> Residency
+                    </label>
+                    <select
+                        value={data.residencyStatus || 'RESIDENT'}
+                        onChange={(e) => update('residencyStatus', e.target.value)}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-3 text-xs font-bold text-white focus:outline-none focus:ring-1 focus:ring-purple-500 appearance-none"
+                    >
+                        <option value="RESIDENT">Resident</option>
+                        <option value="DIASPORA">Diaspora</option>
+                        <option value="EXPAT">Expat</option>
+                    </select>
                 </div>
             </div>
         </div>

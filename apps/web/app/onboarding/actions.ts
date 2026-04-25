@@ -22,6 +22,8 @@ export async function performUpdateOnboardingPhase(phase: string, data: any) {
     if (data.dateOfBirth) payload.dateOfBirth = new Date(data.dateOfBirth);
     if (data.educationLevel) payload.educationLevel = data.educationLevel;
     if (data.employmentStatus) payload.employmentStatus = data.employmentStatus;
+    if (data.employmentSector) payload.employmentSector = data.employmentSector;
+    if (data.residencyStatus) payload.residencyStatus = data.residencyStatus;
     if (data.monthlyIncomeRange) payload.monthlyIncomeRange = data.monthlyIncomeRange;
     if (data.familyStatus) payload.familyStatus = data.familyStatus;
 
@@ -55,6 +57,7 @@ export async function performUpdateOnboardingPhase(phase: string, data: any) {
                 type: acc.type || 'Savings',
                 number: acc.accountNumber || null,
                 balance: parseFloat(acc.balance) || 0,
+                isCompulsory: Boolean(acc.isCompulsory),
                 color: acc.color || '#3EA63B'
              }
           });

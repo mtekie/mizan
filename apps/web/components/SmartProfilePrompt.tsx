@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, X, ArrowRight, Trophy } from 'lucide-react';
 import { performUpdateOnboardingPhase } from '@/app/onboarding/actions';
@@ -41,24 +41,49 @@ const QUESTIONS: Question[] = [
       { label: 'Over 100k ETB', value: 'Over 100k' },
     ]
   },
+  {
+    id: '3',
+    field: 'employmentSector',
+    label: 'Which sector best describes your work?',
+    type: 'select',
+    points: 10,
+    options: [
+      { label: 'Agriculture', value: 'AGRICULTURE' },
+      { label: 'Trade', value: 'TRADE' },
+      { label: 'Technology', value: 'TECHNOLOGY' },
+      { label: 'Manufacturing', value: 'MANUFACTURING' },
+      { label: 'Other', value: 'GENERAL' },
+    ]
+  },
+  {
+    id: '4',
+    field: 'residencyStatus',
+    label: 'What is your residency status?',
+    type: 'select',
+    points: 10,
+    options: [
+      { label: 'Resident', value: 'RESIDENT' },
+      { label: 'Diaspora', value: 'DIASPORA' },
+      { label: 'Expat', value: 'EXPAT' },
+    ]
+  },
 ];
 
 export function SmartProfilePrompt({ user }: { user: any }) {
-  const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
+  const currentQuestion = useMemo(
+    () => QUESTIONS.find(q => !user[q.field]) ?? null,
+    [user]
+  );
   const [value, setValue] = useState('');
   const [isVisible, setIsVisible] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
 
   useEffect(() => {
-    // Find the first question that the user hasn't answered yet
-    const nextQ = QUESTIONS.find(q => !user[q.field]);
-    if (nextQ) {
-      setCurrentQuestion(nextQ);
-      // Show prompt after a small delay
-      const timer = setTimeout(() => setIsVisible(true), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [user]);
+    if (!currentQuestion) return;
+
+    const timer = setTimeout(() => setIsVisible(true), 3000);
+    return () => clearTimeout(timer);
+  }, [currentQuestion]);
 
   const handleSave = async () => {
     if (!currentQuestion || !value) return;

@@ -8,6 +8,8 @@ const ProfileSchema = z.object({
     dateOfBirth: z.string().optional(),
     educationLevel: z.string().optional(),
     employmentStatus: z.string().optional(),
+    employmentSector: z.string().optional(),
+    residencyStatus: z.enum(['RESIDENT', 'DIASPORA', 'EXPAT']).optional(),
     monthlyIncomeRange: z.string().optional(),
     familyStatus: z.string().optional(),
 });

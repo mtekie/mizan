@@ -1,4 +1,7 @@
+import type { ProductAttributes } from '@/lib/marketplace/product-attributes';
+
 export type ProductCategory = 'Banks' | 'BNPL' | 'Insurance' | 'MFIs' | 'SACCOs';
+export type ProductClass = 'SAVINGS' | 'CREDIT' | 'INSURANCE' | 'PAYMENT' | 'CAPITAL_MARKET' | 'COMMUNITY';
 
 export type Product = {
     id: string;
@@ -16,7 +19,11 @@ export type Product = {
 
     // Shared enriched fields
     instituteId?: string;
+    providerId?: string;
     name?: string;
+    productClass?: ProductClass;
+    productType?: string;
+    attributes?: ProductAttributes;
     type?: string;
     interestRate?: number;
     interestMax?: number;

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { getAuthUser } from '@/lib/supabase/auth-adapter';
-import { computeMatchScore } from '@/lib/engine/matching';
+import { computeMatchScore, isProductEligibleForUser } from '@/lib/engine/matching';
 
 export async function GET(req: Request) {
     try {
@@ -76,11 +76,12 @@ export async function GET(req: Request) {
             ]
         });
 
-        // Get total count for pagination info
-        const total = await prisma.product.count({ where });
-
         // Enrich with match scores
-        let results = products.map(p => {
+        const eligibleProducts = user
+            ? products.filter(p => isProductEligibleForUser(user, p as any))
+            : products;
+
+        let results = eligibleProducts.map(p => {
             const score = user ? computeMatchScore(user, p as any) : (p.matchScore || 50);
             return { ...p, personalizedScore: score };
         });

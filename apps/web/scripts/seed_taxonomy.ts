@@ -108,8 +108,8 @@ const tags = [
   { slug: 'youth', label: 'Youth (Under 18)', category: 'AUDIENCE', icon: '👶', profileField: 'dateOfBirth', profileValue: 'UNDER_18' },
   { slug: 'teen', label: 'Teen (14-17)', category: 'AUDIENCE', icon: '🧑', profileField: 'dateOfBirth', profileValue: 'TEEN' },
   { slug: 'senior', label: 'Senior / Retirement', category: 'AUDIENCE', icon: '👴', profileField: 'dateOfBirth', profileValue: 'SENIOR' },
-  { slug: 'diaspora', label: 'Diaspora', category: 'AUDIENCE', icon: '🌍', profileField: 'housingStatus', profileValue: 'DIASPORA' },
-  { slug: 'expat', label: 'Expat / Foreign National', category: 'AUDIENCE', icon: '🛂' },
+  { slug: 'diaspora', label: 'Diaspora', category: 'AUDIENCE', icon: '🌍', profileField: 'residencyStatus', profileValue: 'DIASPORA' },
+  { slug: 'expat', label: 'Expat / Foreign National', category: 'AUDIENCE', icon: '🛂', profileField: 'residencyStatus', profileValue: 'EXPAT' },
   { slug: 'first_time_saver', label: 'First-Time Saver', category: 'AUDIENCE', icon: '🌱' },
   { slug: 'low_income', label: 'Low Income', category: 'AUDIENCE', icon: '📉', profileField: 'monthlyIncomeRange', profileValue: 'LOW' },
   { slug: 'salaried', label: 'Salaried Employee', category: 'AUDIENCE', icon: '💼', profileField: 'employmentStatus', profileValue: 'EMPLOYED' },
@@ -117,16 +117,16 @@ const tags = [
   { slug: 'group_based', label: 'Group / Cooperative', category: 'AUDIENCE', icon: '👥' },
   { slug: 'ngo_staff', label: 'NGO / Intl Org Staff', category: 'AUDIENCE', icon: '🏢' },
   // SECTOR
-  { slug: 'agriculture', label: 'Agriculture', category: 'SECTOR', icon: '🌾', profileField: 'employmentStatus', profileValue: 'FARMER' },
-  { slug: 'manufacturing', label: 'Manufacturing', category: 'SECTOR', icon: '🏭' },
-  { slug: 'trade', label: 'Trade / Import-Export', category: 'SECTOR', icon: '🚢' },
-  { slug: 'construction', label: 'Construction', category: 'SECTOR', icon: '🏗️' },
-  { slug: 'transport', label: 'Transport / Logistics', category: 'SECTOR', icon: '🚛' },
-  { slug: 'hospitality', label: 'Hospitality / Tourism', category: 'SECTOR', icon: '🏨' },
-  { slug: 'technology', label: 'Technology / IT', category: 'SECTOR', icon: '💻' },
-  { slug: 'education_sector', label: 'Education', category: 'SECTOR', icon: '📚' },
-  { slug: 'health_sector', label: 'Health / Pharma', category: 'SECTOR', icon: '🏥' },
-  { slug: 'creative', label: 'Creative / Media', category: 'SECTOR', icon: '🎨' },
+  { slug: 'agriculture', label: 'Agriculture', category: 'SECTOR', icon: '🌾', profileField: 'employmentSector', profileValue: 'AGRICULTURE' },
+  { slug: 'manufacturing', label: 'Manufacturing', category: 'SECTOR', icon: '🏭', profileField: 'employmentSector', profileValue: 'MANUFACTURING' },
+  { slug: 'trade', label: 'Trade / Import-Export', category: 'SECTOR', icon: '🚢', profileField: 'employmentSector', profileValue: 'TRADE' },
+  { slug: 'construction', label: 'Construction', category: 'SECTOR', icon: '🏗️', profileField: 'employmentSector', profileValue: 'CONSTRUCTION' },
+  { slug: 'transport', label: 'Transport / Logistics', category: 'SECTOR', icon: '🚛', profileField: 'employmentSector', profileValue: 'TRANSPORT' },
+  { slug: 'hospitality', label: 'Hospitality / Tourism', category: 'SECTOR', icon: '🏨', profileField: 'employmentSector', profileValue: 'HOSPITALITY' },
+  { slug: 'technology', label: 'Technology / IT', category: 'SECTOR', icon: '💻', profileField: 'employmentSector', profileValue: 'TECHNOLOGY' },
+  { slug: 'education_sector', label: 'Education', category: 'SECTOR', icon: '📚', profileField: 'employmentSector', profileValue: 'EDUCATION' },
+  { slug: 'health_sector', label: 'Health / Pharma', category: 'SECTOR', icon: '🏥', profileField: 'employmentSector', profileValue: 'HEALTH' },
+  { slug: 'creative', label: 'Creative / Media', category: 'SECTOR', icon: '🎨', profileField: 'employmentSector', profileValue: 'CREATIVE' },
   { slug: 'general_sector', label: 'General (No Restriction)', category: 'SECTOR', icon: '🔓' },
   // FEATURE
   { slug: 'interest_free', label: 'Interest-Free', category: 'FEATURE', icon: '☪️', profileField: 'interestFree', profileValue: 'true' },
@@ -195,4 +195,3 @@ async function main() {
 main()
   .catch((e) => { console.error(e); process.exit(1); })
   .finally(() => prisma.$disconnect());
-

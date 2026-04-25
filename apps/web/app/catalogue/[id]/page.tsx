@@ -11,21 +11,25 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     const resolvedParams = await params;
     
     const product = await prisma.product.findUnique({
-        where: { id: resolvedParams.id }
+        where: { id: resolvedParams.id },
+        include: { provider: true }
     });
     
     if (!product) {
         notFound();
     }
 
-    const bank = product.bankId || product.instituteId 
-        ? await prisma.bank.findUnique({ where: { id: product.bankId || product.instituteId || '' } })
-        : null;
+    const provider = product.provider ?? (product.bankId
+        ? await prisma.provider.findUnique({ where: { slug: product.bankId } })
+        : null);
+    const providerHref = provider?.slug ? `/catalogue/bank/${provider.slug}` : '/catalogue';
 
     const formatInterest = (val: number) => val < 1 ? (val * 100).toFixed(0) : val.toFixed(0);
     const interestDisplay = product.interestMax && product.interestMax > (product.interestRate || 0)
         ? `${formatInterest(product.interestRate || 0)}–${formatInterest(product.interestMax)}%`
         : `${formatInterest(product.interestRate || 0)}%`;
+    const isCreditProduct = product.productClass === 'CREDIT' || Boolean(product.loanCategory || product.maxAmount);
+    const productKind = isCreditProduct ? 'Loan' : product.productClass === 'SAVINGS' ? 'Savings' : product.productType || product.productClass || 'Product';
 
     return (
         <div className="flex flex-col min-h-screen bg-slate-50 md:bg-transparent md:py-8">
@@ -56,15 +60,18 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
             <main className="flex-1 px-4 py-6 pb-32 max-w-3xl mx-auto w-full">
                 {/* Title Section */}
                 <section className="mb-8">
-                    <Link href={`/catalogue/bank/${bank?.id || product.bankId || product.instituteId}`} className="flex items-center gap-2 mb-3 group">
-                        <div className={`w-10 h-10 rounded-xl ${bank?.color || 'bg-slate-600'} ${bank?.textColor || 'text-white'} flex items-center justify-center font-bold text-sm shadow-sm`}>
-                            {bank?.logo || product.bankLogo || 'FI'}
+                    <Link href={providerHref} className="flex items-center gap-2 mb-3 group">
+                        <div
+                            className="w-10 h-10 rounded-xl bg-slate-600 text-white flex items-center justify-center font-bold text-sm shadow-sm"
+                            style={provider?.brandColor ? { backgroundColor: provider.brandColor } : undefined}
+                        >
+                            {provider?.shortCode || product.bankLogo || 'FI'}
                         </div>
                         <div>
                             <span className="text-sm font-semibold text-slate-600 group-hover:text-[#3EA63B] transition-colors">
-                                {bank?.name || product.bankName || 'Financial Institution'}
+                                {provider?.name || product.bankName || 'Financial Institution'}
                             </span>
-                            {bank?.nameAmh && <span className="text-xs text-slate-400 ml-2 font-ethiopic">{bank.nameAmh}</span>}
+                            {provider?.nameAmh && <span className="text-xs text-slate-400 ml-2 font-ethiopic">{provider.nameAmh}</span>}
                         </div>
                     </Link>
                     <h1 className="text-3xl font-black text-slate-900 leading-tight mb-2">{product.title || product.name}</h1>
@@ -89,11 +96,11 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                         <div className="flex items-center gap-1.5 text-slate-400 mb-1">
                             <Banknote className="w-4 h-4 text-blue-500" />
                             <span className="text-[10px] font-bold uppercase tracking-wider">
-                                {product.type === 'Loan' ? 'Max Loan' : 'Min Balance'}
+                                {isCreditProduct ? 'Max Loan' : 'Min Balance'}
                             </span>
                         </div>
                         <div className="text-xl font-black text-slate-900">
-                            {product.type === 'Loan'
+                            {isCreditProduct
                                 ? (product.maxAmount ? `${product.maxAmount.toLocaleString()}` : 'N/A')
                                 : (product.minBalance ? `${product.minBalance.toLocaleString()}` : '0')
                             }
@@ -223,26 +230,26 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                     </section>
                 )}
                 {/* Loan Calculator — only for loan products */}
-                {product.type === 'Loan' && (
+                {isCreditProduct && (
                     <LoanCalculator
-                        interestRate={product.interestRate}
-                        interestMax={product.interestMax}
-                        maxAmount={product.maxAmount}
-                        term={product.term}
-                        fees={product.fees}
-                        repaymentFrequency={product.repaymentFrequency}
-                        disbursementTime={product.disbursementTime}
-                        collateralRequirements={product.collateralRequirements}
-                        prepaymentPenalties={product.prepaymentPenalties}
+                        interestRate={product.interestRate ?? undefined}
+                        interestMax={product.interestMax ?? undefined}
+                        maxAmount={product.maxAmount ?? undefined}
+                        term={product.term ?? undefined}
+                        fees={product.fees ?? undefined}
+                        repaymentFrequency={product.repaymentFrequency ?? undefined}
+                        disbursementTime={product.disbursementTime ?? undefined}
+                        collateralRequirements={product.collateralRequirements ?? undefined}
+                        prepaymentPenalties={product.prepaymentPenalties ?? undefined}
                         productName={product.title || product.name || 'This Product'}
                     />
                 )}
 
                 {/* Suitability Check */}
                 <LoanSuitability
-                    productType={product.type || 'Loan'}
+                    productType={productKind}
                     productName={product.title || product.name || 'This Product'}
-                    interestRate={product.interestRate}
+                    interestRate={product.interestRate ?? undefined}
                 />
 
                 {/* Community Voice */}
@@ -251,7 +258,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
 
             {/* Fixed Call to Action */}
             <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-100 md:bg-transparent md:border-none md:static md:p-0 md:max-w-3xl md:mx-auto md:w-full md:mt-6">
-                <ApplyButton productType={product.type || 'Product'} />
+                <ApplyButton productType={productKind} />
             </div>
         </div>
     );

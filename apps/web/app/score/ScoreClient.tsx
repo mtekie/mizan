@@ -23,6 +23,8 @@ export default function ScoreClient({ initialScore = 600 }: { initialScore: numb
     monthlyIncomeRange: '',
     educationLevel: '',
     employmentStatus: '',
+    employmentSector: '',
+    residencyStatus: 'RESIDENT',
     financialPriority: '',
     riskAppetite: '',
     interestFree: false,

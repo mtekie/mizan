@@ -6,13 +6,14 @@ import Link from 'next/link';
 
 export function ProfileCompleteness({ user }: { user: any }) {
   const fields = [
-    'fullName', 
-    'username', 
-    'gender', 
-    'employmentStatus', 
+    'name',
+    'username',
+    'gender',
+    'employmentStatus',
+    'employmentSector',
+    'residencyStatus',
     'monthlyIncomeRange', 
-    'education', 
-    'location'
+    'educationLevel'
   ];
   
   const completedFields = fields.filter(f => !!user[f]);

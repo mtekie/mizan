@@ -31,15 +31,15 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
   const searchParams = useSearchParams();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [goalData, setGoalData] = useState<any>(null);
+  const [goalData, setGoalData] = useState<any[]>([]);
 
   const isGoalOnboarding = searchParams.get('action') === 'set-budget';
 
   const handleGoalComplete = async () => {
-    if (!goalData) return;
+    if (goalData.length === 0) return;
     setLoading(true);
     try {
-      const res = await performUpdateOnboardingPhase('complete', { goal: goalData });
+      const res = await performUpdateOnboardingPhase('complete', { goals: goalData });
       if (res.error) throw new Error(res.error);
       
       toast.success('Awesome! Your first financial goal is set.');
@@ -542,8 +542,8 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
                </button>
                
                <GoalStep 
-                goal={goalData}
-                setGoal={setGoalData}
+                goals={goalData}
+                setGoals={setGoalData}
                 onNext={handleGoalComplete}
                 onBack={() => router.push('/dreams')}
                 loading={loading}

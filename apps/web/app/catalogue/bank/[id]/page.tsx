@@ -5,8 +5,8 @@ import { ArrowLeft, ArrowRight, Building2, Calendar, Globe, ShieldCheck, Trendin
 
 export default async function BankDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const resolvedParams = await params;
-    const bank = await prisma.bank.findUnique({
-        where: { id: resolvedParams.id }
+    const bank = await prisma.provider.findUnique({
+        where: { slug: resolvedParams.id }
     });
 
     if (!bank) {
@@ -14,10 +14,10 @@ export default async function BankDetailPage({ params }: { params: Promise<{ id:
     }
 
     const bankProducts = await prisma.product.findMany({
-        where: { OR: [{ bankId: bank.id }, { instituteId: bank.id }] }
+        where: { OR: [{ providerId: bank.id }, { bankId: bank.slug }] }
     });
-    const loanProducts = bankProducts.filter(p => p.type === 'Loan');
-    const savingsProducts = bankProducts.filter(p => p.type === 'Savings');
+    const loanProducts = bankProducts.filter(p => p.productClass === 'CREDIT' || Boolean(p.loanCategory || p.maxAmount));
+    const savingsProducts = bankProducts.filter(p => p.productClass === 'SAVINGS' || Boolean(p.minBalance));
 
     const interestRates = bankProducts.map(p => p.interestRate).filter(Boolean) as number[];
     const minRate = interestRates.length > 0 ? Math.min(...interestRates) : 0;
@@ -45,8 +45,11 @@ export default async function BankDetailPage({ params }: { params: Promise<{ id:
                 {/* Hero Section */}
                 <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8 mb-6">
                     <div className="flex flex-col md:flex-row gap-6 items-start">
-                        <div className={`w-20 h-20 rounded-2xl ${bank.color || 'bg-slate-600'} ${bank.textColor || 'text-white'} flex items-center justify-center text-2xl font-black shadow-lg shrink-0`}>
-                            {bank.logo || bank.id.slice(0, 2).toUpperCase()}
+                        <div
+                            className="w-20 h-20 rounded-2xl bg-slate-600 text-white flex items-center justify-center text-2xl font-black shadow-lg shrink-0"
+                            style={bank.brandColor ? { backgroundColor: bank.brandColor } : undefined}
+                        >
+                            {bank.shortCode || bank.slug.slice(0, 2).toUpperCase()}
                         </div>
                         <div className="flex-1">
                             <h1 className="text-3xl font-black text-slate-900 leading-tight mb-1">{bank.name}</h1>
@@ -72,7 +75,7 @@ export default async function BankDetailPage({ params }: { params: Promise<{ id:
                     </div>
                     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 text-center">
                         <Calendar className="w-5 h-5 text-blue-400 mx-auto mb-2" />
-                        <p className="text-2xl font-black text-slate-900">{bank.founded || bank.established || '—'}</p>
+                        <p className="text-2xl font-black text-slate-900">{bank.founded || '—'}</p>
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Founded</p>
                     </div>
                     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 text-center">
@@ -99,7 +102,7 @@ export default async function BankDetailPage({ params }: { params: Promise<{ id:
                             <Zap className="w-3 h-3" /> Digital Banking
                         </span>
                     )}
-                    {bank.type === 'Microfinance' && (
+                    {bank.type === 'MFI' && (
                         <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
                             Microfinance Institution
                         </span>

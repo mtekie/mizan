@@ -31,6 +31,10 @@ function mapProviderType(bankType: string): string {
   return map[bankType] || 'BANK';
 }
 
+function toRegionKey(region: string | undefined): string | undefined {
+  return region?.trim().replace(/[\s/-]+/g, '_');
+}
+
 // All institutions from banks.ts
 const providers = [
   // === Commercial Banks ===
@@ -150,9 +154,16 @@ async function main() {
   // Upsert MFI providers
   for (let i = 0; i < mfiProviders.length; i++) {
     const m = mfiProviders[i];
+    const regionKey = toRegionKey(m.headquarters);
+    const branchNetwork = regionKey ? { [regionKey]: m.branches } : undefined;
+
     await prisma.provider.upsert({
       where: { slug: m.id },
-      update: {},
+      update: {
+        branches: m.branches,
+        headquarters: m.headquarters,
+        branchNetwork,
+      },
       create: {
         slug: m.id,
         name: m.name,
@@ -160,6 +171,7 @@ async function main() {
         type: 'MFI',
         tier: m.tier,
         branches: m.branches,
+        branchNetwork,
         headquarters: m.headquarters,
         website: m.website,
         brandColor: mfiColors[i % mfiColors.length],

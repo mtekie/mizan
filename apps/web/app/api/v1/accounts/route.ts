@@ -8,6 +8,7 @@ const accountSchema = z.object({
     nameAmh: z.string().optional(),
     type: z.string(),
     balance: z.number().optional(),
+    isCompulsory: z.boolean().optional(),
     color: z.string().optional(),
     number: z.string().optional(),
 });
