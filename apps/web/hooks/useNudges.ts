@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { Wallet, Target, UserCircle, ShieldCheck, Sparkles } from 'lucide-react';
 import { NudgeProps } from '@/components/Nudge';
+import { getProfileCompletion } from '@/lib/profile/completeness';
 
 interface UseNudgesProps {
     user: any;
@@ -29,7 +30,10 @@ export function useNudges({ user, accounts, goals, mizanScore }: UseNudgesProps)
         }
 
         // 2. Profile Enrichment (Smart Questions)
-        const isProfileIncomplete = !user?.financialPriority || !user?.incomeStability || !user?.housingStatus;
+        const completion = getProfileCompletion(user || {});
+        const isProfileIncomplete = completion.missingFields.some(field =>
+            ['financialPriority', 'incomeStability', 'housingStatus'].includes(field)
+        );
         if (isProfileIncomplete && accounts.length > 0) {
             potentialNudges.push({
                 id: 'enrich-profile',

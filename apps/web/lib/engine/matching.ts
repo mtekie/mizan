@@ -1,14 +1,8 @@
 import { User, Product, TagDefinition } from '@prisma/client';
+import { getProfileCompletion } from '@/lib/profile/completeness';
 
 export function getProfileCompleteness(user: User): number {
-    const fields = [
-        'gender', 'dateOfBirth', 'educationLevel', 'employmentStatus',
-        'employmentSector', 'residencyStatus', 'monthlyIncomeRange',
-        'financialPriority', 'riskAppetite',
-        'housingStatus', 'digitalAdoption'
-    ];
-    const filled = fields.filter(f => !!(user as any)[f]).length;
-    return filled / fields.length;
+    return getProfileCompletion(user as any).percentage / 100;
 }
 
 function normalizeProfileValue(value: any): string {

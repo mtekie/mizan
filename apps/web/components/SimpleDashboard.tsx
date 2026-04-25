@@ -155,7 +155,7 @@ export function SimpleDashboard({ user, accounts, transactions, summary, feature
             {/* Quick Actions (Mobile only, on desktop they use the sidebar/navbar) */}
             <div className="md:hidden mint-card flex justify-around py-4 animate-slide-up" style={{ animationDelay: '0.1s' }}>
           {[
-            { label: 'Add', icon: Plus, href: '/dreams', color: 'bg-[var(--color-mint-primary)]' },
+            { label: 'Plan', icon: Plus, href: '/dreams', color: 'bg-[var(--color-mint-primary)]' },
             { label: 'Send', icon: ArrowUpRight, href: '/transfer', color: 'bg-blue-500' },
             { label: 'Score', icon: TrendingUp, href: '/score', color: 'bg-amber-500' },
             { label: 'More', icon: Sparkles, href: '/catalogue', color: 'bg-purple-500' },
@@ -230,7 +230,7 @@ export function SimpleDashboard({ user, accounts, transactions, summary, feature
         </div>
         </div>
 
-        {/* Right Column (Charts & Goals) */}
+        {/* Right Column (Charts & Plan) */}
         <div className="md:col-span-4 space-y-4 md:space-y-6">
         
         {/* Spending Insights */}

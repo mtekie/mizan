@@ -113,12 +113,15 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
     <div className="flex-1 px-4 md:px-8 py-6 pb-24 md:pb-12 max-w-7xl mx-auto w-full">
         {/* Desktop: 12-col grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Budget Tracker (Left) */}
+          {/* This Month (Left) */}
           <div className="lg:col-span-8 space-y-8">
             {/* Monthly Overview */}
             <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 mb-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">{new Date().toLocaleString('default', { month: 'long' })} Budget</h2>
+                <div>
+                  <p className="text-[10px] font-black text-[#3EA63B] uppercase tracking-widest mb-1">This Month</p>
+                  <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">{new Date().toLocaleString('default', { month: 'long' })} Budget</h2>
+                </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setShowTemplates(true)}
@@ -192,7 +195,7 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
             {/* Savings Goals */}
             <section className="mb-6">
               <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider mb-4 flex items-center gap-2">
-                <Target className="w-4 h-4 text-[#3EA63B]" /> Savings Goals
+                <Target className="w-4 h-4 text-[#3EA63B]" /> Goals
               </h2>
               <div className="space-y-3">
                 {goalsState.map((goal: any) => {
@@ -239,7 +242,7 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
                   <Lightbulb className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm mb-1 text-slate-900">Mizan AI Insight</h3>
+              <h3 className="font-bold text-sm mb-1 text-slate-900">Plan Insight</h3>
                   <p className="text-xs text-slate-700 leading-relaxed">
                     At your current saving rate, you&apos;ll hit your Emergency Fund goal by <span className="font-bold text-[#3EA63B]">May 2026</span> — one month early!
                     Consider redirecting the surplus to your Laptop Fund.
@@ -267,8 +270,8 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
   return (
     <>
       <SimplePageShell
-        title="Goals"
-        description="Manage your financial life with ease"
+        title="Plan"
+        description="Budgets, bills, and savings goals in one place"
         headerAction={
           <div className="flex gap-2">
            <button

@@ -57,10 +57,26 @@ export default async function Page() {
 
   const userData = {
     name: dbUser.name,
+    username: dbUser.username,
     email: dbUser.email,
     score: dbUser.mizanScore,
     onboardingPhase: dbUser.onboardingPhase,
     isProfileComplete: dbUser.isProfileComplete,
+    gender: dbUser.gender,
+    dateOfBirth: dbUser.dateOfBirth,
+    educationLevel: dbUser.educationLevel,
+    employmentStatus: dbUser.employmentStatus,
+    employmentSector: dbUser.employmentSector,
+    residencyStatus: dbUser.residencyStatus,
+    monthlyIncomeRange: dbUser.monthlyIncomeRange,
+    financialPriority: dbUser.financialPriority,
+    riskAppetite: dbUser.riskAppetite,
+    interestFree: dbUser.interestFree,
+    dependents: dbUser.dependents,
+    housingStatus: dbUser.housingStatus,
+    incomeStability: dbUser.incomeStability,
+    digitalAdoption: dbUser.digitalAdoption,
+    behavioralStyle: dbUser.behavioralStyle,
   };
 
   // 1. Calculate Historical Cash Flow (30 days)

@@ -17,9 +17,9 @@ const filterTabs = [
   { key: 'PAYMENT', label: 'Payments', icon: '📱' },
 ] as const;
 
-export function SimpleCatalogue({ products, categories }: { products: any[], categories: readonly any[] }) {
+export function SimpleCatalogue({ products, categories, loading = false }: { products: any[], categories: readonly any[], loading?: boolean }) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState('All');
+  const [activeFilter, setActiveFilter] = useState('all');
   const [selectedInstitution, setSelectedInstitution] = useState<string | null>(null);
   const [showSearch, setShowSearch] = useState(false);
 
@@ -155,11 +155,17 @@ export function SimpleCatalogue({ products, categories }: { products: any[], cat
 
         {/* Product Count */}
         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-          {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''} found
+          {loading ? 'Loading products' : `${filteredProducts.length} product${filteredProducts.length !== 1 ? 's' : ''} found`}
         </p>
 
         {/* Products List */}
-        {filteredProducts.length === 0 ? (
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-12">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-20 rounded-2xl bg-white/70 border border-slate-100 shadow-sm animate-pulse" />
+            ))}
+          </div>
+        ) : filteredProducts.length === 0 ? (
           <EmptyState
             icon={Landmark}
             title="No products found"

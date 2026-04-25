@@ -24,7 +24,7 @@ const navItems = [
     { name: 'Overview', href: '/', icon: Home },
     { name: 'Transactions', href: '/ledger', icon: ReceiptText },
     { name: 'Marketplace', href: '/catalogue', icon: Compass },
-    { name: 'Goals', href: '/dreams', icon: Target },
+    { name: 'Plan', href: '/dreams', icon: Target },
     { name: 'Me', href: '/profile', icon: User },
 ];
 

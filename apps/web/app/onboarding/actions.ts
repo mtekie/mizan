@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server';
 import prisma from '@/lib/db';
 import { revalidatePath } from 'next/cache';
+import { isCoreProfileComplete } from '@/lib/profile/completeness';
 
 export async function performUpdateOnboardingPhase(phase: string, data: any) {
   try {
@@ -13,7 +14,18 @@ export async function performUpdateOnboardingPhase(phase: string, data: any) {
       return { error: 'Unauthorized' };
     }
 
-    const payload: any = { onboardingPhase: phase };
+    const existingUser = await prisma.user.findUnique({
+      where: { id: user.id },
+    });
+
+    const nextOnboardingPhase =
+      phase === 'progressive'
+        ? (existingUser?.onboardingPhase || 'signup')
+        : existingUser?.onboardingPhase === 'complete'
+          ? 'complete'
+          : phase;
+
+    const payload: any = { onboardingPhase: nextOnboardingPhase };
     
     // Core profile updates
     if (data.name) payload.name = data.name;
@@ -37,10 +49,10 @@ export async function performUpdateOnboardingPhase(phase: string, data: any) {
     if (data.digitalAdoption) payload.digitalAdoption = data.digitalAdoption;
     if (data.behavioralStyle) payload.behavioralStyle = data.behavioralStyle;
     
-    // If finishing profile step, mark it complete
-    if (phase === 'complete' || phase === 'goals') {
-       payload.isProfileComplete = true;
-    }
+    payload.isProfileComplete = isCoreProfileComplete({
+       ...(existingUser || {}),
+       ...payload,
+    });
 
     await prisma.user.update({
       where: { id: user.id },

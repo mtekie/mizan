@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, Settings, User as UserIcon, ShieldCheck, CreditCard, ChevronRight, PlusCircle } from 'lucide-react';
+import { ArrowLeft, Settings, User as UserIcon, ShieldCheck, CreditCard, ChevronRight, PlusCircle, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 import { PageHeader } from './PageHeader';
 
@@ -10,6 +10,8 @@ export function SimpleProfile({ user, accounts }: { user: any, accounts: any[] }
   }));
 
   const initial = user.name?.[0] || 'U';
+  const score = user.mizanScore || user.score || 600;
+  const scoreLabel = score > 750 ? 'Excellent' : score > 600 ? 'Good' : 'Fair';
 
   return (
     <div className="flex flex-col min-h-screen bg-[var(--color-mint-bg)] pb-24 md:pb-0 w-full">
@@ -42,7 +44,7 @@ export function SimpleProfile({ user, accounts }: { user: any, accounts: any[] }
             <h2 className="text-xl font-black text-slate-800">{user.name || 'User'}</h2>
             <p className="text-xs font-semibold text-slate-400 mb-6">{user.email}</p>
             
-            <Link href="/onboarding" className="inline-flex items-center justify-center bg-[var(--color-mint-primary)] text-white px-6 py-3 rounded-2xl text-xs font-black w-full hover:opacity-90 transition-all shadow-md">
+            <Link href="/score?action=complete-profile" className="inline-flex items-center justify-center bg-[var(--color-mint-primary)] text-white px-6 py-3 rounded-2xl text-xs font-black w-full hover:opacity-90 transition-all shadow-md">
               {user.isProfileComplete ? 'Edit Profile' : 'Complete Profile Setup'}
             </Link>
           </div>
@@ -59,6 +61,17 @@ export function SimpleProfile({ user, accounts }: { user: any, accounts: any[] }
               </div>
             </div>
           )}
+
+          <Link href="/score" className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 flex items-center gap-4 transition-all hover:shadow-md group">
+            <div className="relative w-14 h-14 rounded-2xl bg-[#3EA63B]/10 text-[#3EA63B] flex items-center justify-center shrink-0">
+              <TrendingUp className="w-6 h-6" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-black text-slate-800">Mizan Score</p>
+              <p className="text-[11px] font-medium text-slate-500">{score} • {scoreLabel}</p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-[var(--color-mint-primary)] transition-colors" />
+          </Link>
         </div>
 
         <div className="md:col-span-8 space-y-6">

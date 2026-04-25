@@ -14,22 +14,25 @@ import { X } from 'lucide-react';
 import { SimplePageShell } from '@/components/SimplePageShell';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 
-export default function ScoreClient({ initialScore = 600 }: { initialScore: number }) {
+export default function ScoreClient({ initialScore = 600, initialProfile = {} }: { initialScore: number, initialProfile?: any }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [profileData, setProfileData] = useState({
-    gender: 'Male',
-    monthlyIncomeRange: '',
-    educationLevel: '',
-    employmentStatus: '',
-    employmentSector: '',
-    residencyStatus: 'RESIDENT',
-    financialPriority: '',
-    riskAppetite: '',
-    interestFree: false,
-    dependents: 0,
-    housingStatus: '',
+    gender: initialProfile.gender || 'Male',
+    monthlyIncomeRange: initialProfile.monthlyIncomeRange || '',
+    educationLevel: initialProfile.educationLevel || '',
+    employmentStatus: initialProfile.employmentStatus || '',
+    employmentSector: initialProfile.employmentSector || '',
+    residencyStatus: initialProfile.residencyStatus || 'RESIDENT',
+    financialPriority: initialProfile.financialPriority || '',
+    riskAppetite: initialProfile.riskAppetite || '',
+    interestFree: initialProfile.interestFree || false,
+    dependents: initialProfile.dependents || 0,
+    housingStatus: initialProfile.housingStatus || '',
+    incomeStability: initialProfile.incomeStability || '',
+    digitalAdoption: initialProfile.digitalAdoption || '',
+    behavioralStyle: initialProfile.behavioralStyle || '',
   });
   const [step, setStep] = useState(1);
   const [score, setScore] = useState(initialScore);
@@ -42,7 +45,7 @@ export default function ScoreClient({ initialScore = 600 }: { initialScore: numb
   const handleProfileComplete = async () => {
     setLoading(true);
     try {
-      const res = await performUpdateOnboardingPhase('goals', profileData);
+      const res = await performUpdateOnboardingPhase('profile', profileData);
       if (res.error) throw new Error(res.error);
       
       toast.success('Profile updated! Your Mizan Score is more accurate now.');

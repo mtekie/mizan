@@ -3,23 +3,13 @@
 import { motion } from 'framer-motion';
 import { ShieldCheck, ChevronRight, Trophy } from 'lucide-react';
 import Link from 'next/link';
+import { getProfileCompletion } from '@/lib/profile/completeness';
 
 export function ProfileCompleteness({ user }: { user: any }) {
-  const fields = [
-    'name',
-    'username',
-    'gender',
-    'employmentStatus',
-    'employmentSector',
-    'residencyStatus',
-    'monthlyIncomeRange', 
-    'educationLevel'
-  ];
+  const completion = getProfileCompletion(user || {});
+  const percentage = completion.corePercentage;
   
-  const completedFields = fields.filter(f => !!user[f]);
-  const percentage = Math.round((completedFields.length / fields.length) * 100);
-  
-  if (percentage === 100) return null;
+  if (completion.isCoreComplete) return null;
 
   return (
     <motion.div 

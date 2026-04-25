@@ -13,12 +13,28 @@ export default async function ScorePage() {
 
   const user = await prisma.user.findUnique({
     where: { id: authUser.id },
-    select: { mizanScore: true }
+    select: {
+      mizanScore: true,
+      gender: true,
+      monthlyIncomeRange: true,
+      educationLevel: true,
+      employmentStatus: true,
+      employmentSector: true,
+      residencyStatus: true,
+      financialPriority: true,
+      riskAppetite: true,
+      interestFree: true,
+      dependents: true,
+      housingStatus: true,
+      incomeStability: true,
+      digitalAdoption: true,
+      behavioralStyle: true,
+    }
   });
 
   if (!user) {
     redirect('/login');
   }
 
-  return <ScoreClient initialScore={user.mizanScore} />;
+  return <ScoreClient initialScore={user.mizanScore} initialProfile={user} />;
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { SimpleCatalogue } from '@/components/SimpleCatalogue';
 
 const categories = [
@@ -13,26 +13,18 @@ const categories = [
 ] as const;
 
 export default function Catalogue() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<string>('all');
-  const [productType, setProductType] = useState<string>('All');
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const params = new URLSearchParams();
-    if (activeFilter !== 'all') params.append('class', activeFilter);
-    if (productType !== 'All') params.append('type', productType);
-    if (searchQuery) params.append('search', searchQuery);
-
-    fetch(`/api/v1/products?${params.toString()}`)
+    fetch('/api/v1/products?take=100')
       .then(res => res.json())
       .then(data => {
-        setProducts(data);
+        setProducts(Array.isArray(data) ? data : []);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [activeFilter, productType, searchQuery]);
+  }, []);
 
-  return <SimpleCatalogue products={products} categories={categories} />;
+  return <SimpleCatalogue products={products} categories={categories} loading={loading} />;
 }

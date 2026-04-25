@@ -2,8 +2,11 @@ import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/supabase/auth-adapter';
 import prisma from '@/lib/db';
 import { z } from 'zod';
+import { isCoreProfileComplete } from '@/lib/profile/completeness';
 
 const ProfileSchema = z.object({
+    name: z.string().optional(),
+    username: z.string().optional(),
     gender: z.string().optional(),
     dateOfBirth: z.string().optional(),
     educationLevel: z.string().optional(),
@@ -12,6 +15,14 @@ const ProfileSchema = z.object({
     residencyStatus: z.enum(['RESIDENT', 'DIASPORA', 'EXPAT']).optional(),
     monthlyIncomeRange: z.string().optional(),
     familyStatus: z.string().optional(),
+    financialPriority: z.string().optional(),
+    riskAppetite: z.string().optional(),
+    interestFree: z.boolean().optional(),
+    dependents: z.coerce.number().int().min(0).optional(),
+    housingStatus: z.string().optional(),
+    incomeStability: z.string().optional(),
+    digitalAdoption: z.string().optional(),
+    behavioralStyle: z.string().optional(),
 });
 
 export async function GET(req: Request) {
@@ -55,7 +66,6 @@ async function updateProfile(req: Request) {
         // Check if user already completed profile
         const existingUser = await prisma.user.findUnique({
             where: { id: userId },
-            select: { isProfileComplete: true, mizanScore: true }
         });
 
         // Upsert user if they don't exist in Prisma yet (in case the Supabase webhook failed or wasn't set up yet)
@@ -72,8 +82,13 @@ async function updateProfile(req: Request) {
 
         let newScore = existingUser?.mizanScore ?? 600;
 
-        // Boost score by 50 points if this is their first time completing the profile
-        if (existingUser && !existingUser.isProfileComplete) {
+        const nextProfileComplete = isCoreProfileComplete({
+            ...(existingUser || {}),
+            ...data,
+        });
+
+        // Boost score by 50 points if this update completes the core profile for the first time.
+        if (existingUser && !existingUser.isProfileComplete && nextProfileComplete) {
             newScore += 50;
         }
 
@@ -82,7 +97,7 @@ async function updateProfile(req: Request) {
             data: {
                 ...data,
                 dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
-                isProfileComplete: true,
+                isProfileComplete: nextProfileComplete,
                 mizanScore: newScore
             }
         });

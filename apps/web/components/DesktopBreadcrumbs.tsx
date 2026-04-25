@@ -9,7 +9,7 @@ import { ChevronRight, Home } from 'lucide-react';
  */
 const routeLabels: Record<string, string> = {
   '/catalogue': 'Find',
-  '/dreams': 'Goals',
+  '/dreams': 'Plan',
   '/transfer': 'Transfer Log',
   '/score': 'Mizan Score',
   '/settings': 'Settings',
