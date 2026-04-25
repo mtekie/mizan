@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { LayoutDashboard, Users, Package, MessageCircle, Search, ChevronRight, Shield, TrendingUp, Activity, BarChart3, Settings, Database, Globe, BrainCircuit } from 'lucide-react';
+import Link from 'next/link';
 
 type Tab = 'overview' | 'users' | 'products' | 'equb' | 'ai' | 'content' | 'analytics' | 'settings';
 
@@ -57,7 +58,12 @@ export default function AdminPage() {
                             <p className="text-[10px] text-slate-400">Management Dashboard</p>
                         </div>
                     </div>
-                    <span className="text-[9px] font-bold text-[#3EA63B] bg-[#3EA63B]/10 px-2 py-1 rounded-full border border-[#3EA63B]/20">Admin Access</span>
+                    <div className="flex items-center gap-2">
+                        <Link href="/admin/taxonomy" className="text-[10px] font-black text-white bg-white/10 px-3 py-2 rounded-lg hover:bg-white/15 transition">
+                            Taxonomy
+                        </Link>
+                        <span className="text-[9px] font-bold text-[#3EA63B] bg-[#3EA63B]/10 px-2 py-1 rounded-full border border-[#3EA63B]/20">Admin Access</span>
+                    </div>
                 </div>
             </header>
 
