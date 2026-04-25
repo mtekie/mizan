@@ -32,7 +32,10 @@ export default function LedgerClient({ accounts, initialTransactions, summary }:
   const [transactions, setTransactions] = useState<any[]>(initialTransactions);
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setMounted(true), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   // Add flow state
   const [addMode, setAddMode] = useState<AddMode>(null);

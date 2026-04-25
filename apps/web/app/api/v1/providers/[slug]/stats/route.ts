@@ -3,10 +3,10 @@ import prisma from '@/lib/db';
 
 export async function GET(
     req: Request,
-    { params }: { params: { slug: string } }
+    { params }: { params: Promise<{ slug: string }> }
 ) {
     try {
-        const { slug } = params;
+        const { slug } = await params;
 
         const provider = await prisma.provider.findUnique({
             where: { slug },
@@ -15,7 +15,6 @@ export async function GET(
                     select: {
                         products: true,
                         reviews: true,
-                        applications: true,
                     }
                 },
                 products: {
@@ -31,10 +30,11 @@ export async function GET(
         }
 
         // Aggregate product classes
-        const classes = provider.products.reduce((acc, p) => {
-            acc[p.productClass] = (acc[p.productClass] || 0) + 1;
+        const classes = provider.products.reduce<Record<string, number>>((acc, p) => {
+            const key = p.productClass || 'UNCATEGORIZED';
+            acc[key] = (acc[key] || 0) + 1;
             return acc;
-        }, {} as Record<string, number>);
+        }, {});
 
         return NextResponse.json({
             providerId: provider.id,

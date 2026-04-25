@@ -41,7 +41,7 @@ export function PersonaStep({
       </div>
 
       <h1 className="text-2xl font-black mb-2 text-center">Financial Persona</h1>
-      <p className="text-slate-400 mb-8 text-sm text-center">Let's tailor Mizan to your specific needs.</p>
+      <p className="text-slate-400 mb-8 text-sm text-center">Let&apos;s tailor Mizan to your specific needs.</p>
 
       <div className="w-full space-y-6">
         {/* Priority & Risk */}

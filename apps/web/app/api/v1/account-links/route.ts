@@ -4,10 +4,10 @@ import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 
 const linkSchema = z.object({
-    providerId: z.string(),
-    accountType: z.string(),
+    providerId: z.string().optional(),
+    productId: z.string().optional(),
     accountNumber: z.string().optional(),
-    verificationTier: z.enum(['SELF_DECLARED', 'DOCUMENT_VERIFIED', 'INSTITUTION_VERIFIED']).default('SELF_DECLARED')
+    level: z.enum(['SELF_DECLARED', 'ACCOUNT_LINKED', 'PHOTO_VERIFIED']).default('SELF_DECLARED')
 });
 
 export async function POST(req: Request) {
@@ -25,25 +25,35 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Invalid input', details: result.error.format() }, { status: 400 });
         }
 
-        const link = await prisma.accountLink.upsert({
+        const existing = await prisma.accountLink.findFirst({
             where: {
-                userId_providerId_accountType: {
-                    userId: user.id,
-                    providerId: result.data.providerId,
-                    accountType: result.data.accountType
-                }
-            },
-            update: {
-                accountNumber: result.data.accountNumber,
-                verificationTier: result.data.verificationTier,
-                isVerified: result.data.verificationTier !== 'SELF_DECLARED'
-            },
-            create: {
                 userId: user.id,
-                ...result.data,
-                isVerified: result.data.verificationTier !== 'SELF_DECLARED'
+                providerId: result.data.providerId,
+                productId: result.data.productId
             }
         });
+
+        const link = existing
+            ? await prisma.accountLink.update({
+                where: { id: existing.id },
+                data: {
+                    accountNumber: result.data.accountNumber,
+                    level: result.data.level,
+                    verifiedAt: result.data.level === 'SELF_DECLARED' ? null : new Date(),
+                    verifiedBy: result.data.level === 'SELF_DECLARED' ? null : 'SYSTEM'
+                }
+            })
+            : await prisma.accountLink.create({
+                data: {
+                    userId: user.id,
+                    providerId: result.data.providerId,
+                    productId: result.data.productId,
+                    accountNumber: result.data.accountNumber,
+                    level: result.data.level,
+                    verifiedAt: result.data.level === 'SELF_DECLARED' ? null : new Date(),
+                    verifiedBy: result.data.level === 'SELF_DECLARED' ? null : 'SYSTEM'
+                }
+            });
 
         return NextResponse.json(link);
     } catch (e: any) {
@@ -62,7 +72,7 @@ export async function GET(req: Request) {
 
         const links = await prisma.accountLink.findMany({
             where: { userId: user.id },
-            include: { provider: true }
+            orderBy: { updatedAt: 'desc' }
         });
 
         return NextResponse.json(links);

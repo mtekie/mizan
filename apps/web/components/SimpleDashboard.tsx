@@ -206,7 +206,7 @@ export function SimpleDashboard({ user, accounts, transactions, summary }: { use
         {/* Spending Insights */}
         <div className="mint-card animate-slide-up" style={{ animationDelay: '0.25s' }}>
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-sm font-bold text-[var(--color-mint-text)]">This month's spending</h3>
+            <h3 className="text-sm font-bold text-[var(--color-mint-text)]">This month&apos;s spending</h3>
             <Link href="/ledger" className="text-xs font-bold text-[var(--color-mint-primary)] flex items-center gap-0.5 hover:underline">
               Details <ChevronRight className="w-3.5 h-3.5" />
             </Link>

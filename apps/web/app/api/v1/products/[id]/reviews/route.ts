@@ -5,18 +5,19 @@ import { z } from 'zod';
 
 const reviewSchema = z.object({
     rating: z.number().min(1).max(5),
+    body: z.string().optional(),
     comment: z.string().optional()
 });
 
 export async function GET(
     req: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { id } = params;
+        const { id } = await params;
         const reviews = await prisma.productReview.findMany({
             where: { productId: id },
-            include: { user: { select: { fullName: true, avatarUrl: true } } },
+            include: { user: { select: { name: true, image: true } } },
             orderBy: { createdAt: 'desc' }
         });
         return NextResponse.json(reviews);
@@ -27,10 +28,10 @@ export async function GET(
 
 export async function POST(
     req: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { id } = params;
+        const { id } = await params;
         const supabase = await createClient();
         const { data: { user }, error } = await supabase.auth.getUser();
 
@@ -53,13 +54,13 @@ export async function POST(
             },
             update: {
                 rating: result.data.rating,
-                comment: result.data.comment
+                body: result.data.body ?? result.data.comment
             },
             create: {
                 userId: user.id,
                 productId: id,
                 rating: result.data.rating,
-                comment: result.data.comment
+                body: result.data.body ?? result.data.comment
             }
         });
 

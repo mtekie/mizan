@@ -122,7 +122,7 @@ npm exec --workspace apps/web tsc -- --noEmit
 npm exec --workspace apps/mobile tsc -- --noEmit
 ```
 
-Current audit status: these checks fail. See [AUDIT.md](AUDIT.md) for the known blocker list.
+Current audit status: these checks pass. `npm run lint` still reports one non-blocking warning for a receipt preview `<img>` in `apps/web/components/ReceiptScanner.tsx`.
 
 ## Build Notes
 

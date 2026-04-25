@@ -3,10 +3,10 @@ import prisma from '@/lib/db';
 
 export async function GET(
     req: Request,
-    { params }: { params: { slug: string } }
+    { params }: { params: Promise<{ slug: string }> }
 ) {
     try {
-        const { slug } = params;
+        const { slug } = await params;
 
         const provider = await prisma.provider.findUnique({
             where: { slug },

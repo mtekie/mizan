@@ -33,13 +33,13 @@ export default async function Page() {
   const accounts = await prisma.account.findMany({ where: { userId: user.id } });
   const netWorth = accounts.reduce((sum, a) => sum + a.balance, 0);
 
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const now = new Date();
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   const transactions = await prisma.transaction.findMany({
     where: { userId: user.id },
     orderBy: { date: 'desc' },
   });
 
-  const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const monthTxs = transactions.filter(t => new Date(t.date) >= startOfMonth);
   const thirtyDayTxs = transactions.filter(t => new Date(t.date) >= thirtyDaysAgo);

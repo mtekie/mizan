@@ -5,7 +5,6 @@ type EventProperties = Record<string, string | number | boolean | undefined>;
 
 const IS_DEV = typeof window !== 'undefined' && window.location.hostname === 'localhost';
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 export function track(event: string, properties?: EventProperties) {
     if (IS_DEV) {
         console.log('[Mizan Analytics]', event, properties);
@@ -19,7 +18,6 @@ export function track(event: string, properties?: EventProperties) {
         if (w?.posthog?.capture) w.posthog.capture(event, properties);
     } catch { /* noop in SSR */ }
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
 
 // Pre-defined event names for consistency
 export const Events = {

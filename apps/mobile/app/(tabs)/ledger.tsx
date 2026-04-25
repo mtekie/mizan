@@ -10,6 +10,7 @@ import { api } from '../../lib/api';
 import { Transaction } from '@mizan/shared';
 import { useStore } from '../../lib/store';
 import { Coffee, ShoppingBag, Car, Home, Smartphone, TrendingUp } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 
 const CATEGORY_ICONS: Record<string, any> = {
   Food: Coffee,
@@ -24,12 +25,13 @@ export default function LedgerScreen() {
   const [transactions, setTransactions] = React.useState<Transaction[]>([]);
   const [loading, setLoading] = React.useState(true);
   const { isGuest } = useStore();
+  const router = useRouter();
 
   const MOCK_TRANSACTIONS: Transaction[] = [
-    { id: '1', title: 'CBE Salary', amount: 35000, category: 'Income', date: new Date().toISOString(), accountId: 'CBE' },
-    { id: '2', title: 'Grocery Shopping', amount: -2450, category: 'Food', date: new Date().toISOString(), accountId: 'CASH' },
-    { id: '3', title: 'Fuel', amount: -1200, category: 'Transport', date: new Date().toISOString(), accountId: 'CBE' },
-    { id: '4', title: 'Internet Bill', amount: -1000, category: 'Bills', date: new Date().toISOString(), accountId: 'TELEBIRR' },
+    { id: '1', userId: 'guest', title: 'CBE Salary', amount: 35000, category: 'Income', source: 'CBE', date: new Date().toISOString(), accountId: 'CBE' },
+    { id: '2', userId: 'guest', title: 'Grocery Shopping', amount: -2450, category: 'Food', source: 'Cash', date: new Date().toISOString(), accountId: 'CASH' },
+    { id: '3', userId: 'guest', title: 'Fuel', amount: -1200, category: 'Transport', source: 'CBE', date: new Date().toISOString(), accountId: 'CBE' },
+    { id: '4', userId: 'guest', title: 'Internet Bill', amount: -1000, category: 'Bills', source: 'telebirr', date: new Date().toISOString(), accountId: 'TELEBIRR' },
   ];
   const sheetRef = React.useRef<BottomSheet>(null);
 
@@ -74,7 +76,7 @@ export default function LedgerScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         renderItem={({ item }) => {
-          const Icon = CATEGORY_ICONS[item.category] || ShoppingBag;
+          const Icon = CATEGORY_ICONS[item.category || ''] || ShoppingBag;
           return (
             <MizanCard style={styles.transactionCard}>
               <View style={styles.transactionLeft}>
@@ -101,7 +103,17 @@ export default function LedgerScreen() {
           if (isGuest) {
             console.log("Guest mode: simulating transaction save", data);
             // Optionally add to local state for feedback
-            const mockTx = { ...data, id: Math.random().toString() };
+            const amount = Math.abs(Number(data.amount) || 0);
+            const mockTx: Transaction = {
+              id: Math.random().toString(),
+              userId: 'guest',
+              title: data.title,
+              amount: data.type === 'EXPENSE' ? -amount : amount,
+              category: data.category,
+              source: data.accountId || 'Cash',
+              accountId: data.accountId,
+              date: data.date,
+            };
             setTransactions([mockTx, ...transactions]);
             return;
           }

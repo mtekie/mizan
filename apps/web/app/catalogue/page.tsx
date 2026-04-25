@@ -20,7 +20,6 @@ export default function Catalogue() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
     const params = new URLSearchParams();
     if (activeFilter !== 'All') params.append('category', activeFilter);
     if (productType !== 'All') params.append('type', productType);

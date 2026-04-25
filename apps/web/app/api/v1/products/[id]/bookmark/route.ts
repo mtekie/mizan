@@ -4,10 +4,10 @@ import { createClient } from '@/lib/supabase/server';
 
 export async function POST(
     req: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { id } = params;
+        const { id } = await params;
         const supabase = await createClient();
         const { data: { user }, error } = await supabase.auth.getUser();
 
@@ -37,10 +37,10 @@ export async function POST(
 
 export async function DELETE(
     req: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { id } = params;
+        const { id } = await params;
         const supabase = await createClient();
         const { data: { user }, error } = await supabase.auth.getUser();
 

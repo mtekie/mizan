@@ -62,48 +62,42 @@ npm exec --workspace apps/mobile tsc -- --noEmit
 
 ### Lint
 
-`npm run lint` fails in `apps/web`.
+`npm run lint` passes with one warning in `apps/web`.
 
 Primary categories:
 
-- React 19 lint rule `react-hooks/set-state-in-effect` in catalogue, ledger, wealth, charts, mode provider, onboarding prompt, and currency provider.
-- `react/no-unescaped-entities` in not-found, dashboard, and onboarding copy.
-- `react-hooks/purity` in `apps/web/app/page.tsx` due to `Date.now()` during render.
-- Warnings for `img` usage and an unused eslint-disable.
+- Remaining warning: `apps/web/components/ReceiptScanner.tsx` uses `<img>` for a preview image. This is acceptable for now unless production image optimization becomes a priority for that preview.
 
 ### Web TypeScript
 
-`npm exec --workspace apps/web tsc -- --noEmit` fails.
+`npm exec --workspace apps/web tsc -- --noEmit` passes.
 
 Primary categories:
 
-- Next.js 15 dynamic route handler context types are stale. Several route handlers type `params` as a plain object, but generated Next types expect promise-based params.
-- `AccountLink` API does not match the Prisma schema. It references `userId_providerId_accountType`, `accountType`, `verificationTier`, `isVerified`, and an included `provider` relation that do not exist in the current schema.
-- Product review routes reference `User.fullName` and `ProductReview.comment`, but the schema uses `User.name` and `ProductReview.body`.
-- Provider stats route references provider application counts and relation shapes that do not exist in the schema.
-- `apps/web/scripts/seed_providers.ts` contains duplicate object literal keys.
+- Next.js 15 dynamic route handler context types were updated.
+- `AccountLink` API was aligned to the checked-in Prisma schema.
+- Product review routes were aligned to `User.name`, `User.image`, and `ProductReview.body`, while keeping `comment` as client-compatible input.
+- Provider stats no longer reference nonexistent provider application counts.
+- Duplicate object literal keys in `apps/web/scripts/seed_providers.ts` were removed.
 
 ### Mobile TypeScript
 
-`npm exec --workspace apps/mobile tsc -- --noEmit` fails.
+`npm exec --workspace apps/mobile tsc -- --noEmit` passes.
 
 Primary categories:
 
-- Seed/demo transaction objects in `apps/mobile/app/(tabs)/ledger.tsx` are missing required shared `Transaction` fields: `userId` and `source`.
-- Ledger category indexing allows `null` or `undefined`.
-- Ledger route references `router` without defining it.
+- Ledger fallback transactions now satisfy shared `Transaction` fields.
+- Ledger category icon lookup handles nullable categories.
+- Ledger route now defines `router`.
 
 ## Release Blockers
 
-1. Web and mobile typechecks must pass.
-2. Lint must pass or rules must be intentionally tuned.
-3. Prisma schema and API route contracts must be aligned.
-4. Mobile API authentication must be normalized. The mobile client sends a Bearer token, but many API routes use `createClient()` and cookie-based `supabase.auth.getUser()` instead of the existing `getAuthUser(req)` adapter.
-5. Local Prisma config is inconsistent. Root `prisma.config.ts` points at `prisma/schema.prisma`, while the schema lives at `apps/web/prisma/schema.prisma`.
-6. No migrations directory exists under `apps/web/prisma`; production database changes need a migration policy.
-7. Android SMS functionality requires product, privacy, and store compliance decisions before release.
-8. iOS needs a substitute for Android-only SMS inbox functionality.
-9. App Store and Play Store metadata, privacy disclosures, screenshots, and permission explanations are not documented yet.
+1. Mobile API authentication must be normalized. The mobile client sends a Bearer token, but many API routes use `createClient()` and cookie-based `supabase.auth.getUser()` instead of the existing `getAuthUser(req)` adapter.
+2. Local Prisma config is inconsistent. Root `prisma.config.ts` points at `prisma/schema.prisma`, while the schema lives at `apps/web/prisma/schema.prisma`.
+3. No migrations directory exists under `apps/web/prisma`; production database changes need a migration policy.
+4. Android SMS functionality requires product, privacy, and store compliance decisions before release.
+5. iOS needs a substitute for Android-only SMS inbox functionality.
+6. App Store and Play Store metadata, privacy disclosures, screenshots, and permission explanations are not documented yet.
 
 ## High-Risk Areas
 

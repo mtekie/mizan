@@ -13,13 +13,12 @@ const twToHex: Record<string, string> = {
   'bg-sky-700': '#0369A1', 'bg-blue-800': '#1E40AF', 'bg-cyan-600': '#0891B2',
   'bg-purple-700': '#7E22CE', 'bg-yellow-600': '#CA8A04', 'bg-teal-600': '#0D9488',
   'bg-pink-600': '#DB2777', 'bg-amber-600': '#D97706', 'bg-lime-600': '#65A30D',
-  'bg-yellow-500': '#EAB308', 'bg-rose-600': '#E11D48', 'bg-cyan-600': '#0891B2',
-  'bg-stone-600': '#57534E', 'bg-green-700': '#15803D', 'bg-blue-700': '#1D4ED8',
-  'bg-orange-700': '#C2410C', 'bg-sky-700': '#0369A1',
-  'bg-slate-700': '#334155', 'bg-emerald-700': '#047857', 'bg-teal-700': '#0F766E',
+  'bg-yellow-500': '#EAB308', 'bg-rose-600': '#E11D48', 'bg-stone-600': '#57534E',
+  'bg-green-700': '#15803D', 'bg-blue-700': '#1D4ED8', 'bg-orange-700': '#C2410C',
+  'bg-slate-700': '#334155', 'bg-teal-700': '#0F766E',
   'bg-indigo-800': '#3730A3', 'bg-purple-800': '#6B21A8', 'bg-cyan-800': '#155E75',
   'bg-sky-800': '#075985', 'bg-rose-800': '#9F1239', 'bg-fuchsia-800': '#86198F',
-  'bg-blue-800': '#1E40AF', 'bg-lime-700': '#4D7C0F', 'bg-stone-700': '#44403C',
+  'bg-lime-700': '#4D7C0F', 'bg-stone-700': '#44403C',
 };
 
 function mapProviderType(bankType: string): string {

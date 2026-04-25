@@ -33,7 +33,10 @@ export default function WealthClient({ initialAssets = [] }: { initialAssets: an
   const [loading, setLoading] = useState(false);
   
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setMounted(true), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
   
   const portfolioData = initialAssets.length > 0 ? initialAssets.reduce((acc: any[], asset: any) => {
     const existing = acc.find(a => a.name === asset.category);

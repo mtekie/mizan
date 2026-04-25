@@ -5,10 +5,10 @@ import { computeMatchScore } from '@/lib/engine/matching';
 
 export async function GET(
     req: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { id } = params;
+        const { id } = await params;
 
         const product = await prisma.product.findUnique({
             where: { id },
@@ -18,7 +18,7 @@ export async function GET(
                     include: { tag: true }
                 },
                 reviews: {
-                    include: { user: { select: { fullName: true, avatarUrl: true } } },
+                    include: { user: { select: { name: true, image: true } } },
                     orderBy: { createdAt: 'desc' },
                     take: 5
                 },

@@ -24,7 +24,7 @@ export function IdentityStep({
       </div>
 
       <h1 className="text-3xl font-black mb-4">Welcome to Mizan</h1>
-      <p className="text-slate-400 mb-8 text-sm">Let's get your financial journey started. What should we call you?</p>
+      <p className="text-slate-400 mb-8 text-sm">Let&apos;s get your financial journey started. What should we call you?</p>
 
       <div className="w-full flex flex-col gap-4">
         <input

@@ -13,12 +13,6 @@ import { useStore } from '@/lib/store';
  */
 export function ModeProvider({ children }: { children: React.ReactNode }) {
   const themeMode = useStore((s) => s.themeMode);
-  const [hydrated, setHydrated] = useState(false);
-
-  // Wait for Zustand hydration
-  useEffect(() => {
-    setHydrated(true);
-  }, []);
 
   // Write cookie for SSR detection
   useEffect(() => {
@@ -27,8 +21,6 @@ export function ModeProvider({ children }: { children: React.ReactNode }) {
 
   // Apply dark mode to <html> element
   useEffect(() => {
-    if (!hydrated) return;
-
     const applyTheme = (isDark: boolean) => {
       document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
     };
@@ -43,7 +35,7 @@ export function ModeProvider({ children }: { children: React.ReactNode }) {
     } else {
       applyTheme(themeMode === 'dark');
     }
-  }, [themeMode, hydrated]);
+  }, [themeMode]);
 
   return <>{children}</>;
 }

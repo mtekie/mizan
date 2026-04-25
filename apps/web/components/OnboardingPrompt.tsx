@@ -19,7 +19,8 @@ export function OnboardingPrompt({ type, userName }: OnboardingPromptProps) {
         // Check local storage so we don't nag if dismissed recently
         const dismissed = localStorage.getItem(`mizan_prompt_dismissed_${type}`);
         if (!dismissed) {
-            setIsVisible(true);
+            const timer = window.setTimeout(() => setIsVisible(true), 0);
+            return () => window.clearTimeout(timer);
         }
     }, [type]);
 

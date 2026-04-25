@@ -37,11 +37,14 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         const saved = localStorage.getItem('mizan_currency');
-        if (saved) setCurrencyState(saved);
+        if (saved) {
+            const timer = window.setTimeout(() => setCurrencyState(saved), 0);
+            return () => window.clearTimeout(timer);
+        }
     }, []);
 
     useEffect(() => {
-        setLoading(true);
+        const timer = window.setTimeout(() => setLoading(true), 0);
         fetch('/api/v1/exchange')
             .then(r => r.json())
             .then(data => {
@@ -49,6 +52,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
             })
             .catch(() => { })
             .finally(() => setLoading(false));
+        return () => window.clearTimeout(timer);
     }, []);
 
     const setCurrency = (c: string) => {
