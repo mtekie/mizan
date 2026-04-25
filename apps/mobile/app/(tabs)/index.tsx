@@ -51,21 +51,16 @@ export default function DashboardScreen() {
     }
   }, [loadData, profile.isComplete, isGuest]);
 
-  const summary = dashboardData || (isGuest ? {
-    netWorth: 124500,
-    monthlyIn: 45000,
-    monthlyOut: 12300,
-    budgets: [
+  const summary = {
+    netWorth: dashboardData?.netWorth ?? (isGuest ? 124500 : 0),
+    monthlyIn: dashboardData?.monthlyIn ?? (isGuest ? 45000 : 0),
+    monthlyOut: dashboardData?.monthlyOut ?? (isGuest ? 12300 : 0),
+    budgets: dashboardData?.budgets ?? (isGuest ? [
       { id: '1', name: 'Housing', spent: 5000, allocated: 5000 },
       { id: '2', name: 'Food & Dining', spent: 2400, allocated: 3000 },
       { id: '3', name: 'Transport', spent: 1200, allocated: 1500 },
-    ]
-  } : {
-    netWorth: 0,
-    monthlyIn: 0,
-    monthlyOut: 0,
-    budgets: []
-  });
+    ] : [])
+  };
 
   return (
     <View style={styles.container}>

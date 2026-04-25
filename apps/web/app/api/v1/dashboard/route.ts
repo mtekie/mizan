@@ -38,13 +38,35 @@ export async function GET(req: Request) {
             ? Math.round(((monthlyIn - monthlyOut) / monthlyIn) * 100) 
             : 0;
 
+        // Get budgets for the current month
+        const budget = await prisma.budget.findUnique({
+            where: {
+                userId_month_year: {
+                    userId: user.id,
+                    month: now.getMonth() + 1,
+                    year: now.getFullYear()
+                }
+            },
+            include: {
+                categories: true
+            }
+        });
+
+        const budgets = budget?.categories.map(c => ({
+            id: c.id,
+            name: c.name,
+            spent: c.spent,
+            allocated: c.allocated
+        })) || [];
+
         return NextResponse.json({
             netWorth,
             monthlyIn,
             monthlyOut,
             savingsRate,
             accountCount: accounts.length,
-            transactionCount: transactions.length
+            transactionCount: transactions.length,
+            budgets
         });
 
     } catch (e: any) {

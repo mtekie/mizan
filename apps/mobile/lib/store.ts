@@ -30,7 +30,7 @@ interface MizanStore {
     username: string;
     primaryBanks: { bankId: string; accountNumber?: string; balance?: string }[];
     currency: string;
-    goals: { name: string; specifics?: Record<string, string> }[];
+    goals: { name: string; target?: string; emoji?: string; specifics?: Record<string, string> }[];
     isComplete: boolean;
     gender?: string;
     monthlyIncomeRange?: string;

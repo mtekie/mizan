@@ -4,7 +4,15 @@ import { MizanColors, MizanRadii, MizanTypography } from '@mizan/ui-tokens';
 import { useStore } from '../lib/store';
 import { Sparkles, X, ArrowRight, Trophy } from 'lucide-react-native';
 
-const QUESTIONS = [
+type ProfilePromptField = 'employmentStatus' | 'monthlyIncomeRange';
+
+const QUESTIONS: {
+  id: string;
+  field: ProfilePromptField;
+  label: string;
+  points: number;
+  options: string[];
+}[] = [
   { 
     id: '1', 
     field: 'employmentStatus', 

@@ -50,8 +50,8 @@ export default function ProductDetailScreen() {
         setProduct(data);
         setIsBookmarked(data.isBookmarked);
       } catch (err: any) {
-        console.error('Failed to fetch product detail:', err);
-        setError(err.message || 'Failed to load product details');
+        console.error(`Failed to fetch product detail for ID ${id}:`, err);
+        setError(err.message || `Failed to load product details for ${id}`);
       } finally {
         setLoading(false);
       }
