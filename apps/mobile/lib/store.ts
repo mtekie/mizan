@@ -1,42 +1,66 @@
 import { create } from 'zustand';
-import { persist, StateStorage } from 'zustand/middleware';
-import { MMKV } from 'react-native-mmkv';
-
-const storage = new MMKV();
+import { createJSONStorage, persist, StateStorage } from 'zustand/middleware';
+let storage: any = null;
+try {
+  const { MMKV } = require('react-native-mmkv');
+  if (MMKV) {
+    storage = new MMKV();
+  }
+} catch (e) {
+  console.warn('MMKV fallback', e);
+}
 
 const zustandStorage: StateStorage = {
   setItem: (name, value) => {
-    return storage.set(name, value);
+    return storage?.set(name, value);
   },
   getItem: (name) => {
-    const value = storage.getString(name);
+    const value = storage?.getString(name);
     return value ?? null;
   },
   removeItem: (name) => {
-    return storage.delete(name);
+    return storage?.delete(name);
   },
 };
 
-export type UIMode = 'simple' | 'pro';
-
 interface MizanStore {
-  uiMode: UIMode;
   aiEnabled: boolean;
-  setUiMode: (mode: UIMode) => void;
+  profile: {
+    fullName: string;
+    username: string;
+    primaryBank: string;
+    currency: string;
+    goals: string;
+    isComplete: boolean;
+  };
+  isGuest: boolean;
   setAiEnabled: (enabled: boolean) => void;
+  setProfile: (profile: Partial<MizanStore['profile']>) => void;
+  setGuest: (isGuest: boolean) => void;
 }
 
 export const useStore = create<MizanStore>()(
   persist(
     (set) => ({
-      uiMode: 'simple',
       aiEnabled: true,
-      setUiMode: (mode) => set({ uiMode: mode }),
+      isGuest: false,
+      profile: {
+        fullName: '',
+        username: '',
+        primaryBank: '',
+        currency: 'ETB',
+        goals: '',
+        isComplete: false,
+      },
       setAiEnabled: (enabled) => set({ aiEnabled: enabled }),
+      setGuest: (isGuest) => set({ isGuest }),
+      setProfile: (newProfile) => set((state) => ({ 
+        profile: { ...state.profile, ...newProfile } 
+      })),
     }),
     {
       name: 'mizan-mobile-storage',
-      storage: zustandStorage,
+      storage: createJSONStorage(() => zustandStorage),
     }
   )
 );

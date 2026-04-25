@@ -3,6 +3,9 @@
 import { useState } from 'react';
 import { ArrowLeft, Plus, Send, Building2, Smartphone, Users, ArrowDownUp, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
+import { EmptyState } from '@/components/EmptyState';
+import { SimplePageShell } from '@/components/SimplePageShell';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 
 type Transfer = {
   id: number;
@@ -14,24 +17,12 @@ type Transfer = {
   type: 'sent' | 'received';
 };
 
-const mockRecentTransfers: Transfer[] = [
-  { id: 1, description: 'Rent payment', fromAccount: 'CBE Savings', toAccount: 'Landlord - Abebe', amount: 8000, date: 'Today', type: 'sent' },
-  { id: 2, description: 'Deposit from Dawit', fromAccount: 'Dawit T.', toAccount: 'CBE Savings', amount: 5000, date: 'Today', type: 'received' },
-  { id: 3, description: 'Telebirr top-up', fromAccount: 'CBE Savings', toAccount: 'Telebirr Wallet', amount: 2000, date: 'Yesterday', type: 'sent' },
-  { id: 4, description: 'Equb contribution', fromAccount: 'Telebirr', toAccount: 'Group A Equb', amount: 1000, date: 'Yesterday', type: 'sent' },
-];
-
-const mockAccounts = [
-  { id: 'cbe', label: 'CBE Savings', icon: Building2 },
-  { id: 'telebirr', label: 'Telebirr', icon: Smartphone },
-  { id: 'equb', label: 'Group Equb', icon: Users },
-];
-
 export default function TransferClient({ initialTransfers, initialAccounts }: { initialTransfers: any[], initialAccounts: any[] }) {
   const [showForm, setShowForm] = useState(false);
+  const modalRef = useFocusTrap(showForm, () => setShowForm(false));
   const [form, setForm] = useState({ description: '', from: '', to: '', amount: '', date: '' });
 
-  const recentTransfers: Transfer[] = initialTransfers.length > 0 ? initialTransfers.map((t: any) => ({
+  const recentTransfers: Transfer[] = initialTransfers.map((t: any) => ({
     id: t.id,
     description: t.title,
     fromAccount: t.amount < 0 ? t.source : 'External',
@@ -39,13 +30,13 @@ export default function TransferClient({ initialTransfers, initialAccounts }: { 
     amount: Math.abs(t.amount),
     date: new Date(t.date).toDateString() === new Date().toDateString() ? 'Today' : 'Earlier',
     type: t.amount < 0 ? 'sent' : 'received'
-  })) : mockRecentTransfers;
+  }));
 
-  const accounts = initialAccounts.length > 0 ? initialAccounts.map((a: any) => ({
+  const accounts = initialAccounts.map((a: any) => ({
     id: a.id,
     label: a.name,
     icon: Building2
-  })) : mockAccounts;
+  }));
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,37 +45,32 @@ export default function TransferClient({ initialTransfers, initialAccounts }: { 
     setForm({ description: '', from: '', to: '', amount: '', date: '' });
   };
 
-  return (
-    <div className="flex flex-col min-h-full bg-slate-50 md:bg-transparent md:py-8">
-      <header className="flex items-center px-6 pb-4 pt-6 justify-between bg-white md:bg-transparent sticky top-0 z-10">
-        <Link href="/" className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 shadow-sm text-slate-900 hover:bg-slate-200 transition-colors">
-          <ArrowLeft className="w-6 h-6" />
-        </Link>
-        <h2 className="text-xl font-bold tracking-tight text-slate-900">Transfer Log</h2>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center justify-center w-10 h-10 rounded-full bg-[#0F172A] text-white hover:bg-slate-800 transition-colors shadow-sm"
-        >
-          <Plus className="w-5 h-5" />
-        </button>
-      </header>
-
+  const content = (
+    <>
       <div className="flex-1 overflow-y-auto hide-scrollbar pb-24 md:pb-0 px-6 space-y-6 pt-4">
         {/* Summary Cards */}
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
             <p className="text-xs text-slate-500 mb-1">Sent this month</p>
-            <p className="text-xl font-bold text-[#D84315]">- 11,000 ETB</p>
+            <p className="text-xl font-bold text-[#D84315]">- {recentTransfers.filter(t => t.type === 'sent').reduce((s, t) => s + t.amount, 0).toLocaleString()} ETB</p>
           </div>
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
             <p className="text-xs text-slate-500 mb-1">Received</p>
-            <p className="text-xl font-bold text-[#3EA63B]">+ 5,000 ETB</p>
+            <p className="text-xl font-bold text-[#3EA63B]">+ {recentTransfers.filter(t => t.type === 'received').reduce((s, t) => s + t.amount, 0).toLocaleString()} ETB</p>
           </div>
         </div>
 
         {/* Recent Transfers */}
         <section>
           <h2 className="text-lg font-bold text-slate-900 mb-3">Recent Transfers</h2>
+          {recentTransfers.length === 0 ? (
+            <EmptyState
+              icon={Send}
+              title="No transfers yet"
+              description="Log your first transfer to start tracking money movement between your accounts."
+              action={{ label: 'Log a Transfer', href: '#' }}
+            />
+          ) : (
           <div className="space-y-3">
             {Object.entries(
               recentTransfers.reduce((acc, t) => {
@@ -117,12 +103,31 @@ export default function TransferClient({ initialTransfers, initialAccounts }: { 
               </div>
             ))}
           </div>
+          )}
         </section>
       </div>
+    </>
+  );
+
+  return (
+    <>
+      <SimplePageShell
+        title="Transfer Log"
+        headerAction={
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center justify-center w-10 h-10 rounded-full bg-white/20 text-white transition-colors hover:bg-white/30"
+          >
+            <Plus className="w-5 h-5" />
+          </button>
+        }
+      >
+        {content}
+      </SimplePageShell>
 
       {/* Log Transfer Modal */}
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div ref={modalRef} className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="bg-white w-full md:max-w-md rounded-t-3xl md:rounded-3xl p-6 shadow-2xl">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-lg font-bold text-slate-900">Log a Transfer</h3>
@@ -203,6 +208,6 @@ export default function TransferClient({ initialTransfers, initialAccounts }: { 
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

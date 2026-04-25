@@ -11,6 +11,8 @@ import { PersonaStep } from '@/components/onboarding/PersonaStep';
 import { performUpdateOnboardingPhase } from '@/app/onboarding/actions';
 import { toast } from 'sonner';
 import { X } from 'lucide-react';
+import { SimplePageShell } from '@/components/SimplePageShell';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 
 export default function ScoreClient({ initialScore = 600 }: { initialScore: number }) {
   const searchParams = useSearchParams();
@@ -33,6 +35,7 @@ export default function ScoreClient({ initialScore = 600 }: { initialScore: numb
   const [tipLoading, setTipLoading] = useState(true);
 
   const isProfileOnboarding = searchParams.get('action') === 'complete-profile';
+  const profileOverlayRef = useFocusTrap(isProfileOnboarding, () => router.push('/score'));
 
   const handleProfileComplete = async () => {
     setLoading(true);
@@ -77,19 +80,9 @@ export default function ScoreClient({ initialScore = 600 }: { initialScore: numb
     }
     fetchTip();
   }, []);
-  return (
-    <div className="flex flex-col min-h-full bg-slate-50 md:bg-transparent md:py-8">
-      <header className="flex items-center justify-between px-6 pt-6 pb-4 bg-slate-50 md:bg-transparent sticky top-0 z-10">
-        <Link href="/" className="flex items-center justify-center w-10 h-10 rounded-full bg-white shadow-sm text-slate-900 transition-transform active:scale-95">
-          <ArrowLeft className="w-6 h-6" />
-        </Link>
-        <h1 className="text-lg font-bold">Mizan Score</h1>
-        <button className="flex items-center justify-center w-10 h-10 rounded-full bg-white shadow-sm text-slate-900 transition-transform active:scale-95">
-          <MoreHorizontal className="w-6 h-6" />
-        </button>
-      </header>
 
-      <main className="flex-1 flex flex-col gap-6 px-6 pb-24 md:pb-0 overflow-y-auto hide-scrollbar">
+  const content = (
+      <>
         <section className="flex flex-col items-center justify-center py-6">
           <div className="relative flex items-center justify-center w-64 h-64">
             <div className="absolute inset-0 rounded-full border-[20px] border-[#6ED063]/20"></div>
@@ -173,12 +166,27 @@ export default function ScoreClient({ initialScore = 600 }: { initialScore: numb
 
         {/* How You Compare */}
         <LeaderboardWidget mizanScore={720} />
-      </main>
+      </>
+  );
+
+  return (
+    <>
+      <SimplePageShell
+        title="Mizan Score"
+        headerAction={
+          <button className="flex items-center justify-center w-10 h-10 rounded-full bg-white/20 text-white transition-transform active:scale-95">
+            <MoreHorizontal className="w-5 h-5" />
+          </button>
+        }
+      >
+        {content}
+      </SimplePageShell>
 
       {/* ── Contextual Profile Overlay ── */}
       <AnimatePresence>
         {isProfileOnboarding && (
           <motion.div
+            ref={profileOverlayRef as any}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -221,6 +229,6 @@ export default function ScoreClient({ initialScore = 600 }: { initialScore: numb
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
 }

@@ -5,7 +5,6 @@ import { TrendingUp, Building2, Smartphone, Users, Filter, Coffee, ArrowDownToLi
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import { useStore } from '@/lib/store';
 import { SimpleLedger } from '@/components/SimpleLedger';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -42,7 +41,6 @@ export default function LedgerClient({ accounts, initialTransactions, summary }:
   const [txData, setTxData] = useState({ title: '', amount: '', category: '', source: accounts[0]?.id, targetAccount: accounts[1]?.id });
   const [success, setSuccess] = useState(false);
   
-  const uiMode = useStore(s => s.uiMode);
   const isMobile = useIsMobile();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -78,8 +76,8 @@ export default function LedgerClient({ accounts, initialTransactions, summary }:
     return acc;
   }, {} as Record<string, any[]>);
 
-  // ── Simple Mode: Gated to mobile only ──
-  if (uiMode === 'simple' && isMobile) {
+  // On mobile, always show the clean Mint-style ledger
+  if (isMobile) {
     return <SimpleLedger accounts={accounts} transactions={transactions} summary={summary} />;
   }
 

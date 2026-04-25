@@ -1,8 +1,10 @@
 node_modules/
 .next/
+.expo/
 coverage/
 .DS_Store
 *.log
+*.tsbuildinfo
 
 # Environment files (secrets go in Vercel dashboard)
 .env
@@ -13,6 +15,8 @@ coverage/
 
 # Generated
 /generated/prisma
+apps/mobile/.expo/
+apps/mobile/modules/**/build/
 
 # Data files
 tmp_*.json

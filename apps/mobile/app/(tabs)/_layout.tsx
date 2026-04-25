@@ -19,19 +19,25 @@ export default function TabLayout() {
       <Tabs.Screen
         name="ledger"
         options={{
-          tabBarLabel: 'Ledger',
+          tabBarLabel: 'Money',
         }}
       />
       <Tabs.Screen
         name="catalogue"
         options={{
-          tabBarLabel: 'Catalogue',
+          tabBarLabel: 'Find',
+        }}
+      />
+      <Tabs.Screen
+        name="goals"
+        options={{
+          tabBarLabel: 'Goals',
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          tabBarLabel: 'Profile',
+          tabBarLabel: 'Me',
         }}
       />
     </Tabs>

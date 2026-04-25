@@ -3,6 +3,7 @@ import { Inter, Noto_Sans_Ethiopic } from 'next/font/google';
 import './globals.css';
 import { LayoutWrapper } from '@/components/LayoutWrapper';
 import { ModeProvider } from '@/components/ModeProvider';
+import { Toaster } from 'sonner';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -52,12 +53,21 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+import { cookies } from 'next/headers';
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const cookieStore = await cookies();
+  const themeMode = cookieStore.get('mizan-themeMode')?.value || 'light';
+  
+  // If system, default to light for SSR (client will hydrate)
+  const initialTheme = themeMode === 'system' ? 'light' : themeMode;
+
   return (
-    <html lang="en" className={`${inter.variable} ${notoSansEthiopic.variable}`} suppressHydrationWarning>
-      <body className="font-sans antialiased bg-slate-50 text-slate-900 selection:bg-[#6ED063] selection:text-white" suppressHydrationWarning>
+    <html lang="en" className={`${inter.variable} ${notoSansEthiopic.variable}`} data-theme={initialTheme} suppressHydrationWarning>
+      <body className="font-sans antialiased bg-[var(--surface-bg)] text-slate-900 selection:bg-[var(--color-mint-primary)] selection:text-white" suppressHydrationWarning>
         <ModeProvider>
           <LayoutWrapper>{children}</LayoutWrapper>
+          <Toaster position="top-center" richColors closeButton />
         </ModeProvider>
       </body>
     </html>

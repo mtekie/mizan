@@ -1,12 +1,11 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { TouchableOpacity } from 'react-native-gesture-handler';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { MizanColors } from '@mizan/ui-tokens';
-import { Home, ReceiptText, Compass, User } from 'lucide-react-native';
-import { useStore } from '../../lib/store';
+import { Home, ReceiptText, Compass, Target, User } from 'lucide-react-native';
 
 export function BottomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
-  const uiMode = useStore((s) => s.uiMode);
 
   return (
     <View style={styles.container}>
@@ -36,6 +35,7 @@ export function BottomTabBar({ state, descriptors, navigation }: BottomTabBarPro
         let Icon = Home;
         if (route.name === 'ledger') Icon = ReceiptText;
         if (route.name === 'catalogue') Icon = Compass;
+        if (route.name === 'goals') Icon = Target;
         if (route.name === 'profile') Icon = User;
 
         return (
@@ -44,19 +44,18 @@ export function BottomTabBar({ state, descriptors, navigation }: BottomTabBarPro
             accessibilityRole="button"
             accessibilityState={isFocused ? { selected: true } : {}}
             accessibilityLabel={options.tabBarAccessibilityLabel}
-            testID={options.tabBarTestID}
             onPress={onPress}
             style={styles.tabButton}
           >
-            {uiMode === 'simple' && isFocused ? (
+            {isFocused ? (
               <View style={styles.activePill}>
                 <Icon size={20} color={MizanColors.mintPrimary} strokeWidth={2.5} />
               </View>
             ) : (
               <Icon 
                 size={22} 
-                color={isFocused ? MizanColors.mintPrimary : MizanColors.textMuted} 
-                strokeWidth={isFocused ? 2.5 : 2}
+                color={MizanColors.textMuted} 
+                strokeWidth={2}
               />
             )}
             <Text

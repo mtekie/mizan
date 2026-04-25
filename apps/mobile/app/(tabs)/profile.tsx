@@ -1,10 +1,25 @@
 import React from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
 import { MizanColors, MizanTypography } from '@mizan/ui-tokens';
-import { Settings, LogOut, Shield, CircleUser } from 'lucide-react-native';
+import { Settings, LogOut, Shield, CircleUser, Target } from 'lucide-react-native';
 import { MizanCard } from '../../components/ui/MizanCard';
+import { useStore } from '../../lib/store';
+import { supabase } from '../../lib/auth';
+import { router } from 'expo-router';
 
 export default function ProfileScreen() {
+  const { profile, isGuest, setGuest, setProfile } = useStore();
+
+  const handleLogout = async () => {
+    if (isGuest) {
+      setGuest(false);
+      setProfile({ isComplete: false });
+    } else {
+      await supabase.auth.signOut();
+    }
+    router.replace('/(auth)/login');
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -13,10 +28,19 @@ export default function ProfileScreen() {
         <View style={styles.header}>
           <CircleUser color={MizanColors.mintDark} size={64} />
           <View style={styles.headerText}>
-            <Text style={styles.name}>Dawit</Text>
-            <Text style={styles.email}>dawit@example.com</Text>
+            <Text style={styles.name}>{isGuest ? 'Guest User' : (profile.fullName || 'User')}</Text>
+            <Text style={styles.email}>{isGuest ? 'Limited Preview Mode' : `@${profile.username || 'username'}`}</Text>
           </View>
         </View>
+
+        {isGuest && (
+          <MizanCard style={styles.guestNotice}>
+            <Text style={styles.guestNoticeText}>You are currently in Guest Mode. Data will not be saved permanently.</Text>
+            <TouchableOpacity style={styles.upgradeBtn} onPress={() => router.replace('/(auth)/signup' as any)}>
+              <Text style={styles.upgradeBtnText}>Create Real Account</Text>
+            </TouchableOpacity>
+          </MizanCard>
+        )}
 
         <MizanCard style={styles.menuCard}>
           <TouchableOpacity style={styles.menuItem}>
@@ -29,9 +53,9 @@ export default function ProfileScreen() {
             <Text style={styles.menuText}>Settings</Text>
           </TouchableOpacity>
           <View style={styles.divider} />
-          <TouchableOpacity style={styles.menuItem}>
-            <LogOut color={MizanColors.terracotta} size={20} />
-            <Text style={[styles.menuText, { color: MizanColors.terracotta }]}>Log Out</Text>
+          <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
+            <LogOut color={MizanColors.mintCoral} size={20} />
+            <Text style={[styles.menuText, { color: MizanColors.mintCoral }]}>Log Out</Text>
           </TouchableOpacity>
         </MizanCard>
       </ScrollView>
@@ -75,6 +99,31 @@ const styles = StyleSheet.create({
   menuCard: {
     padding: 8,
   },
+  goalsCard: {
+    marginBottom: 24,
+    padding: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: MizanColors.mintPrimary,
+  },
+  goalsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  goalsTitle: {
+    fontSize: 14,
+    fontFamily: 'Inter_700Bold',
+    color: MizanColors.mintDark,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  goalsText: {
+    fontSize: 16,
+    fontFamily: 'Inter_400Regular',
+    color: MizanColors.textPrimary,
+    lineHeight: 22,
+  },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -90,5 +139,30 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: '#F1F5F9',
     marginLeft: 48,
+  },
+  guestNotice: {
+    backgroundColor: MizanColors.mintCoral + '10',
+    borderColor: MizanColors.mintCoral,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 24,
+  },
+  guestNoticeText: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 14,
+    color: MizanColors.textPrimary,
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  upgradeBtn: {
+    backgroundColor: MizanColors.mintPrimary,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  upgradeBtnText: {
+    fontFamily: 'Inter_700Bold',
+    color: '#fff',
+    fontSize: 14,
   }
 });

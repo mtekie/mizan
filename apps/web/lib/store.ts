@@ -1,24 +1,22 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type UIMode = 'simple' | 'pro';
+export type ThemeMode = 'light' | 'dark' | 'system';
 
 type MizanStore = {
     aiEnabled: boolean;
-    uiMode: UIMode;
-    modeExplicitlySet: boolean;
+    themeMode: ThemeMode;
     setAiEnabled: (e: boolean) => void;
-    setUiMode: (mode: UIMode) => void;
+    setThemeMode: (theme: ThemeMode) => void;
 };
 
 export const useStore = create<MizanStore>()(
     persist(
         (set) => ({
             aiEnabled: true,
-            uiMode: 'simple' as UIMode,
-            modeExplicitlySet: false,
+            themeMode: 'light' as ThemeMode,
             setAiEnabled: (aiEnabled) => set({ aiEnabled }),
-            setUiMode: (uiMode) => set({ uiMode, modeExplicitlySet: true }),
+            setThemeMode: (themeMode) => set({ themeMode }),
         }),
         {
             name: 'mizan-demo-storage',

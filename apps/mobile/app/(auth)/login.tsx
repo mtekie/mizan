@@ -3,11 +3,13 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingVi
 import { MizanColors, MizanTypography } from '@mizan/ui-tokens';
 import { supabase } from '../../lib/auth';
 import { router } from 'expo-router';
+import { useStore } from '../../lib/store';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const { setGuest, setProfile } = useStore();
 
   const handleLogin = async () => {
     if (!email || !password) return;
@@ -37,6 +39,7 @@ export default function LoginScreen() {
         <TextInput
           style={styles.input}
           placeholder="Email address"
+          placeholderTextColor={MizanColors.textMuted}
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
@@ -46,6 +49,7 @@ export default function LoginScreen() {
         <TextInput
           style={styles.input}
           placeholder="Password"
+          placeholderTextColor={MizanColors.textMuted}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
@@ -59,8 +63,22 @@ export default function LoginScreen() {
           <Text style={styles.buttonText}>{loading ? 'Logging in...' : 'Log In'}</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.secondaryButton} onPress={() => router.push('/(auth)/signup')}>
+        <TouchableOpacity style={styles.secondaryButton} onPress={() => router.push('/(auth)/signup' as any)}>
           <Text style={styles.secondaryButtonText}>Create an account</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.secondaryButton, { marginTop: 0 }]} 
+          onPress={() => {
+            // Development bypass: just go to tabs
+            setGuest(true);
+            setProfile({ isComplete: true }); // Bypass onboarding too
+            router.replace('/(tabs)');
+          }}
+        >
+          <Text style={[styles.secondaryButtonText, { color: MizanColors.textMuted }]}>
+            Sign in as Guest (Dev Mode)
+          </Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -70,7 +88,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: MizanColors.bg,
+    backgroundColor: MizanColors.mintBg,
   },
   content: {
     flex: 1,

@@ -7,12 +7,14 @@ export function ProfileStep({
   data, 
   setData, 
   onNext,
-  onBack
+  onBack,
+  onSkip
 }: { 
   data: any, 
   setData: (d: any) => void, 
   onNext: () => void,
-  onBack: () => void
+  onBack: () => void,
+  onSkip?: () => void
 }) {
   const update = (key: string, val: string) => setData({ ...data, [key]: val });
 
@@ -115,6 +117,11 @@ export function ProfileStep({
             Almost there <ArrowRight className="w-5 h-5" />
           </button>
         </div>
+        {onSkip && (
+          <button onClick={onSkip} className="w-full text-center text-xs text-slate-500 font-bold hover:text-slate-300 mt-2">
+             Skip for now
+          </button>
+        )}
       </div>
     </motion.div>
   );

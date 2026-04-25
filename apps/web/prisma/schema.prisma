@@ -45,6 +45,14 @@ model User {
   budgets            Budget[]
   bills              Bill[]
   notifications      Notification[]
+
+  // Marketplace interactions
+  productReviews     ProductReview[]
+  providerReviews    ProviderReview[]
+  productBookmarks   ProductBookmark[]
+  productApplications ProductApplication[]
+  accountLinks       AccountLink[]
+
   mizanScore         Int            @default(600)
   role               Role           @default(USER)
   theme              String?        @default("light")
@@ -169,15 +177,36 @@ model Notification {
 
 model Product {
   id                     String   @id @default(cuid())
-  category               String   // 'Banks', 'BNPL', 'Insurance', 'MFIs', 'SACCOs'
+
+  // ── New normalized fields ──
+  slug                   String?  @unique
+  providerId             String?
+  provider               Provider? @relation(fields: [providerId], references: [id])
+
+  productClass           String?  // 'SAVINGS', 'CREDIT', 'INSURANCE', 'PAYMENT', 'CAPITAL_MARKET', 'COMMUNITY'
+  productType            String?  // Finer grain: 'personal_loan', 'motor_comprehensive', etc.
+
+  name                   String?
+  nameAmh                String?
+
+  // Flexible structured attributes by class
+  attributes             Json?    // SavingsAttributes | CreditAttributes | InsuranceAttributes | etc.
+
+  // Status & Display
+  isActive               Boolean  @default(true)
+  isFeatured             Boolean  @default(false)
+  isVerified             Boolean  @default(true)  // false = data quality flag
+
+  // ── Legacy fields (kept for backward compat during migration) ──
+  category               String?  // 'Banks', 'BNPL', 'Insurance', 'MFIs', 'SACCOs'
   bankId                 String?
   bankName               String?
   bankLogo               String?
   bankIconBg             String?
-  title                  String
+  title                  String?
   matchScore             Int?
   highlight              String?
-  description            String
+  description            String   @default("")
   interestRate           Float?
   interestMax            Float?
   features               String[]
@@ -198,6 +227,199 @@ model Product {
   prepaymentPenalties    String?
   latePaymentPenalties   String?
   insuranceRequirements  String?
+
+  // Relations
+  tags                   ProductTag[]
+  reviews                ProductReview[]
+  bookmarks              ProductBookmark[]
+  applications           ProductApplication[]
+
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
+
+  @@index([productClass])
+  @@index([providerId])
+  @@index([productType])
 }
+
+// ══════════════════════════════════════════════════
+// PROVIDER — Institution / Company
+// ══════════════════════════════════════════════════
+
+model Provider {
+  id            String       @id @default(cuid())
+  slug          String       @unique        // 'cbe', 'awash', 'nyala-insurance'
+  name          String                       // 'Commercial Bank of Ethiopia'
+  nameAmh       String?                      // 'የኢትዮጵያ ንግድ ባንክ'
+  shortCode     String?                      // 'CBE'
+
+  type          String                       // 'BANK', 'MFI', 'INSURANCE', 'WALLET', 'SACCO', 'BROKER', 'BNPL_MERCHANT', 'GOVERNMENT'
+  tier          String?                      // 'Tier 1', 'Tier 2', 'Tier 3'
+
+  // Branding
+  logoUrl       String?                      // '/providers/cbe-logo.png'
+  iconUrl       String?                      // '/providers/cbe-icon.png'
+  brandColor    String?                      // '#68246D'
+  brandColorBg  String?                      // '#F3E8F4'
+
+  // Info
+  description   String?
+  founded       Int?
+  headquarters  String?
+  region        String?
+  website       String?
+  appStoreUrl   String?
+  playStoreUrl  String?
+
+  // Metrics
+  branches      Int?
+  isDigital     Boolean      @default(false)
+
+  // ESX / Capital Markets
+  esxListed     Boolean      @default(false)
+  esxSymbol     String?
+
+  // Status
+  isVerified    Boolean      @default(false)
+  isActive      Boolean      @default(true)
+
+  // Relations
+  products      Product[]
+  reviews       ProviderReview[]
+
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+// ══════════════════════════════════════════════════
+// PRODUCT TYPE DEFINITIONS — Admin-Extensible Taxonomy
+// ══════════════════════════════════════════════════
+
+model ProductTypeDefinition {
+  id            String   @id @default(cuid())
+  slug          String   @unique            // 'personal_loan', 'motor_comprehensive'
+  label         String                       // 'Personal Loan'
+  labelAmh      String?                      // 'የግል ብድር'
+  productClass  String                       // 'CREDIT', 'INSURANCE', etc.
+  icon          String?                      // Emoji or icon name
+  description   String?
+  sortOrder     Int      @default(0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+}
+
+// ══════════════════════════════════════════════════
+// TAGS — Structured Tagging for Matching & Filtering
+// ══════════════════════════════════════════════════
+
+model TagDefinition {
+  id            String       @id @default(cuid())
+  slug          String       @unique        // 'interest_free', 'agriculture'
+  label         String                       // 'Interest-Free'
+  labelAmh      String?                      // 'ወለድ-አልባ'
+  category      String                       // 'AUDIENCE', 'SECTOR', 'FEATURE', 'COMPLIANCE', 'ACCESS_REQUIREMENT', 'COLLATERAL_TYPE'
+  icon          String?
+  description   String?
+
+  // Profile mapping for match scoring
+  profileField  String?                      // 'interestFree', 'gender', 'employmentStatus'
+  profileValue  String?                      // 'true', 'FEMALE', 'SELF_EMPLOYED'
+
+  productTags   ProductTag[]
+  createdAt     DateTime     @default(now())
+}
+
+model ProductTag {
+  id            String        @id @default(cuid())
+  productId     String
+  tagId         String
+
+  product       Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  tag           TagDefinition @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, tagId])
+}
+
+// ══════════════════════════════════════════════════
+// REVIEWS
+// ══════════════════════════════════════════════════
+
+model ProductReview {
+  id          String   @id @default(cuid())
+  userId      String   @db.Uuid
+  productId   String
+  rating      Int                           // 1-5
+  title       String?
+  body        String?
+  isVerified  Boolean  @default(false)      // User has this product linked
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+  @@unique([userId, productId])
+}
+
+model ProviderReview {
+  id          String   @id @default(cuid())
+  userId      String   @db.Uuid
+  providerId  String
+  rating      Int
+  title       String?
+  body        String?
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider    Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+  @@unique([userId, providerId])
+}
+
+// ══════════════════════════════════════════════════
+// USER ↔ PRODUCT INTERACTIONS
+// ══════════════════════════════════════════════════
+
+model ProductBookmark {
+  id        String   @id @default(cuid())
+  userId    String   @db.Uuid
+  productId String
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  @@unique([userId, productId])
+}
+
+model ProductApplication {
+  id        String   @id @default(cuid())
+  userId    String   @db.Uuid
+  productId String
+  status    String   @default("INTERESTED") // INTERESTED, APPLIED, PENDING, APPROVED, REJECTED, ACTIVE
+  notes     String?
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AccountLink {
+  id              String   @id @default(cuid())
+  userId          String   @db.Uuid
+  productId       String?
+  providerId      String?
+
+  level           String   @default("SELF_DECLARED") // SELF_DECLARED, ACCOUNT_LINKED, PHOTO_VERIFIED
+  accountNumber   String?                             // For level 2
+  photoUrl        String?                             // For level 3 (bank book / contract photo)
+  verifiedAt      DateTime?
+  verifiedBy      String?                             // Admin user ID or 'SYSTEM'
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+

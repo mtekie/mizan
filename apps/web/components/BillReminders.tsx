@@ -2,9 +2,11 @@
 
 import { useState } from 'react';
 import { Bell, Calendar, Check, ChevronDown, ChevronUp, Home, Phone, Shield, Zap, Wifi, CreditCard, Plus, X, Trash2 } from 'lucide-react';
+import { createBill, markBillPaid, deleteBill } from '@/app/dreams/actions';
+import { toast } from 'sonner';
 
 type Bill = {
-    id: number;
+    id: string;
     name: string;
     amount: number;
     category: string;
@@ -12,7 +14,7 @@ type Bill = {
     color: string;
     bg: string;
     dueDay: number;
-    frequency: string;
+    frequency?: string;
     isPaid: boolean;
 };
 
@@ -26,14 +28,17 @@ const categoryMap = [
 ];
 
 const demoBills: Bill[] = [
-    { id: 1, name: 'Apartment Rent', amount: 8000, category: 'Rent', icon: Home, color: 'text-blue-600', bg: 'bg-blue-50', dueDay: 1, frequency: 'Monthly', isPaid: false },
-    { id: 2, name: 'Ethio Telecom', amount: 500, category: 'Phone', icon: Phone, color: 'text-sky-600', bg: 'bg-sky-50', dueDay: 5, frequency: 'Monthly', isPaid: false },
-    { id: 3, name: 'Electric (EELPA)', amount: 350, category: 'Utilities', icon: Zap, color: 'text-amber-600', bg: 'bg-amber-50', dueDay: 10, frequency: 'Monthly', isPaid: true },
-    { id: 4, name: 'Internet - Safaricom', amount: 1200, category: 'Internet', icon: Wifi, color: 'text-indigo-600', bg: 'bg-indigo-50', dueDay: 15, frequency: 'Monthly', isPaid: false },
+    { id: '1', name: 'Apartment Rent', amount: 8000, category: 'Rent', icon: Home, color: 'text-blue-600', bg: 'bg-blue-50', dueDay: 1, frequency: 'Monthly', isPaid: false },
+    { id: '2', name: 'Ethio Telecom', amount: 500, category: 'Phone', icon: Phone, color: 'text-sky-600', bg: 'bg-sky-50', dueDay: 5, frequency: 'Monthly', isPaid: false },
+    { id: '3', name: 'Electric (EELPA)', amount: 350, category: 'Utilities', icon: Zap, color: 'text-amber-600', bg: 'bg-amber-50', dueDay: 10, frequency: 'Monthly', isPaid: true },
+    { id: '4', name: 'Internet - Safaricom', amount: 1200, category: 'Internet', icon: Wifi, color: 'text-indigo-600', bg: 'bg-indigo-50', dueDay: 15, frequency: 'Monthly', isPaid: false },
 ];
 
-export function BillReminders() {
-    const [bills, setBills] = useState(demoBills);
+export function BillReminders({ initialBills }: { initialBills?: any[] }) {
+    const [bills, setBills] = useState<Bill[]>(() => {
+        if (initialBills && initialBills.length > 0) return initialBills as Bill[];
+        return [];
+    });
     const [showAdd, setShowAdd] = useState(false);
     const [expanded, setExpanded] = useState(true);
     const [newBill, setNewBill] = useState({ name: '', amount: '', category: '', dueDay: '' });
@@ -45,14 +50,48 @@ export function BillReminders() {
     const paid = bills.filter(b => b.isPaid);
     const totalDue = unpaid.reduce((s, b) => s + b.amount, 0);
 
-    const markPaid = (id: number) => setBills(bs => bs.map(b => b.id === id ? { ...b, isPaid: true } : b));
-    const removeBill = (id: number) => setBills(bs => bs.filter(b => b.id !== id));
+    const markPaid = async (id: string) => {
+        // Optimistic UI
+        setBills(bs => bs.map(b => b.id === id ? { ...b, isPaid: true } : b));
+        try {
+            await markBillPaid(id, true);
+            toast.success('Bill marked as paid');
+        } catch (e: any) {
+            toast.error('Failed to mark bill as paid');
+            setBills(bs => bs.map(b => b.id === id ? { ...b, isPaid: false } : b));
+        }
+    };
 
-    const handleAdd = () => {
+    const removeBill = async (id: string) => {
+        const deleted = bills.find(b => b.id === id);
+        if (!deleted) return;
+        setBills(bs => bs.filter(b => b.id !== id));
+        try {
+            await deleteBill(id);
+            toast.success('Bill removed');
+        } catch (e: any) {
+            toast.error('Failed to remove bill');
+            setBills(bs => [...bs, deleted]);
+        }
+    };
+
+    const handleAdd = async () => {
         if (!newBill.name || !newBill.amount || !newBill.category || !newBill.dueDay) return;
         const cat = categoryMap.find(c => c.label === newBill.category);
+        
+        try {
+            await createBill({
+                name: newBill.name,
+                amount: Number(newBill.amount),
+                category: newBill.category,
+                dueDay: Number(newBill.dueDay)
+            });
+            toast.success('Bill reminder created');
+            
+            // Note: Since createBill calls revalidatePath('/dreams'), the page will refresh 
+            // and pass the new bill via props soon. But we'll optimistically add it locally.
         setBills(bs => [...bs, {
-            id: Date.now(),
+            id: String(Date.now()),
             name: newBill.name,
             amount: Number(newBill.amount),
             category: newBill.category,
@@ -65,6 +104,9 @@ export function BillReminders() {
         }]);
         setNewBill({ name: '', amount: '', category: '', dueDay: '' });
         setShowAdd(false);
+        } catch (e: any) {
+            toast.error('Failed to create bill: ' + e.message);
+        }
     };
 
     return (
@@ -167,7 +209,7 @@ export function BillReminders() {
 }
 
 function BillRow({ bill, today, onPay, onRemove, isOverdue, isPaid }: {
-    bill: Bill; today: number; onPay: (id: number) => void; onRemove: (id: number) => void; isOverdue?: boolean; isPaid?: boolean;
+    bill: Bill; today: number; onPay: (id: string) => void; onRemove: (id: string) => void; isOverdue?: boolean; isPaid?: boolean;
 }) {
     const Icon = bill.icon;
     const daysUntil = bill.dueDay - today;

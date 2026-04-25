@@ -14,12 +14,14 @@ export function AccountStep({
   accounts, 
   setAccounts, 
   onNext,
-  onBack
+  onBack,
+  onSkip
 }: { 
   accounts: any[], 
   setAccounts: (a: any[]) => void, 
   onNext: () => void,
-  onBack: () => void
+  onBack: () => void,
+  onSkip?: () => void
 }) {
   const [name, setName] = useState('');
   const [balance, setBalance] = useState('');
@@ -127,9 +129,11 @@ export function AccountStep({
           </button>
         </div>
         
-        <button onClick={onNext} className="w-full text-center text-xs text-slate-500 font-bold hover:text-slate-300 mt-2">
-           Skip for now
-        </button>
+        {onSkip && (
+          <button onClick={onSkip} className="w-full text-center text-xs text-slate-500 font-bold hover:text-slate-300 mt-2">
+             Skip for now
+          </button>
+        )}
       </div>
     </motion.div>
   );

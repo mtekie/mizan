@@ -1,15 +1,11 @@
 @import "tailwindcss";
 
 @theme {
-  /* ── Legacy Pro Mode tokens (preserved) ── */
-  --color-mizan-green-start: #6ED063;
-  --color-mizan-green-end: #3EA63B;
-  --color-mizan-charcoal: #0F172A;
-  --color-mizan-yellow: #FFC836;
-  --color-mizan-terracotta: #D84315;
-  --color-mizan-bg: #F8FAFC;
+  /* ══════════════════════════════════════════════
+   * MIZAN DESIGN TOKENS — Single Source of Truth
+   * ══════════════════════════════════════════════ */
 
-  /* ── Mizan Mint Design System ── */
+  /* ── Brand Palette: Mint ── */
   --color-mint-primary: #45BFA0;
   --color-mint-dark: #2D9E82;
   --color-mint-deep: #1A7A64;
@@ -23,20 +19,130 @@
   --color-mint-text: #1E293B;
   --color-mint-text-muted: #94A3B8;
   --color-mint-text-on-mint: #FFFFFF;
+
+  /* ── Legacy Pro Colors (kept for gradients/accents) ── */
+  --color-mizan-green-start: #6ED063;
+  --color-mizan-green-end: #3EA63B;
+  --color-mizan-charcoal: #0F172A;
+  --color-mizan-yellow: #FFC836;
+  --color-mizan-terracotta: #D84315;
+
+  /* ── Typography Scale ── */
+  --text-micro: 10px;
+  --text-caption: 12px;
+  --text-body: 14px;
+  --text-title: 18px;
+  --text-heading: 24px;
+  --text-hero: 32px;
 }
 
+/* ══════════════════════════════════════════════
+ * SEMANTIC TOKENS — Theme Aware
+ *
+ * These are the ONLY tokens components should use.
+ * They automatically adapt to Light/Dark theme.
+ * ══════════════════════════════════════════════ */
+
+:root {
+  /* ── Surfaces ── */
+  --surface-bg: #F0FAF7;
+  --surface-card: #FFFFFF;
+  --surface-card-hover: #F8FAFC;
+  --surface-elevated: #FFFFFF;
+  --surface-inset: #F1F5F9;
+
+  /* ── Text ── */
+  --text-primary: #1E293B;
+  --text-secondary: #475569;
+  --text-muted: #94A3B8;
+  --text-inverse: #FFFFFF;
+
+  /* ── Brand / Primary ── */
+  --color-primary: #45BFA0;
+  --color-primary-light: #7DD4BE;
+  --color-primary-hover: #2D9E82;
+  --color-primary-muted: rgba(69, 191, 160, 0.1);
+
+  /* ── Semantic Status ── */
+  --color-success: #45BFA0;
+  --color-success-bg: #ECFDF5;
+  --color-danger: #E8734A;
+  --color-danger-bg: #FEF2F2;
+  --color-warning: #F5A623;
+  --color-warning-bg: #FFFBEB;
+  --color-info: #3B82F6;
+  --color-info-bg: #EFF6FF;
+
+  /* ── Borders ── */
+  --border-default: #E2E8F0;
+  --border-muted: #F1F5F9;
+
+  /* ── Navigation ── */
+  --nav-bg: #FFFFFF;
+  --nav-text: #94A3B8;
+  --nav-text-active: #1A7A64;
+  --nav-accent: #45BFA0;
+  --nav-border: #E2E8F0;
+
+  /* ── Shadows ── */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* ── Dark Mode Overrides ── */
+[data-theme="dark"] {
+  --surface-bg: #091A15;
+  --surface-card: #0F2620;
+  --surface-card-hover: #14302A;
+  --surface-elevated: #14302A;
+  --surface-inset: #0A1E18;
+
+  --text-primary: #F1F5F9;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+  --text-inverse: #0F172A;
+
+  --color-primary: #45BFA0;
+  --color-primary-light: #7DD4BE;
+  --color-primary-hover: #2D9E82;
+  --color-primary-muted: rgba(69, 191, 160, 0.15);
+
+  --color-success: #45BFA0;
+  --color-success-bg: rgba(69, 191, 160, 0.1);
+  --color-danger: #EF6C47;
+  --color-danger-bg: rgba(239, 108, 71, 0.1);
+  --color-warning: #F5A623;
+  --color-warning-bg: rgba(245, 166, 35, 0.1);
+  --color-info: #60A5FA;
+  --color-info-bg: rgba(96, 165, 250, 0.1);
+
+  --border-default: #1A3A30;
+  --border-muted: #122820;
+
+  --nav-bg: #081510;
+  --nav-border: #0F2620;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+
+  color-scheme: dark;
+}
+
+
 @layer utilities {
-  /* ── Pro Mode gradients (preserved) ── */
+  /* ── Mint Gradients ── */
   .mizan-gradient-bg {
-    background: linear-gradient(135deg, var(--color-mizan-green-start), var(--color-mizan-green-end));
+    background: linear-gradient(135deg, var(--color-mint-primary), var(--color-mint-deep));
   }
   .mizan-gradient-text {
-    background: linear-gradient(135deg, var(--color-mizan-green-start), var(--color-mizan-green-end));
+    background: linear-gradient(135deg, var(--color-mint-primary), var(--color-mint-deep));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
   }
 
-  /* ── Simple Mode: Mint-Inspired Utilities ── */
+  /* ── Mint-Inspired Utilities ── */
   .mint-gradient-bg {
     background: linear-gradient(180deg, #2D9E82 0%, #45BFA0 100%);
   }
@@ -45,10 +151,10 @@
     border-radius: 0 0 28px 28px;
   }
   .mint-card {
-    background: #FFFFFF;
+    background: var(--surface-card);
     border-radius: 20px;
     padding: 20px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    box-shadow: var(--shadow-sm);
   }
   .mint-card-pressed {
     transform: scale(0.98);
@@ -64,7 +170,7 @@
   .mint-segment-item {
     border-radius: 9999px;
     padding: 6px 16px;
-    font-size: 12px;
+    font-size: var(--text-caption);
     font-weight: 700;
     color: rgba(255, 255, 255, 0.7);
     transition: all 0.2s ease;
@@ -79,7 +185,7 @@
     align-items: center;
     padding: 14px 0;
     gap: 12px;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid var(--border-muted);
     min-height: 56px;
   }
   .mint-fab {
@@ -110,12 +216,13 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  /* ── Safe area inset for iOS ── */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
 }
 
-/* ── Simple mode body overrides ── */
-body.mode-simple {
-  background-color: #F0FAF7;
-}
 
 /* ── Animations ── */
 @keyframes ticker {
@@ -136,6 +243,10 @@ body.mode-simple {
 @keyframes slide-up {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-marquee {
+  animation: ticker 30s linear infinite;
 }
 
 .animate-count-up {

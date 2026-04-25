@@ -6,6 +6,7 @@ import { Bell, Lightbulb, Plus, TrendingUp, ArrowDownRight, ArrowUpRight, Chevro
 import { OnboardingPrompt } from '@/components/OnboardingPrompt';
 import { Nudge } from '@/components/Nudge';
 import { useNudges } from '@/hooks/useNudges';
+import { MintDonutChart, MintBudgetBar } from './MintCharts';
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -19,8 +20,8 @@ export function SimpleDashboard({ user, accounts, transactions, summary }: { use
   const { activeNudge } = useNudges({ 
     user, 
     accounts, 
-    goals: user?.goals || [], 
-    mizanScore: user?.mizanScore || 600 
+    goals: [], 
+    mizanScore: user?.score || 600 
   });
 
   const aiTips = [
@@ -202,26 +203,37 @@ export function SimpleDashboard({ user, accounts, transactions, summary }: { use
           )}
         </div>
 
-        {/* Budget Snapshot */}
-        <div className="mint-card animate-slide-up" style={{ animationDelay: '0.4s' }}>
-          <div className="flex justify-between items-center mb-3">
-            <h3 className="text-sm font-bold text-[var(--color-mint-text)]">Monthly Burn</h3>
-            <Link href="/dreams" className="text-xs font-bold text-[var(--color-mint-primary)] flex items-center gap-0.5 hover:underline">
+        {/* Spending Insights */}
+        <div className="mint-card animate-slide-up" style={{ animationDelay: '0.25s' }}>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-sm font-bold text-[var(--color-mint-text)]">This month's spending</h3>
+            <Link href="/ledger" className="text-xs font-bold text-[var(--color-mint-primary)] flex items-center gap-0.5 hover:underline">
               Details <ChevronRight className="w-3.5 h-3.5" />
             </Link>
           </div>
-          <div className="flex items-end justify-between mb-2">
-            <div>
-              <span className="text-2xl font-black text-[var(--color-mint-text)]">{summary.monthlyOut.toLocaleString()}</span>
-              <span className="text-sm text-[var(--color-mint-text-muted)] font-semibold ml-1">ETB spent</span>
+          <MintDonutChart data={summary.spendingData || []} totalSpent={summary.monthlyOut} />
+        </div>
+
+        {/* Budgets */}
+        <div className="mint-card animate-slide-up" style={{ animationDelay: '0.35s' }}>
+           <div className="flex justify-between items-center mb-4">
+            <h3 className="text-sm font-bold text-[var(--color-mint-text)]">Monthly Budgets</h3>
+            <Link href="/dreams" className="text-xs font-bold text-[var(--color-mint-primary)] flex items-center gap-0.5 hover:underline">
+              Edit <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+          {(!summary.budgets || summary.budgets.length === 0 || !summary.budgets[0].categories || summary.budgets[0].categories.length === 0) ? (
+            <div className="text-center py-2">
+              <p className="text-xs text-[var(--color-mint-text-muted)] mb-3">No budgets set up yet.</p>
+              <MintBudgetBar spent={summary.monthlyOut} total={summary.monthlyOut > 0 ? summary.monthlyOut * 1.2 : 5000} title="Overall Estimate" />
             </div>
-          </div>
-          <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all duration-700"
-              style={{ width: `${Math.min(100, (summary.monthlyOut / (summary.monthlyIn || 1)) * 100)}%`, background: 'linear-gradient(90deg, #F59E0B, #D97706)' }}
-            />
-          </div>
+          ) : (
+             <div className="space-y-4">
+               {summary.budgets[0].categories.map((c: any) => (
+                 <MintBudgetBar key={c.id} spent={c.spent} total={c.allocated} title={c.name} />
+               ))}
+             </div>
+          )}
         </div>
 
         {/* Savings Goal Peek */}

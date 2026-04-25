@@ -1,10 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { User, Shield, Bell, Globe, Moon, Sun, Download, Trash2, LogOut, ChevronRight, Check, Languages, Banknote, Smartphone, Mail, TrendingUp, AlertTriangle, ArrowLeft, BarChart3 } from 'lucide-react';
+import { User, Shield, Bell, Globe, Moon, Sun, Download, Trash2, LogOut, ChevronRight, Check, Languages, Banknote, Smartphone, Mail, TrendingUp, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
-import { useStore } from '@/lib/store';
-import type { UIMode } from '@/lib/store';
 import { signOut, deleteAccount, exportData } from './actions';
 
 type ToggleProps = { enabled: boolean; onToggle: () => void };
@@ -16,42 +14,8 @@ function Toggle({ enabled, onToggle }: ToggleProps) {
     );
 }
 
-function InterfaceModePicker() {
-    const uiMode = useStore((s) => s.uiMode);
-    const setUiMode = useStore((s) => s.setUiMode);
 
-    const modes: { mode: UIMode; emoji: string; label: string; desc: string }[] = [
-        { mode: 'simple', emoji: '😊', label: 'Simple', desc: 'Clean, easy to use, guided experience' },
-        { mode: 'pro', emoji: '📊', label: 'Pro', desc: 'Full control, all data, advanced features' },
-    ];
 
-    return (
-        <div className="px-5 py-4 border-b border-slate-50">
-            <div className="flex items-center gap-3 mb-3">
-                <BarChart3 className="w-4 h-4 text-slate-400" />
-                <span className="text-sm font-bold text-slate-900">Interface Mode</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-                {modes.map(m => (
-                    <button
-                        key={m.mode}
-                        onClick={() => setUiMode(m.mode)}
-                        className={`p-3 rounded-xl border-2 text-left transition-all ${
-                            uiMode === m.mode
-                                ? 'border-[var(--color-mint-primary)] bg-[var(--color-mint-primary)]/5 shadow-sm'
-                                : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
-                        }`}
-                    >
-                        <div className="text-xl mb-1">{m.emoji}</div>
-                        <p className={`text-sm font-black ${uiMode === m.mode ? 'text-[var(--color-mint-primary)]' : 'text-slate-900'}`}>{m.label}</p>
-                        <p className="text-[10px] text-slate-400 leading-tight mt-0.5">{m.desc}</p>
-                    </button>
-                ))}
-            </div>
-            <p className="text-[10px] text-slate-400 mt-2">You can switch anytime.</p>
-        </div>
-    );
-}
 
 
 
@@ -183,9 +147,6 @@ export default function SettingsPage() {
                         </h2>
                     </div>
 
-                    {/* Interface Mode */}
-                    <InterfaceModePicker />
-
                     {/* Currency */}
                     <div className="px-5 py-4 flex items-center justify-between border-b border-slate-50">
                         <div className="flex items-center gap-3">
@@ -196,7 +157,7 @@ export default function SettingsPage() {
                             {currencies.map(c => (
                                 <button
                                     key={c}
-                                    onClick={() => updateSetting('currency', c)}
+                                    onClick={() => { setCurrency(c); updateSetting('currency', c); }}
                                     className={`px-2.5 py-1 rounded-lg text-[10px] font-black transition-all ${currency === c ? 'bg-[#0F172A] text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
                                 >
                                     {c}
@@ -215,7 +176,7 @@ export default function SettingsPage() {
                             {[{ code: 'en', label: 'English' }, { code: 'am', label: 'አማርኛ' }].map(l => (
                                 <button
                                     key={l.code}
-                                    onClick={() => updateSetting('language', l.code)}
+                                    onClick={() => { setLanguage(l.code); updateSetting('language', l.code); }}
                                     className={`px-3 py-1 rounded-lg text-[10px] font-black transition-all ${language === l.code ? 'bg-[#0F172A] text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
                                 >
                                     {l.label}

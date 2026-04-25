@@ -16,13 +16,15 @@ export function GoalStep({
   setGoal, 
   onNext,
   onBack,
-  loading
+  loading,
+  onSkip
 }: { 
   goal: any, 
   setGoal: (g: any) => void, 
   onNext: () => void,
   onBack: () => void,
-  loading: boolean
+  loading: boolean,
+  onSkip?: () => void
 }) {
   return (
     <motion.div
@@ -72,6 +74,12 @@ export function GoalStep({
             {loading ? 'Finishing...' : <>Finalize <ArrowRight className="w-5 h-5" /></>}
           </button>
         </div>
+        
+        {onSkip && (
+          <button onClick={onSkip} className="w-full text-center text-xs text-slate-500 font-bold hover:text-slate-300 mt-2">
+             Skip for now
+          </button>
+        )}
       </div>
     </motion.div>
   );

@@ -28,25 +28,37 @@ export default function Onboarding() {
   });
   const [goal, setGoal] = useState<any>(null);
 
-  const handleFinalSubmit = async () => {
+  const handleNextStep = async (currentPhase: 'identity' | 'accounts' | 'profile' | 'goal', data: any, nextStep: Step | 'done', isSkip = false) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await performUpdateOnboardingPhase('complete', {
-        name,
-        ...profile,
-        accounts,
-        goal
-      });
+      // If skip is true and it's not the final step, we just move state without saving to DB
+      // But we map our local phase name to the API phase names ('identity', 'accounts', 'goals', 'complete')
+      const apiPhase = nextStep === 'done' ? 'complete' :
+                       currentPhase === 'goal' ? 'goals' :
+                       currentPhase;
 
-      if (res.error) throw new Error(res.error);
+      if (!isSkip || nextStep === 'done') {
+        const payload = {
+            name,
+            ...profile,
+            ...(currentPhase === 'accounts' ? { accounts: data.accounts } : {}),
+            ...(currentPhase === 'goal' ? { goal: data.goal } : {})
+        };
+        const res = await performUpdateOnboardingPhase(apiPhase, payload);
+        if (res.error) throw new Error(res.error);
+      }
 
-      router.push('/');
-      router.refresh();
+      if (nextStep === 'done') {
+        router.push('/');
+        router.refresh();
+      } else {
+        setStep(nextStep);
+      }
     } catch (err: any) {
       setError(err.message || 'Something went wrong.');
-      setLoading(false);
     }
+    setLoading(false);
   };
 
   return (
@@ -85,7 +97,7 @@ export default function Onboarding() {
               key="identity"
               name={name} 
               setName={setName} 
-              onNext={() => setStep('accounts')} 
+              onNext={() => handleNextStep('identity', { name }, 'accounts')} 
             />
           )}
           {step === 'accounts' && (
@@ -93,7 +105,8 @@ export default function Onboarding() {
               key="accounts"
               accounts={accounts} 
               setAccounts={setAccounts} 
-              onNext={() => setStep('profile')} 
+              onNext={() => handleNextStep('accounts', { accounts }, 'profile')} 
+              onSkip={() => handleNextStep('accounts', {}, 'profile', true)}
               onBack={() => setStep('identity')}
             />
           )}
@@ -102,7 +115,8 @@ export default function Onboarding() {
               key="profile"
               data={profile} 
               setData={setProfile} 
-              onNext={() => setStep('goal')} 
+              onNext={() => handleNextStep('profile', profile, 'goal')} 
+              onSkip={() => handleNextStep('profile', {}, 'goal', true)}
               onBack={() => setStep('accounts')}
             />
           )}
@@ -111,7 +125,8 @@ export default function Onboarding() {
               key="goal"
               goal={goal} 
               setGoal={setGoal} 
-              onNext={handleFinalSubmit} 
+              onNext={() => handleNextStep('goal', { goal }, 'done')} 
+              onSkip={() => handleNextStep('goal', {}, 'done', true)}
               onBack={() => setStep('profile')}
               loading={loading}
             />

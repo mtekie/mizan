@@ -1,208 +1,337 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
-import { MizanColors, MizanTypography } from '@mizan/ui-tokens';
+import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
+import { MizanColors, MizanTypography, MizanSpacing, MizanRadii } from '@mizan/ui-tokens';
 import { MizanCard } from '../../components/ui/MizanCard';
+import { MintBudgetBar } from '../../components/ui/MintBudgetBar';
+import { SmsPermissionCard } from '../../components/ui/SmsPermissionCard';
+import { MintAccountSheet } from '../../components/forms/MintAccountSheet';
 import { router } from 'expo-router';
-import { ArrowUpRight, ArrowDownRight, Activity, Bell, Plus } from 'lucide-react-native';
+import BottomSheet from '@gorhom/bottom-sheet';
+import { Bell, ChevronRight, Plus } from 'lucide-react-native';
+import { useStore } from '../../lib/store';
+
+import { api } from '../../lib/api';
 
 export default function DashboardScreen() {
-  // Static placeholders for now
-  const netWorth = 125400;
-  const income = 45000;
-  const expenses = 12300;
+  const [dashboardData, setDashboardData] = React.useState<any>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [refreshing, setRefreshing] = React.useState(false);
+  const accountSheetRef = React.useRef<BottomSheet>(null);
+
+  const loadData = React.useCallback(async () => {
+    try {
+      const data = await api.dashboard.get();
+      setDashboardData(data);
+    } catch (error: any) {
+      console.error('Failed to load dashboard:', error);
+      // If unauthorized, redirect to login
+      if (error?.message?.includes('401') || error?.status === 401) {
+        router.replace('/(auth)/login');
+      }
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  const { profile, isGuest } = useStore();
+
+  React.useEffect(() => {
+    if (!profile.isComplete && !isGuest) {
+      router.replace('/(onboarding)');
+      return;
+    }
+    
+    if (!isGuest) {
+      loadData();
+    } else {
+      setLoading(false);
+    }
+  }, [loadData, profile.isComplete, isGuest]);
+
+  const summary = dashboardData || (isGuest ? {
+    netWorth: 124500,
+    monthlyIn: 45000,
+    monthlyOut: 12300,
+    budgets: [
+      { id: '1', name: 'Housing', spent: 5000, allocated: 5000 },
+      { id: '2', name: 'Food & Dining', spent: 2400, allocated: 3000 },
+      { id: '3', name: 'Transport', spent: 1200, allocated: 1500 },
+    ]
+  } : {
+    netWorth: 0,
+    monthlyIn: 0,
+    monthlyOut: 0,
+    budgets: []
+  });
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        
-        {/* Header Section */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>Good morning 👋</Text>
-            <Text style={styles.userName}>Dawit</Text>
-          </View>
-          <TouchableOpacity onPress={() => router.push('/notifications')}>
-            <Bell color={MizanColors.textPrimary} size={24} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Net Worth Card */}
-        <MizanCard variant="primary" style={styles.netWorthCard}>
-          <Text style={styles.netWorthLabel}>Total Net Worth</Text>
-          <Text style={styles.netWorthValue}>
-            ETB {netWorth.toLocaleString()}
-          </Text>
-          
-          <View style={styles.pillsContainer}>
-            <View style={styles.pill}>
-              <ArrowDownRight color="#fff" size={16} />
-              <Text style={styles.pillText}>+ ETB {income.toLocaleString()}</Text>
+    <View style={styles.container}>
+      {/* Solid green header background acting like safe area */}
+      <View style={styles.headerBackground}>
+        <SafeAreaView>
+          <View style={styles.headerContent}>
+            <View>
+              <Text style={styles.headerTitle}>This Month</Text>
             </View>
-            <View style={[styles.pill, styles.expensePill]}>
-              <ArrowUpRight color={MizanColors.mintDark} size={16} />
-              <Text style={[styles.pillText, {color: MizanColors.mintDark}]}>- ETB {expenses.toLocaleString()}</Text>
-            </View>
-          </View>
-        </MizanCard>
-
-        {/* Quick Actions */}
-        <View style={styles.quickActions}>
-          {['Add Money', 'Send', 'Pay Bill', 'More'].map((action, i) => (
-            <TouchableOpacity key={i} style={styles.actionButton}>
-              <View style={styles.actionIcon}>
-                <Plus color={MizanColors.mintPrimary} size={24} />
-              </View>
-              <Text style={styles.actionText}>{action}</Text>
+            <TouchableOpacity onPress={() => router.push('/notifications')}>
+              <Bell color="#fff" size={24} />
             </TouchableOpacity>
-          ))}
-        </View>
+          </View>
+        </SafeAreaView>
+      </View>
 
-        {/* Nudge / Insight */}
-        <MizanCard style={styles.nudgeCard} variant="outline">
-          <Activity color={MizanColors.mintPrimary} size={24} />
-          <View style={styles.nudgeContent}>
-            <Text style={styles.nudgeTitle}>Insight</Text>
-            <Text style={styles.nudgeText}>You've spent 20% less on dining this month. Keep it up!</Text>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <SmsPermissionCard />
+        
+        {/* Net Worth Summary */}
+        <MizanCard variant="primary" style={styles.card}>
+          <View style={styles.netWorthHeader}>
+            <View>
+              <Text style={styles.netWorthLabel}>Net Worth</Text>
+              <Text style={styles.netWorthValue}>ETB {summary.netWorth.toLocaleString()}</Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.addAccountBtn} 
+              onPress={() => accountSheetRef.current?.expand()}
+            >
+              <Plus size={16} color="#FFF" style={{ marginRight: 6 }} />
+              <Text style={styles.addAccountBtnText}>Add Account</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.cashFlowRow}>
+            <View style={styles.cashFlowItem}>
+              <Text style={styles.cashFlowLabel}>Income</Text>
+              <Text style={styles.cashFlowValue}>{summary.monthlyIn.toLocaleString()}</Text>
+            </View>
+            <View style={styles.cashFlowItem}>
+              <Text style={styles.cashFlowLabel}>Expenses</Text>
+              <Text style={styles.cashFlowValue}>{summary.monthlyOut.toLocaleString()}</Text>
+            </View>
+          </View>
+        </MizanCard>
+        
+        {/* Spending Card (Fake Donut) */}
+        <MizanCard variant="primary" style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>September spending</Text>
+            <ChevronRight color={MizanColors.mintPrimary} size={16} />
+          </View>
+          <Text style={styles.spendingSubtitle}>You've spent {summary.monthlyOut.toLocaleString()} so far</Text>
+          
+          <View style={styles.donutPlaceholder}>
+            <View style={styles.donutCenter}>
+              <Text style={styles.donutLabel}>This month</Text>
+              <Text style={styles.donutValue}>{summary.monthlyOut.toLocaleString()}</Text>
+            </View>
+          </View>
+          
+          <View style={styles.legendContainer}>
+            <View style={styles.legendItem}><View style={[styles.dot, {backgroundColor: '#45BFA0'}]}/><Text style={styles.legendText}>Auto</Text></View>
+            <View style={styles.legendItem}><View style={[styles.dot, {backgroundColor: '#F5A623'}]}/><Text style={styles.legendText}>Food</Text></View>
+            <View style={styles.legendItem}><View style={[styles.dot, {backgroundColor: '#E8734A'}]}/><Text style={styles.legendText}>Fun</Text></View>
           </View>
         </MizanCard>
 
-        {/* Recent Transactions Placeholder */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recent Transactions</Text>
-          {/* Will use FlashList here */}
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No transactions yet</Text>
+        {/* Budgets Card */}
+        <MizanCard variant="primary" style={styles.card}>
+           <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>Monthly budgets</Text>
+            <ChevronRight color={MizanColors.mintPrimary} size={16} />
           </View>
-        </View>
+          <View style={styles.budgetList}>
+            {summary.budgets.map((b: any) => (
+              <MintBudgetBar key={b.id} spent={b.spent} total={b.allocated} title={b.name} />
+            ))}
+          </View>
+        </MizanCard>
 
       </ScrollView>
-    </SafeAreaView>
+
+      <MintAccountSheet 
+        sheetRef={accountSheetRef}
+        onClose={() => accountSheetRef.current?.close()}
+        onSave={async (data) => {
+          if (isGuest) {
+            console.log("Guest mode: simulating account save", data);
+            return;
+          }
+          try {
+            await api.assets.create(data);
+            loadData();
+          } catch(e: any) {
+            console.error("Failed to add account", e);
+            if (e?.message?.includes('401') || e?.status === 401) {
+              router.replace('/(auth)/login');
+            }
+          }
+        }}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: MizanColors.mintBg,
+    backgroundColor: '#F1F5F9', // Light gray standard background
+  },
+  headerBackground: {
+    backgroundColor: '#17A697', // Mint Teal
+    paddingBottom: 16,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 16,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontFamily: 'Inter_700Bold',
+    color: '#fff',
   },
   scrollContent: {
-    padding: 24,
+    padding: 16,
+    gap: 16,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  greeting: {
-    fontSize: MizanTypography.sizes.body,
-    color: MizanColors.textMuted,
-    fontFamily: 'Inter_400Regular',
-  },
-  userName: {
-    fontSize: MizanTypography.sizes.title,
-    color: MizanColors.textPrimary,
-    fontFamily: 'Inter_700Bold',
-  },
-  netWorthCard: {
-    marginBottom: 24,
-  },
-  netWorthLabel: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: MizanTypography.sizes.caption,
-    fontFamily: 'Inter_400Regular',
-    marginBottom: 4,
-  },
-  netWorthValue: {
-    color: '#fff',
-    fontSize: MizanTypography.sizes.hero,
-    fontFamily: 'Inter_900Black',
-    marginBottom: 16,
-  },
-  pillsContainer: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  pill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    gap: 4,
-  },
-  expensePill: {
+  card: {
     backgroundColor: '#fff',
-  },
-  pillText: {
-    color: '#fff',
-    fontFamily: 'Inter_700Bold',
-    fontSize: MizanTypography.sizes.caption,
-  },
-  quickActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-  },
-  actionButton: {
-    alignItems: 'center',
-    gap: 8,
-  },
-  actionIcon: {
-    width: 56,
-    height: 56,
-    backgroundColor: '#fff',
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: 16,
+    padding: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
   },
-  actionText: {
-    fontSize: MizanTypography.sizes.caption,
-    color: MizanColors.textPrimary,
-    fontFamily: 'Inter_400Regular',
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
   },
-  nudgeCard: {
+  cardTitle: {
+    fontSize: 16,
+    fontFamily: 'Inter_700Bold',
+    color: MizanColors.textPrimary,
+  },
+  netWorthLabel: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.9)',
+    marginBottom: 4,
+  },
+  netWorthValue: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 32,
+    color: '#fff',
+    marginBottom: MizanSpacing.lg,
+  },
+  netWorthHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  addAccountBtn: {
+    backgroundColor: MizanColors.mintPrimary,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: MizanRadii.full,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
-    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  nudgeContent: {
+  addAccountBtnText: {
+    color: '#fff',
+    fontFamily: 'Inter_700Bold',
+    fontSize: 14,
+  },
+  cashFlowRow: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.1)',
+    paddingTop: MizanSpacing.md,
+  },
+  cashFlowItem: {
     flex: 1,
   },
-  nudgeTitle: {
-    fontFamily: 'Inter_700Bold',
-    color: MizanColors.textPrimary,
+  cashFlowLabel: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
     marginBottom: 2,
   },
-  nudgeText: {
-    fontFamily: 'Inter_400Regular',
-    color: MizanColors.textMuted,
+  cashFlowValue: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 16,
+    color: '#fff',
+  },
+  spendingSubtitle: {
     fontSize: 13,
-  },
-  section: {
-    marginTop: 8,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontFamily: 'Inter_700Bold',
-    color: MizanColors.textPrimary,
-    marginBottom: 16,
-  },
-  emptyState: {
-    padding: 24,
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 16,
-  },
-  emptyText: {
     fontFamily: 'Inter_400Regular',
     color: MizanColors.textMuted,
+    marginBottom: 24,
   },
+  donutPlaceholder: {
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: '#E2E8F0', // Light gray ring
+    alignSelf: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  donutCenter: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  donutLabel: {
+    fontSize: 11,
+    fontFamily: 'Inter_600SemiBold',
+    color: MizanColors.textMuted,
+    textTransform: 'uppercase',
+  },
+  donutValue: {
+    fontSize: 24,
+    fontFamily: 'Inter_900Black',
+    color: MizanColors.textPrimary,
+  },
+  legendContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 16,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  dot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  legendText: {
+    fontSize: 12,
+    fontFamily: 'Inter_600SemiBold',
+    color: MizanColors.textPrimary,
+  },
+  budgetList: {
+    marginTop: 16,
+  }
 });

@@ -35,7 +35,7 @@ export function SimpleLedger({ accounts, transactions, summary }: { accounts: an
         <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 flex items-center justify-between">
           <div>
             <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-1">Total Balance</p>
-            <p className="text-2xl font-black text-slate-800">{summary.totalBalance.toLocaleString()} <span className="text-sm">ETB</span></p>
+            <p className="text-2xl font-black text-slate-800">{(summary.netWorth ?? 0).toLocaleString()} <span className="text-sm">ETB</span></p>
           </div>
         </div>
 

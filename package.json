@@ -12,11 +12,18 @@
     "dev": "turbo run dev",
     "lint": "turbo run lint"
   },
+  "dependencies": {
+    "anser": "^2.3.5",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "stacktrace-parser": "^0.1.11"
+  },
   "devDependencies": {
     "turbo": "latest"
   },
   "overrides": {
-    "react": "19.2.5",
-    "react-dom": "19.2.5"
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-native-gesture-handler": "2.31.1"
   }
 }

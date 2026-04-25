@@ -11,6 +11,8 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { GoalStep } from '@/components/onboarding/GoalStep';
 import { performUpdateOnboardingPhase } from '@/app/onboarding/actions';
 import { toast } from 'sonner';
+import { SimplePageShell } from '@/components/SimplePageShell';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 
 const mockBudgets = [
   { id: 1, name: 'Food & Groceries', spent: 3800, total: 5000, icon: ShoppingBasket, color: 'text-orange-600', bg: 'bg-orange-100', progressColor: 'bg-orange-500' },
@@ -81,44 +83,34 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
   const totalSpent = budgets.reduce((s: number, b: any) => s + b.spent, 0);
   const budgetPercent = Math.round((totalSpent / totalBudget) * 100);
 
-  const handleAddGoal = (e: React.FormEvent) => {
+  const addGoalRef = useFocusTrap(showNewGoal, () => setShowNewGoal(false));
+  const loggerRef = useFocusTrap(showExpenseLogger, () => setShowExpenseLogger(false));
+  const templatesRef = useFocusTrap(showTemplates, () => setShowTemplates(false));
+  const goalStepRef = useFocusTrap(isGoalOnboarding, () => router.push('/dreams'));
+
+  const handleAddGoal = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newGoal.name && newGoal.target) {
+      try {
+        const res = await fetch('/api/v1/goals', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: newGoal.name, target: Number(newGoal.target) })
+        });
+        if (!res.ok) throw new Error('Failed to create goal');
+        const created = await res.json();
+        setGoals((g: any[]) => [...g, created]);
+        toast.success('Goal created!');
+      } catch (err: any) {
+        toast.error(err.message || 'Failed to create goal');
+      }
       setShowNewGoal(false);
       setNewGoal({ name: '', target: '' });
     }
   };
 
-  return (
-    <div className="flex flex-col min-h-full bg-slate-50 md:bg-transparent">
-      {/* Header */}
-      <header className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-slate-100 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-black text-slate-900">Budget & Goals</h1>
-            <p className="text-sm text-slate-500">Monthly budgets, savings goals, and expense tracking</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => { setShowScanner(true); setShowExpenseLogger(true); setExpenseSuccess(false); setExpense({ amount: '', category: '', note: '' }); }}
-              className="flex items-center gap-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-200 px-3 py-2 rounded-xl hover:bg-slate-50 transition shadow-sm"
-            >
-              <Camera className="w-3.5 h-3.5" /> Scan
-            </button>
-            <button
-              onClick={() => { setShowExpenseLogger(true); setShowScanner(false); setExpenseSuccess(false); setExpense({ amount: '', category: '', note: '' }); }}
-              className="flex items-center gap-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-200 px-3 py-2 rounded-xl hover:bg-slate-50 transition shadow-sm"
-            >
-              <ReceiptText className="w-3.5 h-3.5" /> Log Expense
-            </button>
-            <button onClick={() => setShowNewGoal(true)} className="flex items-center gap-1.5 text-xs font-bold text-white bg-[#3EA63B] px-3 py-2 rounded-xl hover:bg-[#339932] transition shadow-sm">
-              <Plus className="w-3.5 h-3.5" /> Add Goal
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="flex-1 px-6 py-6 pb-24 md:pb-6 max-w-7xl mx-auto w-full">
+  const content = (
+    <div className="flex-1 px-6 py-6 pb-24 md:pb-6 max-w-7xl mx-auto w-full">
         {/* Desktop: 12-col grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Budget Tracker (Left) */}
@@ -126,7 +118,7 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
             {/* Monthly Overview */}
             <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 mb-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">February Budget</h2>
+                <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">{new Date().toLocaleString('default', { month: 'long' })} Budget</h2>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setShowTemplates(true)}
@@ -189,7 +181,7 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
             </section>
 
             {/* Bill Reminders */}
-            <BillReminders />
+            <BillReminders initialBills={initialBills} />
 
             {/* AI Forecast */}
             <AIBudgetForecast />
@@ -260,20 +252,47 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
             <section className="mt-6 grid grid-cols-2 gap-3">
               <div className="bg-white rounded-xl border border-slate-100 p-4 text-center">
                 <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Avg. Monthly Save</p>
-                <p className="text-xl font-black text-[#3EA63B]">ETB 8,200</p>
+                <p className="text-xl font-black text-[#3EA63B]">ETB {totalBudget > 0 ? (totalBudget - totalSpent).toLocaleString() : '0'}</p>
               </div>
               <div className="bg-white rounded-xl border border-slate-100 p-4 text-center">
                 <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Goals On Track</p>
-                <p className="text-xl font-black text-slate-900">2 / 3</p>
+                <p className="text-xl font-black text-slate-900">{goalsState.filter((g: any) => g.saved / g.target >= 0.5).length} / {goalsState.length}</p>
               </div>
             </section>
           </div>
         </div>
-      </main>
+      </div>
+  );
+
+  return (
+    <>
+      <SimplePageShell
+        title="Budget & Goals"
+        headerAction={
+          <div className="flex gap-2">
+           <button
+              onClick={() => setShowExpenseLogger(true)}
+              className="flex items-center justify-center w-8 h-8 rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors"
+              title="Log Expense"
+            >
+              <ReceiptText className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setShowNewGoal(true)}
+              className="flex items-center justify-center w-8 h-8 rounded-full bg-white text-[var(--color-mint-primary)] hover:bg-white/90 transition-colors"
+              title="Add Goal"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
+        }
+      >
+        {content}
+      </SimplePageShell>
 
       {/* Add Goal Modal */}
       {showNewGoal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div ref={addGoalRef} className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-lg font-black text-slate-900">New Savings Goal</h3>
@@ -304,6 +323,7 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
       <AnimatePresence>
         {showExpenseLogger && (
           <motion.div
+            ref={loggerRef as any}
             className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-4"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={(e) => { if (e.target === e.currentTarget) setShowExpenseLogger(false); }}
@@ -385,7 +405,28 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
                     </div>
                     {/* Submit */}
                     <button
-                      onClick={() => { if (expense.amount && expense.category) { setExpenseSuccess(true); setTimeout(() => setShowExpenseLogger(false), 1800); } }}
+                      onClick={async () => {
+                        if (expense.amount && expense.category) {
+                          try {
+                            const res = await fetch('/api/v1/transactions', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                title: expense.note || expense.category,
+                                amount: -Math.abs(Number(expense.amount)),
+                                source: 'Manual',
+                                category: expense.category,
+                              })
+                            });
+                            if (!res.ok) throw new Error('Failed to log expense');
+                            setExpenseSuccess(true);
+                            toast.success('Expense logged!');
+                            setTimeout(() => setShowExpenseLogger(false), 1800);
+                          } catch (err: any) {
+                            toast.error(err.message || 'Failed to log expense');
+                          }
+                        }
+                      }}
                       disabled={!expense.amount || !expense.category}
                       className={`w-full py-3.5 rounded-2xl font-black text-sm transition-all ${expense.amount && expense.category
                         ? 'bg-[#0F172A] text-white hover:bg-slate-800 shadow-lg'
@@ -404,7 +445,7 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
 
       {/* ── Budget Templates Modal ── */}
       {showTemplates && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+        <div ref={templatesRef} className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-4"
           onClick={(e) => { if (e.target === e.currentTarget) setShowTemplates(false); }}
         >
           <div className="bg-white w-full sm:max-w-md rounded-3xl shadow-2xl overflow-hidden max-h-[80vh] flex flex-col">
@@ -420,7 +461,7 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
               {budgetTemplates.map(tmpl => (
                 <button
                   key={tmpl.id}
-                  onClick={() => {
+                  onClick={async () => {
                     const totalIncome = 26000; // default monthly income for demo
                     const newBudgets = tmpl.categories.map((cat, i) => ({
                       id: i + 1,
@@ -434,6 +475,23 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
                     }));
                     setBudgets(newBudgets);
                     setShowTemplates(false);
+                    // Persist via API
+                    try {
+                      const now = new Date();
+                      await fetch('/api/v1/budgets', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          month: now.getMonth() + 1,
+                          year: now.getFullYear(),
+                          totalLimit: totalIncome,
+                          categories: newBudgets.map(b => ({ name: b.name, allocated: b.total }))
+                        })
+                      });
+                      toast.success('Budget template applied!');
+                    } catch {
+                      toast.error('Budget saved locally only');
+                    }
                   }}
                   className="w-full text-left p-4 rounded-2xl border border-slate-200 hover:border-[#3EA63B] hover:bg-[#3EA63B]/5 transition-all"
                 >
@@ -467,6 +525,7 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
       <AnimatePresence>
         {isGoalOnboarding && (
           <motion.div
+            ref={goalStepRef as any}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -492,6 +551,6 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
 }

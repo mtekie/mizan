@@ -99,7 +99,25 @@ export default async function Page() {
       take: 2
   });
 
-  const summary = { netWorth, monthlyIn, monthlyOut, savingsRate, cashFlowData, topGoal };
+  // 5. Compute spending data
+  const spendingMap: Record<string, number> = {};
+  monthTxs.filter(t => t.amount < 0).forEach(t => {
+    const cat = t.category || 'Uncategorized';
+    spendingMap[cat] = (spendingMap[cat] || 0) + Math.abs(t.amount);
+  });
+
+  const colors = ['#0EA5E9', '#10B981', '#F59E0B', '#8B5CF6', '#F43F5E', '#8B5CF6'];
+  const spendingData = Object.entries(spendingMap)
+      .map(([name, value], i) => ({ name, value, color: colors[i % colors.length] }))
+      .sort((a, b) => b.value - a.value);
+
+  // 6. Fetch Budgets
+  const budgets = await prisma.budget.findMany({
+      where: { userId: user.id, month: now.getMonth() + 1, year: now.getFullYear() },
+      include: { categories: true }
+  });
+
+  const summary = { netWorth, monthlyIn, monthlyOut, savingsRate, cashFlowData, topGoal, spendingData, budgets };
 
   return <DashboardClient user={userData} accounts={accounts} transactions={transactions.slice(0, 5)} summary={summary} featuredProducts={featuredProducts} />;
 }
