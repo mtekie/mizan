@@ -6,16 +6,16 @@ import { z } from 'zod';
 const categorySchema = z.object({
     id: z.string().optional(),
     name: z.string(),
-    allocated: z.number().min(0),
-    spent: z.number().min(0).optional(),
+    allocated: z.coerce.number().min(0),
+    spent: z.coerce.number().min(0).optional(),
     icon: z.string().optional(),
     color: z.string().optional(),
 });
 
 const budgetSchema = z.object({
-    month: z.number().min(1).max(12).optional(),
-    year: z.number().min(2020).optional(),
-    totalLimit: z.number().min(0).optional(),
+    month: z.coerce.number().min(1).max(12).optional(),
+    year: z.coerce.number().min(2020).optional(),
+    totalLimit: z.coerce.number().min(0).optional(),
     categories: z.array(categorySchema).optional(),
 });
 
@@ -65,27 +65,53 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Invalid input', details: result.error.format() }, { status: 400 });
         }
 
-        if (!result.data.month || !result.data.year || !result.data.totalLimit) {
+        if (!result.data.month || !result.data.year || result.data.totalLimit === undefined) {
              return NextResponse.json({ error: 'Month, year, and totalLimit are required for new budgets' }, { status: 400 });
         }
 
-        const budget = await prisma.budget.create({
-            data: {
-                userId: user.id,
-                month: result.data.month,
-                year: result.data.year,
-                totalLimit: result.data.totalLimit,
-                categories: {
-                    create: result.data.categories?.map((c) => ({
+        const budget = await prisma.$transaction(async (tx) => {
+            const existing = await tx.budget.findUnique({
+                where: {
+                    userId_month_year: {
+                        userId: user.id,
+                        month: result.data.month!,
+                        year: result.data.year!,
+                    }
+                }
+            });
+
+            const saved = existing
+                ? await tx.budget.update({
+                    where: { id: existing.id },
+                    data: { totalLimit: result.data.totalLimit! }
+                })
+                : await tx.budget.create({
+                    data: {
+                        userId: user.id,
+                        month: result.data.month!,
+                        year: result.data.year!,
+                        totalLimit: result.data.totalLimit!,
+                    }
+                });
+
+            await tx.budgetCategory.deleteMany({ where: { budgetId: saved.id } });
+            if (result.data.categories?.length) {
+                await tx.budgetCategory.createMany({
+                    data: result.data.categories.map((c) => ({
+                        budgetId: saved.id,
                         name: c.name,
                         allocated: c.allocated,
                         icon: c.icon,
                         color: c.color,
                         spent: c.spent || 0
-                    })) || []
-                }
-            },
-            include: { categories: true }
+                    }))
+                });
+            }
+
+            return tx.budget.findUnique({
+                where: { id: saved.id },
+                include: { categories: true }
+            });
         });
 
         return NextResponse.json(budget, { status: 201 });
@@ -125,8 +151,17 @@ export async function PATCH(req: Request) {
                 data: budgetData
             });
 
-            // 2. Update categories if provided
+            // 2. Update categories if provided. The submitted list is the desired
+            // current category set, so categories omitted by the client are removed.
             if (categories) {
+                const existingIds = categories.map((cat) => cat.id).filter(Boolean) as string[];
+                await tx.budgetCategory.deleteMany({
+                    where: {
+                        budgetId: id,
+                        ...(existingIds.length ? { id: { notIn: existingIds } } : {}),
+                    },
+                });
+
                 for (const cat of categories) {
                     if (cat.id) {
                         await tx.budgetCategory.update({
@@ -169,7 +204,8 @@ export async function PATCH(req: Request) {
 
 export async function DELETE(req: Request) {
     try {
-        const user = await getAuthUser(req);
+        const userContext = await getOrCreateDbUser(req);
+        const user = userContext?.dbUser;
 
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

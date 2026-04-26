@@ -9,14 +9,16 @@ export async function GET(req: Request) {
         const productClass = searchParams.get('class');
         const productType = searchParams.get('type');
         const providerId = searchParams.get('providerId');
+        const providerIds = searchParams.get('providerIds')?.split(',').filter(Boolean);
         const search = searchParams.get('search');
+        const audience = searchParams.get('audience');
         const tags = searchParams.get('tags')?.split(',').filter(Boolean);
         const digitalOnly = searchParams.get('digital') === 'true';
         const interestFree = searchParams.get('interestFree') === 'true';
         const scored = searchParams.get('scored') === 'true';
-        const mode = searchParams.get('mode') || 'detail';
-        const skip = parseInt(searchParams.get('skip') || '0');
-        const take = parseInt(searchParams.get('take') || '50');
+        const mode = searchParams.get('mode') || 'list';
+        const skip = Math.max(0, parseInt(searchParams.get('skip') || '0', 10) || 0);
+        const take = Math.min(100, Math.max(1, parseInt(searchParams.get('take') || '50', 10) || 50));
 
         const where: any = { isActive: true };
 
@@ -24,7 +26,11 @@ export async function GET(req: Request) {
             where.productClass = productClass;
         }
         if (productType && productType !== 'All') where.productType = productType;
-        if (providerId) where.providerId = providerId;
+        if (providerIds && providerIds.length > 0) {
+            where.providerId = { in: providerIds };
+        } else if (providerId) {
+            where.providerId = providerId;
+        }
         if (digitalOnly) where.digital = true;
         if (interestFree) where.interestFree = true;
 
@@ -34,6 +40,22 @@ export async function GET(req: Request) {
                 { description: { contains: search, mode: 'insensitive' } },
                 { bankName: { contains: search, mode: 'insensitive' } },
                 { title: { contains: search, mode: 'insensitive' } },
+            ];
+        }
+
+        if (audience === 'student' || audience === 'salaried') {
+            const terms = audience === 'student'
+                ? ['student', 'education', 'teen', 'youth']
+                : ['salary', 'salaried', 'employee', 'payroll'];
+            const audienceOr = terms.flatMap((term) => [
+                { name: { contains: term, mode: 'insensitive' } },
+                { title: { contains: term, mode: 'insensitive' } },
+                { description: { contains: term, mode: 'insensitive' } },
+            ]);
+
+            where.AND = [
+                ...(where.AND || []),
+                { OR: audienceOr }
             ];
         }
 
@@ -60,24 +82,38 @@ export async function GET(req: Request) {
             }
         }
 
-        const total = await prisma.product.count({ where });
-
-        const products = await (mode === 'list' 
+        const productsQuery = mode === 'list'
             ? prisma.product.findMany({
                 where,
                 select: {
                     id: true,
+                    slug: true,
                     name: true,
                     title: true,
                     bankName: true,
+                    bankLogo: true,
                     productClass: true,
                     productType: true,
+                    attributes: true,
                     minBalance: true,
                     maxAmount: true,
                     interestRate: true,
+                    interestMax: true,
                     term: true,
                     matchScore: true,
                     isFeatured: true,
+                    isVerified: true,
+                    updatedAt: true,
+                    currency: true,
+                    digital: true,
+                    interestFree: true,
+                    genderBased: true,
+                    sourceName: true,
+                    sourceUrl: true,
+                    sourceType: true,
+                    lastReviewedAt: true,
+                    reviewedBy: true,
+                    dataConfidence: true,
                     features: true,
                     eligibility: true,
                     requirements: true,
@@ -86,7 +122,9 @@ export async function GET(req: Request) {
                         select: {
                             id: true,
                             name: true,
-                            logoUrl: true
+                            logoUrl: true,
+                            brandColor: true,
+                            shortCode: true
                         }
                     }
                 },
@@ -112,7 +150,12 @@ export async function GET(req: Request) {
                     { matchScore: 'desc' },
                 ]
             })
-        );
+        ;
+
+        const [total, products] = await Promise.all([
+            prisma.product.count({ where }),
+            productsQuery
+        ]);
 
         // Enrich with match scores
         const eligibleProducts = user

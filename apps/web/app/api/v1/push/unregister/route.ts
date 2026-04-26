@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { getAuthUser } from '@/lib/supabase/auth-adapter';
+import { getOrCreateDbUser } from '@/lib/supabase/auth-adapter';
 import { z } from 'zod';
 
 const unregisterSchema = z.object({
@@ -9,7 +9,8 @@ const unregisterSchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    const user = await getAuthUser(req);
+    const userContext = await getOrCreateDbUser(req);
+    const user = userContext?.dbUser;
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -22,12 +23,7 @@ export async function POST(req: Request) {
     }
 
     // Fetch the current user to get their preferences
-    const dbUser = await prisma.user.findUnique({
-      where: { id: user.id },
-      select: { notificationPreferences: true }
-    });
-
-    const prefs = (dbUser?.notificationPreferences as Record<string, any>) || {};
+    const prefs = (user.notificationPreferences as Record<string, any>) || {};
     
     // Remove the specific push token
     let tokens = (prefs.expoPushTokens as string[]) || [];

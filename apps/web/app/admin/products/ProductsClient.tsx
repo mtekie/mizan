@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { CheckCircle2, Package, Pencil, Plus, Save, Search, Star, Trash2, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Clock, Package, Pencil, Plus, Save, Search, Star, Trash2, X } from 'lucide-react';
 
 type ProviderOption = { id: string; slug: string; name: string; shortCode: string | null };
 type ProductTypeOption = { slug: string; label: string; productClass: string };
@@ -47,10 +47,17 @@ type ProductRow = {
   digital: boolean | null;
   interestFree: boolean | null;
   genderBased: boolean | null;
+  sourceName: string | null;
+  sourceUrl: string | null;
+  sourceType: string | null;
+  lastReviewedAt: Date | string | null;
+  reviewedBy: string | null;
+  dataConfidence: number | null;
+  updatedAt: Date | string;
   tags: { tag: TagOption }[];
 };
 
-type ProductForm = Omit<ProductRow, 'id' | 'provider' | 'tags' | 'features' | 'eligibility' | 'requirements' | 'attributes' | 'bankName'> & {
+type ProductForm = Omit<ProductRow, 'id' | 'provider' | 'tags' | 'features' | 'eligibility' | 'requirements' | 'attributes' | 'bankName' | 'updatedAt'> & {
   id?: string;
   features: string;
   eligibility: string;
@@ -60,6 +67,7 @@ type ProductForm = Omit<ProductRow, 'id' | 'provider' | 'tags' | 'features' | 'e
 };
 
 const productClasses = ['SAVINGS', 'CREDIT', 'INSURANCE', 'PAYMENT', 'CAPITAL_MARKET', 'COMMUNITY'];
+const qualityFilters = ['ALL', 'UNVERIFIED', 'STALE', 'MISSING_SOURCE'] as const;
 
 const emptyProduct: ProductForm = {
   slug: '',
@@ -98,6 +106,12 @@ const emptyProduct: ProductForm = {
   digital: false,
   interestFree: false,
   genderBased: false,
+  sourceName: '',
+  sourceUrl: '',
+  sourceType: '',
+  lastReviewedAt: '',
+  reviewedBy: '',
+  dataConfidence: null,
 };
 
 function slugify(value: string) {
@@ -155,6 +169,12 @@ function toForm(product: ProductRow): ProductForm {
     digital: product.digital || false,
     interestFree: product.interestFree || false,
     genderBased: product.genderBased || false,
+    sourceName: product.sourceName || '',
+    sourceUrl: product.sourceUrl || '',
+    sourceType: product.sourceType || '',
+    lastReviewedAt: product.lastReviewedAt ? new Date(product.lastReviewedAt).toISOString().slice(0, 10) : '',
+    reviewedBy: product.reviewedBy || '',
+    dataConfidence: product.dataConfidence,
   };
 }
 
@@ -174,6 +194,7 @@ export function ProductsClient({
   const [form, setForm] = useState<ProductForm>(emptyProduct);
   const [query, setQuery] = useState('');
   const [classFilter, setClassFilter] = useState('ALL');
+  const [qualityFilter, setQualityFilter] = useState<(typeof qualityFilters)[number]>('ALL');
   const [message, setMessage] = useState<string | null>(null);
 
   const isEditing = Boolean(form.id);
@@ -183,6 +204,9 @@ export function ProductsClient({
     return products.filter((product) => {
       const matchesClass = classFilter === 'ALL' || product.productClass === classFilter;
       if (!matchesClass) return false;
+      if (qualityFilter === 'UNVERIFIED' && product.isVerified) return false;
+      if (qualityFilter === 'STALE' && !isStale(product)) return false;
+      if (qualityFilter === 'MISSING_SOURCE' && getSourceRef(product)) return false;
       if (!q) return true;
       return [
         product.name || '',
@@ -193,7 +217,14 @@ export function ProductsClient({
         product.productClass || '',
       ].some((value) => value.toLowerCase().includes(q));
     });
-  }, [products, query, classFilter]);
+  }, [products, query, classFilter, qualityFilter]);
+
+  const qualityCounts = useMemo(() => ({
+    total: products.length,
+    unverified: products.filter((product) => !product.isVerified).length,
+    stale: products.filter(isStale).length,
+    missingSource: products.filter((product) => !getSourceRef(product)).length,
+  }), [products]);
 
   const availableTypes = useMemo(() => {
     return productTypes.filter((type) => !form.productClass || type.productClass === form.productClass);
@@ -333,6 +364,31 @@ export function ProductsClient({
             <TextArea label="Features (one per line)" value={form.features} onChange={(value) => update('features', value)} />
             <TextArea label="Eligibility (one per line)" value={form.eligibility} onChange={(value) => update('eligibility', value)} />
             <TextArea label="Requirements (one per line)" value={form.requirements} onChange={(value) => update('requirements', value)} />
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+              <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Source Metadata</p>
+              <div className="space-y-3">
+                <TextInput label="Source Name" value={form.sourceName || ''} onChange={(value) => update('sourceName', value)} />
+                <TextInput label="Source URL" value={form.sourceUrl || ''} onChange={(value) => update('sourceUrl', value)} />
+                <div className="grid grid-cols-2 gap-3">
+                  <SelectInput
+                    label="Source Type"
+                    value={form.sourceType || ''}
+                    options={[
+                      { value: '', label: 'Select source' },
+                      { value: 'website', label: 'Website' },
+                      { value: 'spreadsheet', label: 'Spreadsheet' },
+                      { value: 'pdf', label: 'PDF' },
+                      { value: 'manual_review', label: 'Manual review' },
+                      { value: 'partner', label: 'Partner' },
+                    ]}
+                    onChange={(value) => update('sourceType', value)}
+                  />
+                  <TextInput label="Confidence" type="number" value={form.dataConfidence !== null ? String(form.dataConfidence) : ''} onChange={(value) => update('dataConfidence', value ? Number(value) : null)} />
+                  <TextInput label="Reviewed At" type="date" value={form.lastReviewedAt ? String(form.lastReviewedAt) : ''} onChange={(value) => update('lastReviewedAt', value)} />
+                  <TextInput label="Reviewed By" value={form.reviewedBy || ''} onChange={(value) => update('reviewedBy', value)} />
+                </div>
+              </div>
+            </div>
             <TextArea label="Attributes JSON" value={form.attributes} onChange={(value) => update('attributes', value)} />
             <div className="grid grid-cols-2 gap-2">
               <Checkbox label="Active" checked={form.isActive} onChange={(value) => update('isActive', value)} />
@@ -363,6 +419,12 @@ export function ProductsClient({
         </section>
 
         <section className="space-y-4">
+          <div className="grid gap-3 md:grid-cols-4">
+            <QualityStat label="Total" value={qualityCounts.total} />
+            <QualityStat label="Unverified" value={qualityCounts.unverified} tone={qualityCounts.unverified ? 'warn' : 'good'} />
+            <QualityStat label="Stale" value={qualityCounts.stale} tone={qualityCounts.stale ? 'warn' : 'good'} />
+            <QualityStat label="Missing Source" value={qualityCounts.missingSource} tone={qualityCounts.missingSource ? 'warn' : 'good'} />
+          </div>
           <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:flex-row">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
@@ -374,6 +436,18 @@ export function ProductsClient({
               />
             </div>
             <SelectInput label="Class" value={classFilter} options={[{ value: 'ALL', label: 'All classes' }, ...productClasses.map((value) => ({ value, label: value }))]} onChange={setClassFilter} compact />
+            <SelectInput
+              label="Quality"
+              value={qualityFilter}
+              options={[
+                { value: 'ALL', label: 'All quality' },
+                { value: 'UNVERIFIED', label: 'Unverified' },
+                { value: 'STALE', label: 'Stale' },
+                { value: 'MISSING_SOURCE', label: 'Missing source' },
+              ]}
+              onChange={(value) => setQualityFilter(value as (typeof qualityFilters)[number])}
+              compact
+            />
           </div>
 
           <div className="grid gap-3">
@@ -387,10 +461,14 @@ export function ProductsClient({
                     <h3 className="truncate text-sm font-black text-slate-900">{product.name || product.title || 'Untitled product'}</h3>
                     <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-black text-slate-500">{product.productClass || 'UNCLASSIFIED'}</span>
                     {product.isFeatured && <Star className="size-4 fill-amber-400 text-amber-400" />}
-                    {product.isVerified && <CheckCircle2 className="size-4 text-[#3EA63B]" />}
+                    {product.isVerified ? <CheckCircle2 className="size-4 text-[#3EA63B]" /> : <AlertTriangle className="size-4 text-amber-500" />}
+                    {isStale(product) && <Clock className="size-4 text-orange-500" />}
                   </div>
                   <p className="mt-1 truncate text-xs font-semibold text-slate-500">
                     {product.provider?.name || product.bankName || 'No provider'} / {product.productType || 'No type'} / {product.tags.length} tags
+                  </p>
+                  <p className="mt-1 truncate text-[10px] font-bold text-slate-400">
+                    {formatReviewed(product)} / {getSourceRef(product) || 'No source reference'}
                   </p>
                 </div>
                 <button onClick={() => setForm(toForm(product))} className="flex size-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200" title="Edit">
@@ -404,6 +482,46 @@ export function ProductsClient({
           </div>
         </section>
       </main>
+    </div>
+  );
+}
+
+function getSourceRef(product: ProductRow) {
+  const attributes = product.attributes as { sourceSheet?: string; sourceUrl?: string; source?: string } | null;
+  return product.sourceName || product.sourceUrl || attributes?.sourceSheet || attributes?.sourceUrl || attributes?.source || '';
+}
+
+function getReviewedDate(product: ProductRow) {
+  const attributes = product.attributes as { lastReviewedAt?: string } | null;
+  const value = product.lastReviewedAt || attributes?.lastReviewedAt || product.updatedAt;
+  const date = value ? new Date(value) : null;
+  return date && !Number.isNaN(date.getTime()) ? date : null;
+}
+
+function isStale(product: ProductRow) {
+  const date = getReviewedDate(product);
+  if (!date) return true;
+  const ageMs = Date.now() - date.getTime();
+  return ageMs > 90 * 24 * 60 * 60 * 1000;
+}
+
+function formatReviewed(product: ProductRow) {
+  const date = getReviewedDate(product);
+  if (!date) return 'Review date pending';
+  return `Reviewed ${date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+}
+
+function QualityStat({ label, value, tone = 'neutral' }: { label: string; value: number; tone?: 'neutral' | 'good' | 'warn' }) {
+  const toneClass = tone === 'good'
+    ? 'text-[#3EA63B]'
+    : tone === 'warn'
+      ? 'text-amber-600'
+      : 'text-slate-900';
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</p>
+      <p className={`mt-1 text-2xl font-black ${toneClass}`}>{value}</p>
     </div>
   );
 }

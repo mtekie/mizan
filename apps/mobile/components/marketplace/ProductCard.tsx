@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
-import { MizanColors, MizanRadii, MizanSpacing } from '@mizan/ui-tokens';
-import { MizanCard } from '../../components/ui/MizanCard'; // Reusing base card
+import { MizanColors, MizanRadii } from '@mizan/ui-tokens';
 import { ScoreBadge } from './ScoreBadge';
-import { ArrowRight, Star } from 'lucide-react-native';
+import { CheckCircle2, Star, AlertTriangle } from 'lucide-react-native';
+import { getProductFacts, getProductProviderName, getProductTitle, getProductTrustMeta, labelProductType } from '@mizan/shared';
 
 interface ProductCardProps {
   product: any;
@@ -13,6 +13,9 @@ interface ProductCardProps {
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress, variant = 'list' }) => {
   const isFeatured = variant === 'featured';
+  const facts = getProductFacts(product, 3);
+  const providerName = getProductProviderName(product);
+  const trust = getProductTrustMeta(product);
 
   return (
     <TouchableOpacity 
@@ -35,32 +38,37 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress, vari
           )}
           <View>
             <Text style={styles.providerName} numberOfLines={1}>
-              {product.provider?.name || product.bankName}
+              {providerName}
             </Text>
             <Text style={styles.productType}>
-              {product.productType?.replace(/_/g, ' ') || product.category}
+              {labelProductType(product.productType || product.productClass || product.category)}
             </Text>
           </View>
         </View>
         <ScoreBadge score={product.personalizedScore || product.matchScore || 50} size="sm" />
       </View>
 
-      <Text style={styles.title} numberOfLines={2}>{product.name || product.title}</Text>
+      <Text style={styles.title} numberOfLines={2}>{getProductTitle(product)}</Text>
+
+      <View style={styles.trustRow}>
+        {trust.tone === 'good' ? (
+          <CheckCircle2 size={12} color={MizanColors.mintPrimary} />
+        ) : (
+          <AlertTriangle size={12} color="#B45309" />
+        )}
+        <Text style={[styles.trustText, trust.tone === 'warn' && styles.trustTextWarn]} numberOfLines={1}>
+          {trust.label} · {trust.freshness}
+        </Text>
+      </View>
       
       <View style={styles.footer}>
         <View style={styles.metrics}>
-          {product.interestRate ? (
-            <View style={styles.metric}>
-              <Text style={styles.metricLabel}>Rate</Text>
-              <Text style={styles.metricValue}>{product.interestRate}%</Text>
+          {facts.slice(0, isFeatured ? 2 : 3).map(fact => (
+            <View key={`${fact.label}-${fact.value}`} style={styles.metric}>
+              <Text style={styles.metricLabel}>{fact.label}</Text>
+              <Text style={styles.metricValue} numberOfLines={1}>{fact.value}</Text>
             </View>
-          ) : null}
-          {product.attributes?.term ? (
-            <View style={styles.metric}>
-              <Text style={styles.metricLabel}>Term</Text>
-              <Text style={styles.metricValue}>{product.attributes.term}</Text>
-            </View>
-          ) : null}
+          ))}
         </View>
         
         {product.isFeatured && (
@@ -143,6 +151,21 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     lineHeight: 22,
   },
+  trustRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 12,
+  },
+  trustText: {
+    flex: 1,
+    fontSize: 10,
+    fontFamily: 'Inter_600SemiBold',
+    color: MizanColors.mintPrimary,
+  },
+  trustTextWarn: {
+    color: '#B45309',
+  },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -151,10 +174,12 @@ const styles = StyleSheet.create({
   },
   metrics: {
     flexDirection: 'row',
-    gap: 16,
+    flex: 1,
+    gap: 12,
   },
   metric: {
     flexDirection: 'column',
+    maxWidth: 92,
   },
   metricLabel: {
     fontSize: 9,

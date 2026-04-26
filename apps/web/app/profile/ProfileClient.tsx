@@ -3,6 +3,7 @@
 import { Settings, User as UserIcon, ShieldCheck, CreditCard, ChevronRight, PlusCircle, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 import { AppPageShell } from '@/components/AppPageShell';
+import { formatMoney } from '@mizan/shared';
 
 export default function ProfileClient({ user, accounts }: { user: any, accounts: any[] }) {
   const displayAccounts = accounts.map((a: any) => ({
@@ -91,8 +92,7 @@ export default function ProfileClient({ user, accounts }: { user: any, accounts:
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-black text-slate-900">{a.value.toLocaleString()}</p>
-                    <p className="text-[10px] font-bold text-slate-400">ETB</p>
+                    <p className="text-sm font-black text-slate-900">{formatMoney(a.value)}</p>
                   </div>
                 </div>
               ))}

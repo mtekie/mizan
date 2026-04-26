@@ -210,6 +210,12 @@ export default function OnboardingScreen() {
               <Sparkles size={20} color="#FFF" style={{ marginRight: 8 }} />
               <Text style={styles.scanBtnText}>Scan SMS for Auto-Setup</Text>
             </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.skipSmsBtn}
+              onPress={() => setScanResult('SMS import skipped. Manual accounts and transactions are ready now.')}
+            >
+              <Text style={styles.skipSmsText}>Skip SMS import</Text>
+            </TouchableOpacity>
             {scanResult && <Text style={[styles.scanResultText, { marginTop: 12 }]}>{scanResult}</Text>}
           </View>
         );
@@ -250,6 +256,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: MizanColors.mintBg,
+  },
+  skipSmsBtn: {
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  skipSmsText: {
+    fontSize: 13,
+    fontFamily: 'Inter_700Bold',
+    color: MizanColors.textSecondary,
   },
   header: {
     padding: 20,

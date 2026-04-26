@@ -1,23 +1,19 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { getAuthUser } from '@/lib/supabase/auth-adapter';
+import { getOrCreateDbUser } from '@/lib/supabase/auth-adapter';
 import { products } from '@/lib/data/products';
 
 export async function POST(req: Request) {
     try {
-        const user = await getAuthUser(req);
+        const userContext = await getOrCreateDbUser(req);
+        const user = userContext?.dbUser;
 
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
         // 1. Check if user is ADMIN
-        const dbUser = await prisma.user.findUnique({
-            where: { id: user.id },
-            select: { role: true }
-        });
-
-        if (dbUser?.role !== 'ADMIN') {
+        if (user.role !== 'ADMIN') {
             return NextResponse.json({ error: 'Forbidden: Admin access only' }, { status: 403 });
         }
 
@@ -56,6 +52,11 @@ export async function POST(req: Request) {
                         interestFree: (p as any).interestFree,
                         genderBased: (p as any).genderBased,
                         currency: p.currency || 'ETB',
+                        sourceName: (p as any).sourceName || 'bankProductData.csv initial import',
+                        sourceType: (p as any).sourceType || 'spreadsheet',
+                        lastReviewedAt: (p as any).lastReviewedAt ? new Date((p as any).lastReviewedAt) : new Date(),
+                        reviewedBy: (p as any).reviewedBy || 'Mizan data import',
+                        dataConfidence: (p as any).dataConfidence || (p.isVerified === false ? 40 : 70),
                     },
                     create: {
                         id: p.id,
@@ -82,6 +83,11 @@ export async function POST(req: Request) {
                         interestFree: (p as any).interestFree,
                         genderBased: (p as any).genderBased,
                         currency: p.currency || 'ETB',
+                        sourceName: (p as any).sourceName || 'bankProductData.csv initial import',
+                        sourceType: (p as any).sourceType || 'spreadsheet',
+                        lastReviewedAt: (p as any).lastReviewedAt ? new Date((p as any).lastReviewedAt) : new Date(),
+                        reviewedBy: (p as any).reviewedBy || 'Mizan data import',
+                        dataConfidence: (p as any).dataConfidence || (p.isVerified === false ? 40 : 70),
                     }
                 });
             }

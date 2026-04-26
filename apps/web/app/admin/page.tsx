@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { LayoutDashboard, Users, Package, MessageCircle, Search, ChevronRight, Shield, TrendingUp, Activity, BarChart3, Settings, Database, Globe, BrainCircuit } from 'lucide-react';
 import Link from 'next/link';
 
@@ -14,6 +14,15 @@ const stats = {
     totalProducts: 387,
     totalTransactions: 5892,
     pendingReviews: 12,
+};
+
+type MarketplaceStats = {
+    totalProducts: number;
+    activeProducts: number;
+    totalProviders: number;
+    unverifiedProducts: number;
+    staleProducts: number;
+    missingSourceProducts: number;
 };
 
 const demoUsers = [
@@ -33,6 +42,14 @@ const demoReviews = [
 export default function AdminPage() {
     const [tab, setTab] = useState<Tab>('overview');
     const [searchQuery, setSearchQuery] = useState('');
+    const [marketplaceStats, setMarketplaceStats] = useState<MarketplaceStats | null>(null);
+
+    useEffect(() => {
+        fetch('/api/v1/admin/marketplace/stats')
+            .then((res) => res.ok ? res.json() : null)
+            .then((body) => setMarketplaceStats(body?.stats || null))
+            .catch(() => setMarketplaceStats(null));
+    }, []);
 
     const tabs: { id: Tab; label: string; icon: any }[] = [
         { id: 'overview', label: 'Overview', icon: LayoutDashboard },
@@ -104,9 +121,9 @@ export default function AdminPage() {
                                 { label: 'Total Users', value: stats.totalUsers.toLocaleString(), icon: Users, color: 'text-blue-600 bg-blue-50' },
                                 { label: 'Active Today', value: stats.activeToday.toString(), icon: Activity, color: 'text-[#3EA63B] bg-[#3EA63B]/10' },
                                 { label: 'Avg. Score', value: stats.avgScore.toString(), icon: TrendingUp, color: 'text-amber-600 bg-amber-50' },
-                                { label: 'Products', value: stats.totalProducts.toString(), icon: Package, color: 'text-purple-600 bg-purple-50' },
-                                { label: 'Transactions', value: stats.totalTransactions.toLocaleString(), icon: BarChart3, color: 'text-indigo-600 bg-indigo-50' },
-                                { label: 'Pending Reviews', value: stats.pendingReviews.toString(), icon: MessageCircle, color: 'text-red-600 bg-red-50' },
+                                { label: 'Products', value: (marketplaceStats?.totalProducts ?? stats.totalProducts).toString(), icon: Package, color: 'text-purple-600 bg-purple-50' },
+                                { label: 'Providers', value: (marketplaceStats?.totalProviders ?? 0).toString(), icon: Database, color: 'text-indigo-600 bg-indigo-50' },
+                                { label: 'Needs Review', value: (marketplaceStats?.unverifiedProducts ?? stats.pendingReviews).toString(), icon: MessageCircle, color: 'text-red-600 bg-red-50' },
                             ].map(stat => {
                                 const Icon = stat.icon;
                                 return (

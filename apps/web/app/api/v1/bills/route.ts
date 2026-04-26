@@ -1,14 +1,16 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { getOrCreateDbUser } from '@/lib/supabase/auth-adapter';
+import { syncPaidBillTransaction } from '@/lib/bills/paid-bill-transaction';
 import { z } from 'zod';
 
 const billSchema = z.object({
     name: z.string().min(1),
-    amount: z.number().min(0),
-    dueDay: z.number().min(1).max(31),
+    amount: z.coerce.number().min(0),
+    dueDay: z.coerce.number().min(1).max(31),
     category: z.string(),
     isPaid: z.boolean().optional(),
+    skipThisMonth: z.boolean().optional(),
 });
 
 export async function GET(req: Request) {
@@ -50,12 +52,14 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Name, amount, and dueDay are required' }, { status: 400 });
         }
 
+        const { skipThisMonth, ...billData } = result.data;
         const bill = await prisma.bill.create({
             data: {
-                ...result.data,
+                ...billData,
                 userId: user.id,
-                amount: result.data.amount,
-                dueDay: result.data.dueDay,
+                amount: billData.amount,
+                dueDay: billData.dueDay,
+                lastSkipped: skipThisMonth ? new Date() : null,
             }
         });
 
@@ -86,9 +90,33 @@ export async function PATCH(req: Request) {
             return NextResponse.json({ error: 'Invalid input', details: result.error.format() }, { status: 400 });
         }
 
-        const bill = await prisma.bill.update({
-            where: { id, userId: user.id },
-            data: result.data
+        const existingBill = await prisma.bill.findUnique({
+            where: { id, userId: user.id }
+        });
+
+        if (!existingBill) {
+            return NextResponse.json({ error: 'Bill not found' }, { status: 404 });
+        }
+
+        const actionAt = new Date();
+        const { skipThisMonth, ...billData } = result.data;
+        const bill = await prisma.$transaction(async (tx) => {
+            const updatedBill = await tx.bill.update({
+                where: { id, userId: user.id },
+                data: {
+                    ...billData,
+                    lastPaid: billData.isPaid ? actionAt : null,
+                    lastSkipped: skipThisMonth ? actionAt : billData.isPaid ? null : existingBill.lastSkipped,
+                }
+            });
+
+            if (skipThisMonth) {
+                await syncPaidBillTransaction(tx, existingBill, false, actionAt);
+            } else if (typeof billData.isPaid === 'boolean') {
+                await syncPaidBillTransaction(tx, billData.isPaid ? updatedBill : existingBill, billData.isPaid, actionAt);
+            }
+
+            return updatedBill;
         });
 
         return NextResponse.json(bill);

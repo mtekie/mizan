@@ -4,20 +4,40 @@ import prisma from '@/lib/db';
 export async function GET() {
     try {
         // Calculate leaderboard based on reviews and applications
-        const providers = await prisma.provider.findMany({
-            where: { isActive: true },
-            include: {
-                _count: {
-                    select: {
-                        products: true,
-                        reviews: true,
+        const [providers, productCounts, staleProducts, productSources] = await Promise.all([
+            prisma.provider.findMany({
+                where: { isActive: true },
+                include: {
+                    _count: {
+                        select: {
+                            products: true,
+                            reviews: true,
+                        }
+                    },
+                    reviews: {
+                        select: { rating: true }
                     }
-                },
-                reviews: {
-                    select: { rating: true }
                 }
-            }
-        });
+            }),
+            prisma.product.groupBy({
+                by: ['isActive', 'isVerified'],
+                _count: { _all: true },
+            }),
+            prisma.product.count({
+                where: {
+                    updatedAt: {
+                        lt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
+                    },
+                },
+            }),
+            prisma.product.findMany({
+                select: {
+                    attributes: true,
+                    sourceName: true,
+                    sourceUrl: true,
+                },
+            }),
+        ]);
 
         const leaderboard = providers.map(p => {
             const avgRating = p.reviews.length > 0 
@@ -37,7 +57,29 @@ export async function GET() {
             };
         }).sort((a, b) => b.score - a.score);
 
-        return NextResponse.json(leaderboard.slice(0, 10));
+        const totalProducts = productCounts.reduce((sum, row) => sum + row._count._all, 0);
+        const activeProducts = productCounts
+            .filter((row) => row.isActive)
+            .reduce((sum, row) => sum + row._count._all, 0);
+        const unverifiedProducts = productCounts
+            .filter((row) => !row.isVerified)
+            .reduce((sum, row) => sum + row._count._all, 0);
+        const missingSourceProducts = productSources.filter((product) => {
+            const attributes = product.attributes as { source?: string; sourceSheet?: string; sourceUrl?: string } | null;
+            return !product.sourceName && !product.sourceUrl && !attributes?.source && !attributes?.sourceSheet && !attributes?.sourceUrl;
+        }).length;
+
+        return NextResponse.json({
+            stats: {
+                totalProducts,
+                activeProducts,
+                totalProviders: providers.length,
+                unverifiedProducts,
+                staleProducts,
+                missingSourceProducts,
+            },
+            leaderboard: leaderboard.slice(0, 10),
+        });
     } catch (e: any) {
         return NextResponse.json({ error: e.message }, { status: 500 });
     }

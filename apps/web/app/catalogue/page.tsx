@@ -1,14 +1,6 @@
 import prisma from '@/lib/db';
 import { CatalogueClient } from './CatalogueClient';
-
-const categories = [
-  { key: 'all', label: 'All', icon: '✨' },
-  { key: 'SAVINGS', label: 'Savings', icon: '💰' },
-  { key: 'CREDIT', label: 'Loans', icon: '🏦' },
-  { key: 'INSURANCE', label: 'Insurance', icon: '🛡️' },
-  { key: 'PAYMENT', label: 'Payments', icon: '📱' },
-  { key: 'COMMUNITY', label: 'Community', icon: '🤝' },
-] as const;
+import { productCategories } from '@mizan/shared';
 
 export default async function Catalogue() {
   const products = await prisma.product.findMany({
@@ -23,9 +15,22 @@ export default async function Catalogue() {
       minBalance: true,
       maxAmount: true,
       interestRate: true,
+      interestMax: true,
       term: true,
       matchScore: true,
       isFeatured: true,
+      isVerified: true,
+      updatedAt: true,
+      currency: true,
+      digital: true,
+      interestFree: true,
+      genderBased: true,
+      sourceName: true,
+      sourceUrl: true,
+      sourceType: true,
+      lastReviewedAt: true,
+      reviewedBy: true,
+      dataConfidence: true,
       features: true,
       eligibility: true,
       requirements: true,
@@ -45,5 +50,5 @@ export default async function Catalogue() {
     ]
   });
 
-  return <CatalogueClient products={products} categories={categories} />;
+  return <CatalogueClient products={products} categories={productCategories} />;
 }

@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MizanColors, MizanTypography, MizanSpacing, MizanRadii } from '@mizan/ui-tokens';
 import { ArrowLeft } from 'lucide-react-native';
 import { router } from 'expo-router';
@@ -34,37 +35,42 @@ export function AppScreenShell({
   onRefresh,
 }: AppScreenShellProps) {
   const ContentWrapper = scrollable ? ScrollView : View;
+  const insets = useSafeAreaInsets();
 
   return (
     <View style={[styles.container, variant === 'plain' && { backgroundColor: '#F8FAFC' }]}>
-      <View style={[styles.headerWrapper, variant === 'hero' ? styles.heroHeader : styles.plainHeader]}>
-        <SafeAreaView>
-          <View style={styles.headerContent}>
-            <View style={styles.headerLeft}>
-              {showBack && (
-                <TouchableOpacity 
-                  onPress={() => router.back()} 
-                  style={[styles.backBtn, variant === 'hero' ? styles.heroBackBtn : styles.plainBackBtn]}
-                >
-                  <ArrowLeft size={20} color={variant === 'hero' ? '#fff' : MizanColors.textPrimary} />
-                </TouchableOpacity>
-              )}
-              <View>
-                <Text style={[styles.title, variant === 'hero' ? styles.heroTitle : styles.plainTitle]}>
-                  {title}
+      <View
+        style={[
+          styles.headerWrapper,
+          variant === 'hero' ? styles.heroHeader : styles.plainHeader,
+          { paddingTop: Math.max(insets.top, 12) },
+        ]}
+      >
+        <View style={styles.headerContent}>
+          <View style={styles.headerLeft}>
+            {showBack && (
+              <TouchableOpacity 
+                onPress={() => router.back()} 
+                style={[styles.backBtn, variant === 'hero' ? styles.heroBackBtn : styles.plainBackBtn]}
+              >
+                <ArrowLeft size={20} color={variant === 'hero' ? '#fff' : MizanColors.textPrimary} />
+              </TouchableOpacity>
+            )}
+            <View>
+              <Text style={[styles.title, variant === 'hero' ? styles.heroTitle : styles.plainTitle]}>
+                {title}
+              </Text>
+              {subtitle && (
+                <Text style={[styles.subtitle, variant === 'hero' ? styles.heroSubtitle : styles.plainSubtitle]}>
+                  {subtitle}
                 </Text>
-                {subtitle && (
-                  <Text style={[styles.subtitle, variant === 'hero' ? styles.heroSubtitle : styles.plainSubtitle]}>
-                    {subtitle}
-                  </Text>
-                )}
-              </View>
-            </View>
-            <View style={styles.headerActions}>
-              {actions}
+              )}
             </View>
           </View>
-        </SafeAreaView>
+          <View style={styles.headerActions}>
+            {actions}
+          </View>
+        </View>
       </View>
 
       <ContentWrapper 
@@ -104,7 +110,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: 16,
   },
   headerLeft: {
     flexDirection: 'row',

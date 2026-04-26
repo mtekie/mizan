@@ -36,16 +36,39 @@ export async function getOrCreateDbUser(req?: Request) {
   if (!authUser) return null;
 
   try {
-    // Upsert to ensure user exists. Using email as fallback if id mismatch, 
-    // but usually id (Supabase UID) is the primary key in our Prisma User model.
-    const user = await prisma.user.upsert({
+    const existingById = await prisma.user.findUnique({
       where: { id: authUser.id },
-      update: { email: authUser.email || '' },
-      create: {
+    });
+
+    if (existingById) {
+      const user = await prisma.user.update({
+        where: { id: existingById.id },
+        data: {
+          email: authUser.email || existingById.email,
+          name: existingById.name || authUser.user_metadata?.name || authUser.user_metadata?.full_name || null,
+          image: existingById.image || authUser.user_metadata?.avatar_url || null,
+        },
+      });
+
+      return { authUser, dbUser: user };
+    }
+
+    if (authUser.email) {
+      const existingByEmail = await prisma.user.findUnique({
+        where: { email: authUser.email },
+      });
+
+      if (existingByEmail) {
+        return { authUser, dbUser: existingByEmail };
+      }
+    }
+
+    const user = await prisma.user.create({
+      data: {
         id: authUser.id,
-        email: authUser.email || '',
-        // Initialize other required fields if any. 
-        // Based on the audit, we just need the row to exist for FKs.
+        email: authUser.email || null,
+        name: authUser.user_metadata?.name || authUser.user_metadata?.full_name || null,
+        image: authUser.user_metadata?.avatar_url || null,
       },
     });
 

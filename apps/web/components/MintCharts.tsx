@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import { formatMoney, safePercent } from '@mizan/shared';
 
 // Lazy load heavy chart components
 const ResponsiveContainer = dynamic(() => import('recharts').then(mod => mod.ResponsiveContainer), { ssr: false });
@@ -13,7 +14,8 @@ const Tooltip = dynamic(() => import('recharts').then(mod => mod.Tooltip), { ssr
 export function MintDonutChart({ data, totalSpent }: { data: any[], totalSpent: number }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
-    setMounted(true);
+    const timer = window.setTimeout(() => setMounted(true), 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   if (!data || data.length === 0) {
@@ -45,7 +47,7 @@ export function MintDonutChart({ data, totalSpent }: { data: any[], totalSpent: 
                 ))}
               </Pie>
               <Tooltip 
-                formatter={(val: any) => [`${Number(val).toLocaleString()} ETB`, 'Spent']}
+                formatter={(val: any) => [formatMoney(val), 'Spent']}
                 contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
               />
             </PieChart>
@@ -53,7 +55,7 @@ export function MintDonutChart({ data, totalSpent }: { data: any[], totalSpent: 
         )}
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
           <span className="text-[10px] font-bold text-[var(--color-mint-text-muted)] uppercase tracking-wider">This month</span>
-          <span className="text-xl font-black text-[var(--color-mint-text)]">{totalSpent.toLocaleString()}</span>
+          <span className="text-xl font-black text-[var(--color-mint-text)]">{formatMoney(totalSpent)}</span>
         </div>
       </div>
       
@@ -71,7 +73,7 @@ export function MintDonutChart({ data, totalSpent }: { data: any[], totalSpent: 
 }
 
 export function MintBudgetBar({ spent, total, title }: { spent: number, total: number, title?: string }) {
-  const percent = Math.min(100, Math.max(0, (spent / total) * 100));
+  const percent = Math.min(100, Math.max(0, safePercent(spent, total)));
   const isOver = spent > total;
   const left = Math.max(0, total - spent);
   
@@ -87,9 +89,9 @@ export function MintBudgetBar({ spent, total, title }: { spent: number, total: n
       {title && <h4 className="text-[11px] font-bold text-[var(--color-mint-text)] uppercase tracking-wider mb-1">{title}</h4>}
       <div className="flex justify-between items-end mb-1.5">
         <span className="text-sm font-black text-[var(--color-mint-text)]">
-          {spent.toLocaleString()} <span className="text-[10px] font-semibold text-[var(--color-mint-text-muted)]">of {total.toLocaleString()}</span>
+          {formatMoney(spent)} <span className="text-[10px] font-semibold text-[var(--color-mint-text-muted)]">of {formatMoney(total)}</span>
         </span>
-        {!isOver && <span className="text-[10px] font-bold text-[var(--color-mint-text-muted)]">{left.toLocaleString()} left</span>}
+        {!isOver && <span className="text-[10px] font-bold text-[var(--color-mint-text-muted)]">{formatMoney(left)} left</span>}
         {isOver && <span className="text-[10px] font-bold text-[var(--color-mint-coral)]">Over budget</span>}
       </div>
       <div className="h-2.5 bg-slate-100 rounded-full w-full relative overflow-hidden">

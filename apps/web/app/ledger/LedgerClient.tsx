@@ -1,11 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { TrendingUp, Building2, Smartphone, Users, Filter, Coffee, ArrowDownToLine, ShoppingCart, Tv, X, ChevronDown, CircleDollarSign, Download, PieChart as PieChartIcon, Calendar, Plus, ArrowRight, ArrowLeft, Send, Wallet, Sparkles, ArrowUpRight, ArrowDownRight, CreditCard, CheckCircle2 } from 'lucide-react';
+import { TrendingUp, Building2, Smartphone, Users, Filter, Coffee, ArrowDownToLine, ShoppingCart, Tv, X, ChevronDown, CircleDollarSign, Download, PieChart as PieChartIcon, Calendar, Plus, ArrowRight, ArrowLeft, Send, Wallet, Sparkles, ArrowUpRight, ArrowDownRight, CreditCard, CheckCircle2, Pencil, Trash2 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import { SimpleLedger } from '@/components/SimpleLedger';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { AccountStep } from '@/components/onboarding/AccountStep';
@@ -13,26 +12,27 @@ import { performUpdateOnboardingPhase } from '@/app/onboarding/actions';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/PageHeader';
 import { AppPageShell } from '@/components/AppPageShell';
+import { formatMoney, formatSignedMoney, safePercent, toFiniteNumber } from '@mizan/shared';
 
 type AddMode = 'transaction' | 'transfer' | null;
 type TxType = 'expense' | 'income';
+type AccountForm = { name: string; type: string; balance: string; number: string; color: string };
 
 const ETB_TO_USD = 0.0071;
 
 const txCategories = ['Income', 'Food & Drink', 'Groceries', 'Entertainment', 'Transport', 'Utilities', 'Healthcare', 'Transfer'];
 const filterCategories = ['All', 'Income', 'Food & Drink', 'Groceries', 'Entertainment'];
 
-export default function LedgerClient({ accounts, initialTransactions, summary }: { accounts: any[], initialTransactions: any[], summary: any }) {
-  // Derive source accounts from real data
-  const sourceAccounts = ['All', ...accounts.map(a => a.name)];
-  
+export default function LedgerClient({ accounts: initialAccounts, initialTransactions, summary }: { accounts: any[], initialTransactions: any[], summary: any }) {
   const [showFilter, setShowFilter] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedSource, setSelectedSource] = useState('All');
   const [expandedTx, setExpandedTx] = useState<string | null>(null);
   const [showUSD, setShowUSD] = useState(false);
+  const [accounts, setAccounts] = useState<any[]>(initialAccounts);
   const [transactions, setTransactions] = useState<any[]>(initialTransactions);
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     const timer = window.setTimeout(() => setMounted(true), 0);
@@ -41,9 +41,19 @@ export default function LedgerClient({ accounts, initialTransactions, summary }:
 
   // Add flow state
   const [addMode, setAddMode] = useState<AddMode>(null);
+  const [showNewAccount, setShowNewAccount] = useState(false);
+  const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
+  const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
   const [addStep, setAddStep] = useState(0);
   const [txType, setTxType] = useState<TxType>('expense');
   const [txData, setTxData] = useState({ title: '', amount: '', category: '', source: accounts[0]?.id, targetAccount: accounts[1]?.id });
+  const [accountData, setAccountData] = useState<AccountForm>({
+    name: '',
+    type: 'Savings',
+    balance: '',
+    number: '',
+    color: '#3EA63B',
+  });
   const [success, setSuccess] = useState(false);
   
   const isMobile = useIsMobile();
@@ -53,9 +63,12 @@ export default function LedgerClient({ accounts, initialTransactions, summary }:
   const isOnboarding = searchParams.get('action') === 'add-account';
   const [onboardingAccounts, setOnboardingAccounts] = useState<any[]>([]);
 
+  const sourceAccounts = ['All', ...accounts.map(a => a.name)];
+
   const fmt = (amount: number) => {
-    if (showUSD) return `$${(Math.abs(amount) * ETB_TO_USD).toFixed(2)}`;
-    return `${Math.abs(amount).toLocaleString(undefined, { minimumFractionDigits: 2 })} ETB`;
+    const safeAmount = Math.abs(toFiniteNumber(amount));
+    if (showUSD) return `$${(safeAmount * ETB_TO_USD).toFixed(2)}`;
+    return formatMoney(safeAmount, 'ETB', { minimumFractionDigits: 2 });
   };
 
   const filtered = transactions.filter((tx) => {
@@ -87,15 +100,166 @@ export default function LedgerClient({ accounts, initialTransactions, summary }:
     setAddMode(mode);
     setAddStep(0);
     setSuccess(false);
+    setSaving(false);
+    setEditingTransactionId(null);
     setTxData({ title: '', amount: '', category: '', source: accounts[0]?.id, targetAccount: accounts[1]?.id });
   };
 
-  const closeAdd = () => { setAddMode(null); setAddStep(0); setSuccess(false); };
+  const closeAdd = () => { setAddMode(null); setAddStep(0); setSuccess(false); setEditingTransactionId(null); };
+
+  const openEditTransaction = (tx: any) => {
+    setEditingTransactionId(tx.id);
+    setAddMode('transaction');
+    setAddStep(2);
+    setSuccess(false);
+    setTxType(toFiniteNumber(tx.amount) >= 0 ? 'income' : 'expense');
+    setTxData({
+      title: tx.title || '',
+      amount: String(Math.abs(toFiniteNumber(tx.amount))),
+      category: tx.category || 'Transfer',
+      source: tx.accountId || accounts[0]?.id,
+      targetAccount: accounts[1]?.id,
+    });
+  };
+
+  const openCreateAccount = () => {
+    setEditingAccountId(null);
+    setAccountData({ name: '', type: 'Savings', balance: '', number: '', color: '#3EA63B' });
+    setShowNewAccount(true);
+  };
+
+  const openEditAccount = (account: any) => {
+    setEditingAccountId(account.id);
+    setAccountData({
+      name: account.name || '',
+      type: account.type || 'Savings',
+      balance: String(toFiniteNumber(account.balance)),
+      number: account.number || '',
+      color: account.color || '#3EA63B',
+    });
+    setShowNewAccount(true);
+  };
 
   const handleAddSubmit = async () => {
-    // For demo, just show success
-    setSuccess(true);
-    setTimeout(() => closeAdd(), 1800);
+    if (!addMode) return;
+
+    setSaving(true);
+    try {
+      if (addMode === 'transaction') {
+        const account = accounts.find(a => a.id === txData.source);
+        const amount = Math.abs(toFiniteNumber(txData.amount));
+        const res = await fetch('/api/v1/transactions', {
+          method: editingTransactionId ? 'PATCH' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...(editingTransactionId ? { id: editingTransactionId } : {}),
+            title: txData.title.trim(),
+            amount: txType === 'expense' ? -amount : amount,
+            source: account?.name || 'Manual',
+            category: txData.category,
+            accountId: account?.id,
+          }),
+        });
+
+        if (!res.ok) throw new Error(editingTransactionId ? 'Failed to update transaction' : 'Failed to log transaction');
+        const saved = await res.json();
+        setTransactions(current => editingTransactionId
+          ? current.map(tx => tx.id === saved.id ? saved : tx)
+          : [saved, ...current]
+        );
+      } else {
+        const res = await fetch('/api/v1/transfer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fromAccountId: txData.source,
+            toAccountId: txData.targetAccount,
+            amount: toFiniteNumber(txData.amount),
+          }),
+        });
+
+        if (!res.ok) throw new Error('Failed to send transfer');
+        router.refresh();
+      }
+
+      setSuccess(true);
+      setTimeout(() => {
+        closeAdd();
+        router.refresh();
+      }, 1200);
+    } catch (err: any) {
+      toast.error(err.message || 'Could not save this entry');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAccountSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!accountData.name.trim()) return;
+
+    setSaving(true);
+    try {
+      const res = await fetch('/api/v1/accounts', {
+        method: editingAccountId ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...(editingAccountId ? { id: editingAccountId } : {}),
+          name: accountData.name.trim(),
+          type: accountData.type,
+          balance: toFiniteNumber(accountData.balance),
+          number: accountData.number.trim() || undefined,
+          color: accountData.color,
+        }),
+      });
+
+      if (!res.ok) throw new Error(editingAccountId ? 'Failed to update account' : 'Failed to create account');
+      const saved = await res.json();
+      setAccounts(current => editingAccountId
+        ? current.map(account => account.id === saved.id ? saved : account)
+        : [...current, saved]
+      );
+      setAccountData({ name: '', type: 'Savings', balance: '', number: '', color: '#3EA63B' });
+      setEditingAccountId(null);
+      setShowNewAccount(false);
+      toast.success(editingAccountId ? 'Account updated' : 'Account added');
+      router.refresh();
+    } catch (err: any) {
+      toast.error(err.message || 'Could not save account');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteAccount = async (accountId: string) => {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/v1/accounts?id=${encodeURIComponent(accountId)}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete account');
+      setAccounts(current => current.filter(account => account.id !== accountId));
+      setTransactions(current => current.map(tx => tx.accountId === accountId ? { ...tx, accountId: null } : tx));
+      toast.success('Account deleted');
+      router.refresh();
+    } catch (err: any) {
+      toast.error(err.message || 'Could not delete account');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteTransaction = async (transactionId: string) => {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/v1/transactions?id=${encodeURIComponent(transactionId)}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete transaction');
+      setTransactions(current => current.filter(tx => tx.id !== transactionId));
+      toast.success('Transaction deleted');
+      router.refresh();
+    } catch (err: any) {
+      toast.error(err.message || 'Could not delete transaction');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleOnboardingComplete = async () => {
@@ -129,11 +293,11 @@ export default function LedgerClient({ accounts, initialTransactions, summary }:
     if (addMode === 'transfer') {
       if (addStep === 0) return !!txData.source;
       if (addStep === 1) return !!txData.targetAccount && txData.targetAccount !== txData.source;
-      if (addStep === 2) return !!txData.amount && !isNaN(Number(txData.amount));
+      if (addStep === 2) return !!txData.amount && Number.isFinite(Number(txData.amount)) && Number(txData.amount) > 0;
     } else {
       if (addStep === 0) return true; // type is always set
       if (addStep === 1) return !!txData.category;
-      if (addStep === 2) return !!txData.amount && !!txData.title;
+      if (addStep === 2) return !!txData.amount && Number(txData.amount) > 0 && !!txData.title.trim() && accounts.length > 0;
     }
     return false;
   };
@@ -166,22 +330,22 @@ export default function LedgerClient({ accounts, initialTransactions, summary }:
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           <div className="bg-white rounded-xl p-3 border border-slate-200 shadow-sm">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Total Balance</span>
-            <span className="text-xl font-black text-[#0F172A]">{(summary.totalBalance / 1000).toFixed(0)}K ETB</span>
+            <span className="text-xl font-black text-[#0F172A]">{formatMoney(summary.totalBalance)}</span>
             <span className="text-[10px] text-[#3EA63B] font-bold ml-1">+12%</span>
           </div>
           <div className="bg-white rounded-xl p-3 border border-slate-200 shadow-sm">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Monthly In</span>
-            <span className="text-xl font-black text-[#3EA63B]">+{summary.monthlyIn.toLocaleString()} ETB</span>
+            <span className="text-xl font-black text-[#3EA63B]">{formatSignedMoney(summary.monthlyIn)}</span>
           </div>
           <div className="bg-white rounded-xl p-3 border border-slate-200 shadow-sm">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Monthly Out</span>
-            <span className="text-xl font-black text-amber-600">-{summary.monthlyOut.toLocaleString()} ETB</span>
+            <span className="text-xl font-black text-amber-600">-{formatMoney(summary.monthlyOut)}</span>
           </div>
           <div className="bg-white rounded-xl p-3 border border-slate-200 shadow-sm">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Savings Rate</span>
             <div className="flex items-center gap-2 mt-0.5">
               <span className="text-xl font-black text-[#0F172A]">{summary.savingsRate}%</span>
-              <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden"><div className="bg-[#3EA63B]" style={{ width: `${summary.savingsRate}%`, height: '100%' }} /></div>
+              <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden"><div className="bg-[#3EA63B]" style={{ width: `${Math.max(0, Math.min(100, toFiniteNumber(summary.savingsRate)))}%`, height: '100%' }} /></div>
             </div>
           </div>
         </div>
@@ -192,6 +356,12 @@ export default function LedgerClient({ accounts, initialTransactions, summary }:
             <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">My Accounts</h2>
             <div className="flex gap-2">
               <button
+                onClick={openCreateAccount}
+                className="flex items-center gap-1.5 bg-white border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-50 transition"
+              >
+                <Building2 className="w-3.5 h-3.5" /> Add Account
+              </button>
+              <button
                 onClick={() => openAdd('transaction')}
                 className="flex items-center gap-1.5 bg-[#0F172A] text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-800 transition"
               >
@@ -199,6 +369,7 @@ export default function LedgerClient({ accounts, initialTransactions, summary }:
               </button>
               <button
                 onClick={() => openAdd('transfer')}
+                disabled={accounts.length < 2}
                 className="flex items-center gap-1.5 bg-white border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-50 transition"
               >
                 <Send className="w-3.5 h-3.5" /> Transfer
@@ -206,7 +377,16 @@ export default function LedgerClient({ accounts, initialTransactions, summary }:
             </div>
           </div>
           <div className="flex gap-3 overflow-x-auto pb-2 hide-scrollbar snap-x snap-mandatory">
-            {accounts.map((account) => (
+            {accounts.length === 0 ? (
+              <div className="w-full rounded-lg border border-dashed border-slate-300 bg-white p-6 text-center">
+                <Wallet className="mx-auto mb-3 h-8 w-8 text-slate-300" />
+                <p className="text-sm font-bold text-slate-700">Add your first account</p>
+                <p className="mt-1 text-xs text-slate-400">Start with cash, telebirr, CBE, or any account you track manually.</p>
+                <button onClick={openCreateAccount} className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-[#0F172A] px-3 py-2 text-xs font-bold text-white">
+                  <Plus className="h-3.5 w-3.5" /> Add Account
+                </button>
+              </div>
+            ) : accounts.map((account) => (
               <div
                 key={account.id}
                 className="min-w-[220px] h-[130px] rounded-2xl p-4 text-white shadow-lg relative snap-center flex flex-col justify-between overflow-hidden shrink-0"
@@ -218,14 +398,32 @@ export default function LedgerClient({ accounts, initialTransactions, summary }:
                     <p className="text-[10px] opacity-80 font-semibold uppercase tracking-widest">{account.type}</p>
                     <p className="text-sm font-black">{account.name}</p>
                   </div>
-                  {account.type === 'Credit Card' ? <CreditCard className="w-4 h-4 opacity-50" /> : <Wallet className="w-4 h-4 opacity-50" />}
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => openEditAccount(account)}
+                      className="rounded-full bg-white/15 p-1.5 text-white hover:bg-white/25"
+                      title="Edit account"
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteAccount(account.id)}
+                      className="rounded-full bg-white/15 p-1.5 text-white hover:bg-white/25"
+                      title="Delete account"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                    {account.type === 'Credit Card' ? <CreditCard className="w-4 h-4 opacity-50" /> : <Wallet className="w-4 h-4 opacity-50" />}
+                  </div>
                 </div>
                 <div className="z-10">
-                  <p className="text-xl font-black">{showUSD ? `$${(account.balance * ETB_TO_USD).toFixed(0)}` : `${account.balance.toLocaleString()} ETB`}</p>
+                  <p className="text-xl font-black">{showUSD ? `$${(toFiniteNumber(account.balance) * ETB_TO_USD).toFixed(0)}` : formatMoney(account.balance)}</p>
                   {account.type === 'Credit Card' && account.limit && (
                     <p className="text-[9px] opacity-60 font-bold">/ {account.limit.toLocaleString()} Limit</p>
                   )}
-                  <p className="text-[9px] opacity-60 mt-0.5">{account.number}</p>
+                  {account.number && <p className="text-[9px] opacity-60 mt-0.5">Ending {String(account.number).slice(-4)}</p>}
                 </div>
               </div>
             ))}
@@ -266,9 +464,10 @@ export default function LedgerClient({ accounts, initialTransactions, summary }:
             <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
               <div className="hidden md:grid grid-cols-12 gap-4 p-3 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
                 <div className="col-span-2">Date</div>
-                <div className="col-span-5">Description</div>
-                <div className="col-span-3">Category</div>
+                <div className="col-span-4">Description</div>
+                <div className="col-span-2">Category</div>
                 <div className="col-span-2 text-right">Amount</div>
+                <div className="col-span-2 text-right">Actions</div>
               </div>
               <div className="divide-y divide-slate-100">
                 {(Object.entries(grouped) as [string, any[]][]).map(([date, txs]) => (
@@ -280,16 +479,34 @@ export default function LedgerClient({ accounts, initialTransactions, summary }:
                           <div className="md:col-span-2 text-slate-500">
                             {new Date(tx.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                           </div>
-                          <div className="md:col-span-5 font-medium text-slate-800">
+                          <div className="md:col-span-4 font-medium text-slate-800">
                             {tx.title}
                           </div>
-                          <div className="md:col-span-3">
+                          <div className="md:col-span-2">
                             <span className="inline-block px-2.5 py-1 bg-slate-100 text-slate-600 rounded-md text-xs">
-                              {tx.category}
+                              {tx.category || 'Uncategorized'}
                             </span>
                           </div>
                           <div className={`md:col-span-2 text-right font-semibold ${tx.amount > 0 ? 'text-[#3EA63B]' : 'text-slate-700'}`}>
                             {tx.amount > 0 ? '+' : ''}{fmt(tx.amount)}
+                          </div>
+                          <div className="md:col-span-2 flex justify-start md:justify-end gap-1">
+                            <button
+                              type="button"
+                              onClick={() => openEditTransaction(tx)}
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200"
+                              title="Edit transaction"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteTransaction(tx.id)}
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-500 hover:bg-red-100"
+                              title="Delete transaction"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
                           </div>
                         </div>
                       );
@@ -332,7 +549,7 @@ export default function LedgerClient({ accounts, initialTransactions, summary }:
                     )}
                   </div>
                   <div>
-                    <p className="text-xl font-black text-slate-900">{(summary.totalSpending / 1000).toFixed(0)}K ETB</p>
+                    <p className="text-xl font-black text-slate-900">{formatMoney(summary.totalSpending)}</p>
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">This Month</p>
                   </div>
                 </div>
@@ -341,7 +558,7 @@ export default function LedgerClient({ accounts, initialTransactions, summary }:
                     <div key={i} className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
                       <span className="text-[10px] text-slate-600 flex-1">{cat.name}</span>
-                      <span className="text-[10px] font-bold text-slate-900">{(cat.value / 1000).toFixed(1)}K</span>
+                      <span className="text-[10px] font-bold text-slate-900">{formatMoney(cat.value)}</span>
                       <span className="text-[10px] text-slate-400 w-8 text-right">{summary.totalSpending ? Math.round(cat.value / summary.totalSpending * 100) : 0}%</span>
                     </div>
                   ))}
@@ -359,8 +576,8 @@ export default function LedgerClient({ accounts, initialTransactions, summary }:
                       <div className="flex justify-between items-center mb-1">
                         <span className="text-[10px] font-bold text-slate-400 uppercase w-8">{m.month}</span>
                         <div className="flex gap-3 text-[10px]">
-                          <span className="text-[#3EA63B] font-bold">+{(m.income / 1000).toFixed(0)}K</span>
-                          <span className="text-red-500 font-bold">-{(m.expense / 1000).toFixed(0)}K</span>
+                          <span className="text-[#3EA63B] font-bold">+{formatMoney(m.income)}</span>
+                          <span className="text-red-500 font-bold">-{formatMoney(m.expense)}</span>
                         </div>
                       </div>
                       <div className="flex gap-1 h-1.5">
@@ -418,6 +635,74 @@ export default function LedgerClient({ accounts, initialTransactions, summary }:
         </div>
       )}
 
+      {/* ── Manual Account Modal ── */}
+      {showNewAccount && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white w-full sm:max-w-md rounded-2xl p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-black text-slate-900">{editingAccountId ? 'Edit Account' : 'Add Account'}</h3>
+              <button onClick={() => { setShowNewAccount(false); setEditingAccountId(null); }} className="p-1 rounded-full hover:bg-slate-100">
+                <X className="w-5 h-5 text-slate-500" />
+              </button>
+            </div>
+            <form onSubmit={handleAccountSubmit} className="space-y-4">
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Account Name</label>
+                <input
+                  value={accountData.name}
+                  onChange={e => setAccountData(a => ({ ...a, name: e.target.value }))}
+                  placeholder="e.g. CBE Savings"
+                  className="w-full mt-1 px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#3EA63B]/30 focus:border-[#3EA63B]"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Type</label>
+                  <select
+                    value={accountData.type}
+                    onChange={e => setAccountData(a => ({ ...a, type: e.target.value }))}
+                    className="w-full mt-1 px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#3EA63B]/30 focus:border-[#3EA63B]"
+                  >
+                    <option>Savings</option>
+                    <option>Wallet</option>
+                    <option>Cash</option>
+                    <option>Checking</option>
+                    <option>Equb</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Balance</label>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    value={accountData.balance}
+                    onChange={e => setAccountData(a => ({ ...a, balance: e.target.value }))}
+                    placeholder="0"
+                    className="w-full mt-1 px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#3EA63B]/30 focus:border-[#3EA63B]"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Account Number</label>
+                <input
+                  value={accountData.number}
+                  onChange={e => setAccountData(a => ({ ...a, number: e.target.value }))}
+                  placeholder="Optional"
+                  className="w-full mt-1 px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#3EA63B]/30 focus:border-[#3EA63B]"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={saving || !accountData.name.trim()}
+                className="w-full py-3 rounded-xl bg-[#0F172A] text-white font-bold hover:bg-slate-800 transition disabled:bg-slate-100 disabled:text-slate-400"
+              >
+                {saving ? 'Saving...' : editingAccountId ? 'Save Changes' : 'Create Account'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* ── Progressive Add / Transfer Flow ── */}
       <AnimatePresence>
         {addMode && (
@@ -436,7 +721,7 @@ export default function LedgerClient({ accounts, initialTransactions, summary }:
                   <div className="w-16 h-16 rounded-full bg-[#3EA63B]/10 flex items-center justify-center mb-4">
                     <CheckCircle2 className="w-8 h-8 text-[#3EA63B]" />
                   </div>
-                  <h3 className="text-xl font-black text-slate-900 mb-1">{addMode === 'transfer' ? 'Transfer Sent!' : 'Transaction Logged!'}</h3>
+                  <h3 className="text-xl font-black text-slate-900 mb-1">{addMode === 'transfer' ? 'Transfer Sent!' : editingTransactionId ? 'Transaction Updated!' : 'Transaction Logged!'}</h3>
                   <p className="text-sm text-slate-500">Your Ledger has been updated.</p>
                 </div>
               ) : (
@@ -448,7 +733,7 @@ export default function LedgerClient({ accounts, initialTransactions, summary }:
                         {addMode === 'transfer' ? <Send className="w-4 h-4 text-white" /> : <Plus className="w-4 h-4 text-white" />}
                       </div>
                       <div>
-                        <h3 className="font-black text-sm text-slate-900">{addMode === 'transfer' ? 'Transfer Money' : 'Log Transaction'}</h3>
+                        <h3 className="font-black text-sm text-slate-900">{addMode === 'transfer' ? 'Transfer Money' : editingTransactionId ? 'Edit Transaction' : 'Log Transaction'}</h3>
                         <p className="text-[10px] text-slate-400">Step {addStep + 1} of {txSteps.length}</p>
                       </div>
                     </div>
@@ -550,7 +835,7 @@ export default function LedgerClient({ accounts, initialTransactions, summary }:
                               <div className="w-8 h-8 rounded-lg flex-shrink-0" style={{ backgroundColor: a.color }} />
                               <div className="flex-1 text-left">
                                 <p className="text-sm font-bold text-slate-900">{a.name}</p>
-                                <p className="text-[10px] text-slate-400">{a.balance.toLocaleString()} ETB</p>
+                                <p className="text-[10px] text-slate-400">{formatMoney(a.balance)}</p>
                               </div>
                               {txData.source === a.id && <CheckCircle2 className="w-4 h-4 text-[#3EA63B]" />}
                             </button>
@@ -568,7 +853,7 @@ export default function LedgerClient({ accounts, initialTransactions, summary }:
                               <div className="w-8 h-8 rounded-lg flex-shrink-0" style={{ backgroundColor: a.color }} />
                               <div className="flex-1 text-left">
                                 <p className="text-sm font-bold text-slate-900">{a.name}</p>
-                                <p className="text-[10px] text-slate-400">{a.balance.toLocaleString()} ETB</p>
+                                <p className="text-[10px] text-slate-400">{formatMoney(a.balance)}</p>
                               </div>
                               {txData.targetAccount === a.id && <CheckCircle2 className="w-4 h-4 text-[#3EA63B]" />}
                             </button>
@@ -583,7 +868,7 @@ export default function LedgerClient({ accounts, initialTransactions, summary }:
                             <div className="w-8 h-8 rounded-lg flex-shrink-0" style={{ backgroundColor: accounts.find(a => a.id === txData.source)?.color }} />
                             <div className="flex-1 min-w-0 text-left">
                               <p className="text-xs font-bold text-slate-700">{accounts.find(a => a.id === txData.source)?.name}</p>
-                              <p className="text-[9px] text-slate-400">{accounts.find(a => a.id === txData.source)?.balance.toLocaleString()} ETB</p>
+                              <p className="text-[9px] text-slate-400">{formatMoney(accounts.find(a => a.id === txData.source)?.balance)}</p>
                             </div>
                             <ArrowRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
                             <div className="w-8 h-8 rounded-lg flex-shrink-0" style={{ backgroundColor: accounts.find(a => a.id === txData.targetAccount)?.color }} />
@@ -613,10 +898,10 @@ export default function LedgerClient({ accounts, initialTransactions, summary }:
                     </button>
                     <button
                       onClick={() => addStep < txSteps.length - 1 ? setAddStep(s => s + 1) : handleAddSubmit()}
-                      disabled={!isStepValid()}
+                      disabled={!isStepValid() || saving}
                       className={`flex-1 py-3 rounded-xl font-black text-sm transition-all flex items-center justify-center gap-2 ${!isStepValid() ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-[#0F172A] text-white hover:bg-slate-800 shadow-lg'}`}
                     >
-                      {addStep < txSteps.length - 1 ? 'Continue' : addMode === 'transfer' ? 'Send Transfer' : 'Log Transaction'}
+                      {saving ? 'Saving...' : addStep < txSteps.length - 1 ? 'Continue' : addMode === 'transfer' ? 'Send Transfer' : editingTransactionId ? 'Save Transaction' : 'Log Transaction'}
                       <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>

@@ -8,21 +8,28 @@ import {
   ActivityIndicator,
   Switch
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { MizanColors, MizanRadii, MizanSpacing } from '@mizan/ui-tokens';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { MizanColors, MizanRadii } from '@mizan/ui-tokens';
 import { api } from '../lib/api';
 import { Check } from 'lucide-react-native';
 
 export default function FilterModal() {
   const router = useRouter();
+  const params = useLocalSearchParams<{
+    digital?: string;
+    interestFree?: string;
+    providerIds?: string;
+    audience?: string;
+  }>();
   const [providers, setProviders] = useState<any[]>([]);
   const [productTypes, setProductTypes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Filter State
-  const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
-  const [digitalOnly, setDigitalOnly] = useState(false);
-  const [interestFree, setInterestFree] = useState(false);
+  const [selectedProviders, setSelectedProviders] = useState<string[]>(() => params.providerIds ? String(params.providerIds).split(',').filter(Boolean) : []);
+  const [digitalOnly, setDigitalOnly] = useState(params.digital === 'true');
+  const [interestFree, setInterestFree] = useState(params.interestFree === 'true');
+  const [audience, setAudience] = useState(params.audience || '');
 
   useEffect(() => {
     const fetchFilters = async () => {
@@ -51,9 +58,16 @@ export default function FilterModal() {
   };
 
   const applyFilters = () => {
-    // In a real app, we'd pass this back via a state manager or search params
-    // For now, we'll just go back. In a real scenario, we'd use a global store.
-    router.back();
+    const nextParams: Record<string, string> = {};
+    if (selectedProviders.length > 0) nextParams.providerIds = selectedProviders.join(',');
+    if (digitalOnly) nextParams.digital = 'true';
+    if (interestFree) nextParams.interestFree = 'true';
+    if (audience) nextParams.audience = String(audience);
+
+    router.replace({
+      pathname: '/(tabs)/catalogue',
+      params: nextParams,
+    });
   };
 
   if (loading) {
@@ -85,6 +99,21 @@ export default function FilterModal() {
               trackColor={{ false: MizanColors.borderLight, true: MizanColors.mintPrimary }}
             />
           </View>
+          <View style={styles.segmentRow}>
+            {[
+              { id: '', label: 'Any' },
+              { id: 'student', label: 'Student' },
+              { id: 'salaried', label: 'Salaried' },
+            ].map(option => (
+              <TouchableOpacity
+                key={option.id}
+                style={[styles.segmentButton, audience === option.id && styles.segmentButtonActive]}
+                onPress={() => setAudience(option.id)}
+              >
+                <Text style={[styles.segmentText, audience === option.id && styles.segmentTextActive]}>{option.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
         <View style={styles.section}>
@@ -114,6 +143,7 @@ export default function FilterModal() {
             setSelectedProviders([]);
             setDigitalOnly(false);
             setInterestFree(false);
+            setAudience('');
           }}
         >
           <Text style={styles.resetText}>Reset All</Text>
@@ -161,6 +191,31 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: 'Inter_400Regular',
     color: MizanColors.textPrimary,
+  },
+  segmentRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 18,
+  },
+  segmentButton: {
+    flex: 1,
+    borderRadius: MizanRadii.md,
+    borderWidth: 1,
+    borderColor: MizanColors.borderLight,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  segmentButtonActive: {
+    backgroundColor: MizanColors.mintPrimary,
+    borderColor: MizanColors.mintPrimary,
+  },
+  segmentText: {
+    fontSize: 12,
+    fontFamily: 'Inter_700Bold',
+    color: MizanColors.textSecondary,
+  },
+  segmentTextActive: {
+    color: '#fff',
   },
   checkRow: {
     flexDirection: 'row',

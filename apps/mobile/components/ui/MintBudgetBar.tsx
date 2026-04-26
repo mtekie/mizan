@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { MizanColors, MizanTypography } from '@mizan/ui-tokens';
+import { formatMoney, safePercent } from '@mizan/shared';
 
 interface MintBudgetBarProps {
   spent: number;
@@ -9,7 +10,7 @@ interface MintBudgetBarProps {
 }
 
 export function MintBudgetBar({ spent, total, title }: MintBudgetBarProps) {
-  const percent = Math.min(100, Math.max(0, (spent / total) * 100));
+  const percent = Math.min(100, Math.max(0, safePercent(spent, total)));
   const isOver = spent > total;
   const left = Math.max(0, total - spent);
 
@@ -27,11 +28,11 @@ export function MintBudgetBar({ spent, total, title }: MintBudgetBarProps) {
       <Text style={styles.title}>{title}</Text>
       <View style={styles.headerRow}>
         <View style={styles.spentContainer}>
-          <Text style={styles.spentValue}>{spent.toLocaleString()}</Text>
-          <Text style={styles.ofTotal}> of {total.toLocaleString()}</Text>
+          <Text style={styles.spentValue}>{formatMoney(spent)}</Text>
+          <Text style={styles.ofTotal}> of {formatMoney(total)}</Text>
         </View>
         {!isOver ? (
-          <Text style={styles.leftValue}>{left.toLocaleString()} left</Text>
+          <Text style={styles.leftValue}>{formatMoney(left)} left</Text>
         ) : (
           <Text style={styles.overValue}>Over budget</Text>
         )}

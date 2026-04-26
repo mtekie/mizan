@@ -5,6 +5,14 @@ export interface ApiClientConfig {
   getToken: () => Promise<string | null>;
 }
 
+type PaginatedResponse<T> = {
+  data?: T[];
+  total?: number;
+  skip?: number;
+  take?: number;
+  hasMore?: boolean;
+};
+
 export class MizanAPI {
   private config: ApiClientConfig;
 
@@ -56,6 +64,7 @@ export class MizanAPI {
   transactions = {
     list: () => this.fetch<Transaction[]>('/api/v1/transactions'),
     create: (data: Partial<Transaction>) => this.fetch<Transaction>('/api/v1/transactions', { method: 'POST', body: JSON.stringify(data) }),
+    update: (data: Partial<Transaction> & { id: string }) => this.fetch<Transaction>('/api/v1/transactions', { method: 'PATCH', body: JSON.stringify(data) }),
     delete: (id: string) => this.fetch<void>(`/api/v1/transactions?id=${id}`, { method: 'DELETE' }),
   };
   
@@ -63,11 +72,17 @@ export class MizanAPI {
   goals = {
     list: () => this.fetch<Goal[]>('/api/v1/goals'),
     create: (data: Partial<Goal>) => this.fetch<Goal>('/api/v1/goals', { method: 'POST', body: JSON.stringify(data) }),
+    update: (data: Partial<Goal> & { id: string }) => this.fetch<Goal>('/api/v1/goals', { method: 'PATCH', body: JSON.stringify(data) }),
+    contribute: (id: string, saved: number) => this.fetch<Goal>('/api/v1/goals', { method: 'PATCH', body: JSON.stringify({ id, saved }) }),
+    delete: (id: string) => this.fetch<void>(`/api/v1/goals?id=${id}`, { method: 'DELETE' }),
   };
 
   // Budgets
   budgets = {
     list: () => this.fetch<any[]>('/api/v1/budgets'),
+    create: (data: any) => this.fetch<any>('/api/v1/budgets', { method: 'POST', body: JSON.stringify(data) }),
+    update: (data: any & { id: string }) => this.fetch<any>('/api/v1/budgets', { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (id: string) => this.fetch<void>(`/api/v1/budgets?id=${id}`, { method: 'DELETE' }),
   };
 
   // Assets
@@ -103,9 +118,16 @@ export class MizanAPI {
 
   // Products
   products = {
-    list: (params?: Record<string, string>) => {
-      const qs = params ? `?${new URLSearchParams(params).toString()}` : '';
-      return this.fetch<any[]>(`/api/v1/products${qs}`);
+    list: async (params?: Record<string, string>) => {
+      const searchParams = new URLSearchParams({ mode: 'list', ...(params || {}) });
+      const qs = `?${searchParams.toString()}`;
+      const response = await this.fetch<any[] | PaginatedResponse<any>>(`/api/v1/products${qs}`);
+      return Array.isArray(response) ? response : response.data ?? [];
+    },
+    listPage: (params?: Record<string, string>) => {
+      const searchParams = new URLSearchParams({ mode: 'list', ...(params || {}) });
+      const qs = `?${searchParams.toString()}`;
+      return this.fetch<PaginatedResponse<any>>(`/api/v1/products${qs}`);
     },
     get: (id: string) => this.fetch<any>(`/api/v1/products/${id}`),
     bookmark: (id: string, method: 'POST' | 'DELETE') => this.fetch<any>(`/api/v1/products/${id}/bookmark`, { method }),
@@ -124,6 +146,14 @@ export class MizanAPI {
   // Bills
   bills = {
     list: () => this.fetch<any[]>('/api/v1/bills'),
+    create: (data: any) => this.fetch<any>('/api/v1/bills', { method: 'POST', body: JSON.stringify(data) }),
+    update: (data: any & { id: string }) => this.fetch<any>('/api/v1/bills', { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (id: string) => this.fetch<void>(`/api/v1/bills?id=${id}`, { method: 'DELETE' }),
+  };
+
+  // Notifications
+  notifications = {
+    list: () => this.fetch<any[]>('/api/v1/notifications'),
   };
 
   // Score

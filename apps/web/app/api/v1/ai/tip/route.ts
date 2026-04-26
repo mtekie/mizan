@@ -1,11 +1,13 @@
 import { GoogleGenAI } from '@google/genai';
 import { NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/supabase/auth-adapter';
+import { getOrCreateDbUser } from '@/lib/supabase/auth-adapter';
 import prisma from '@/lib/db';
+import { formatMoney, safePercent, toFiniteNumber } from '@mizan/shared';
 
 export async function POST(request: Request) {
     try {
-        const user = await getAuthUser(request);
+        const userContext = await getOrCreateDbUser(request);
+        const user = userContext?.dbUser;
 
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -13,7 +15,7 @@ export async function POST(request: Request) {
 
         // Fetch real-time context
         const accounts = await prisma.account.findMany({ where: { userId: user.id } });
-        const netWorth = accounts.reduce((s, a) => s + a.balance, 0);
+        const netWorth = accounts.reduce((s, a) => s + toFiniteNumber(a.balance), 0);
         
         const topGoal = await prisma.goal.findFirst({
             where: { userId: user.id },
@@ -27,18 +29,21 @@ export async function POST(request: Request) {
         });
 
         let spending = 0;
-        recentTxs.forEach(t => { if (t.amount < 0) spending += Math.abs(t.amount); });
+        recentTxs.forEach(t => {
+            const amount = toFiniteNumber(t.amount);
+            if (amount < 0) spending += Math.abs(amount);
+        });
 
         // Check for Low Balance Alert
-        const lowBalanceAccount = accounts.find(a => a.balance < 500);
-        const lowBalanceContext = lowBalanceAccount ? `Warning: ${lowBalanceAccount.name} is low (${lowBalanceAccount.balance} ETB).` : '';
+        const lowBalanceAccount = accounts.find(a => toFiniteNumber(a.balance) < 500);
+        const lowBalanceContext = lowBalanceAccount ? `Warning: ${lowBalanceAccount.name} is low (${formatMoney(lowBalanceAccount.balance)}).` : '';
 
-        const dynamicContext = `${lowBalanceContext} ${netWorth.toLocaleString()} ETB across ${accounts.length} accounts. Spending: ${spending.toLocaleString()} ETB/mo. ${topGoal ? `Top goal: ${topGoal.name} (${Math.round(topGoal.saved/topGoal.target*100)}% complete).` : 'No active goals.'}`;
+        const dynamicContext = `${lowBalanceContext} ${formatMoney(netWorth)} across ${accounts.length} accounts. Spending: ${formatMoney(spending)}/mo. ${topGoal ? `Top goal: ${topGoal.name} (${Math.round(safePercent(topGoal.saved, topGoal.target))}% complete).` : 'No active goals.'}`;
 
         const apiKey = process.env.GEMINI_API_KEY;
         
         if (!apiKey) {
-            return NextResponse.json({ tip: `Your net worth is ${netWorth.toLocaleString()} ETB. Consider moving idle funds to a high-interest savings account to maximize returns.` });
+            return NextResponse.json({ tip: `Your net worth is ${formatMoney(netWorth)}. Consider moving idle funds to a high-interest savings account to maximize returns.` });
         }
 
         const ai = new GoogleGenAI({ apiKey });

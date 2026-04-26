@@ -1,16 +1,16 @@
 import React from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { MizanColors, MizanTypography } from '@mizan/ui-tokens';
 import { MizanCard } from '../../components/ui/MizanCard';
 import { Plus, Filter, ArrowRightLeft, PieChart, TrendingDown } from 'lucide-react-native';
 import BottomSheet from '@gorhom/bottom-sheet';
 import { MintTransactionSheet } from '../../components/forms/MintTransactionSheet';
+import { MintAccountSheet } from '../../components/forms/MintAccountSheet';
 
 import { api } from '../../lib/api';
-import { Transaction } from '@mizan/shared';
+import { formatMoney, formatSignedMoney, Transaction } from '@mizan/shared';
 import { useStore } from '../../lib/store';
 import { Coffee, ShoppingBag, Car, Home, Smartphone, TrendingUp } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
 
 const CATEGORY_ICONS: Record<string, any> = {
   Food: Coffee,
@@ -28,7 +28,6 @@ export default function LedgerScreen() {
   const [accounts, setAccounts] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
   const { isGuest } = useStore();
-  const router = useRouter();
 
   const MOCK_TRANSACTIONS: Transaction[] = [
     { id: '1', userId: 'guest', title: 'CBE Salary', amount: 35000, category: 'Income', source: 'CBE', date: new Date().toISOString(), accountId: 'CBE' },
@@ -44,6 +43,7 @@ export default function LedgerScreen() {
   ];
 
   const sheetRef = React.useRef<BottomSheet>(null);
+  const accountSheetRef = React.useRef<BottomSheet>(null);
 
   const loadData = React.useCallback(async () => {
     setLoading(true);
@@ -78,7 +78,7 @@ export default function LedgerScreen() {
       {/* Balance Summary */}
       <MizanCard style={styles.summaryCard}>
         <Text style={styles.summaryLabel}>Total Balance</Text>
-        <Text style={styles.summaryAmount}>{totalBalance.toLocaleString()} ETB</Text>
+        <Text style={styles.summaryAmount}>{formatMoney(totalBalance)}</Text>
         <View style={styles.summaryFooter}>
           <TrendingUp size={16} color={MizanColors.mintDark} />
           <Text style={styles.summaryFooterText}>+12.5% this month</Text>
@@ -87,24 +87,37 @@ export default function LedgerScreen() {
 
       {/* Accounts Strip */}
       <View style={styles.accountsSection}>
-        <Text style={styles.sectionTitle}>Accounts</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Accounts</Text>
+          <TouchableOpacity onPress={() => accountSheetRef.current?.expand()}>
+            <Text style={styles.sectionAction}>Add</Text>
+          </TouchableOpacity>
+        </View>
         <FlatList
           horizontal
           showsHorizontalScrollIndicator={false}
           data={accounts}
           keyExtractor={item => item.id}
           contentContainerStyle={styles.accountsList}
+          ListEmptyComponent={
+            !loading ? (
+              <TouchableOpacity style={styles.emptyAccountPill} onPress={() => accountSheetRef.current?.expand()}>
+                <Plus size={18} color={MizanColors.mintPrimary} />
+                <Text style={styles.emptyAccountText}>Add your first account</Text>
+              </TouchableOpacity>
+            ) : null
+          }
           renderItem={({ item }) => (
             <TouchableOpacity 
               style={styles.accountPill}
-              onPress={() => router.push(`/accounts/${item.id}`)}
+              onPress={() => {}}
             >
               <View style={styles.accountIconBox}>
                 <Home size={16} color={MizanColors.mintPrimary} />
               </View>
               <View>
                 <Text style={styles.accountName}>{item.name}</Text>
-                <Text style={styles.accountBalance}>{item.balance?.toLocaleString()} ETB</Text>
+                <Text style={styles.accountBalance}>{formatMoney(item.balance)}</Text>
               </View>
             </TouchableOpacity>
           )}
@@ -183,21 +196,24 @@ export default function LedgerScreen() {
                 </View>
                 <View>
                   <Text style={styles.txTitle}>{item.title}</Text>
-                  <Text style={styles.txDate}>{item.accountId || 'Cash'} • {item.category}</Text>
+                  <Text style={styles.txDate}>{accounts.find(account => account.id === item.accountId)?.name || item.source || 'Manual'} • {item.category || 'Uncategorized'}</Text>
                 </View>
               </View>
               <Text style={[styles.txAmount, { color: item.amount > 0 ? MizanColors.mintDark : MizanColors.textPrimary }]}>
-                {item.amount > 0 ? '+' : ''}{item.amount.toLocaleString()}
+                {formatSignedMoney(item.amount)}
               </Text>
             </MizanCard>
           );
         }}
         ListEmptyComponent={
-          !loading && (
+          !loading ? (
             <View style={styles.emptyState}>
               <Text style={styles.emptyText}>No transactions yet</Text>
+              <TouchableOpacity style={styles.emptyButton} onPress={() => sheetRef.current?.expand()}>
+                <Text style={styles.emptyButtonText}>Log first transaction</Text>
+              </TouchableOpacity>
             </View>
-          )
+          ) : null
         }
       />
 
@@ -221,10 +237,40 @@ export default function LedgerScreen() {
             return;
           }
           try {
-            await api.transactions.create(data);
+            const amount = Math.abs(Number(data.amount) || 0);
+            const account = accounts.find(a => a.id === data.accountId);
+            await api.transactions.create({
+              title: data.title,
+              amount: data.type === 'EXPENSE' ? -amount : amount,
+              category: data.category,
+              source: account?.name || 'Manual',
+              accountId: account?.id,
+              date: data.date,
+            });
             loadData();
           } catch (e: any) {
             console.error("Failed to save trans", e);
+          }
+        }}
+      />
+
+      <MintAccountSheet
+        sheetRef={accountSheetRef}
+        onClose={() => accountSheetRef.current?.close()}
+        onSave={async (data) => {
+          if (isGuest) {
+            setAccounts([...accounts, { ...data, id: Math.random().toString() }]);
+            return;
+          }
+          try {
+            await api.accounts.create({
+              name: data.name,
+              type: data.type,
+              balance: Number(data.balance) || 0,
+            });
+            loadData();
+          } catch (e: any) {
+            console.error("Failed to save account", e);
           }
         }}
       />
@@ -274,11 +320,21 @@ const styles = StyleSheet.create({
   accountsSection: {
     marginTop: 8,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   sectionTitle: {
     fontSize: 18,
     fontFamily: 'Inter_900Black',
     color: MizanColors.textPrimary,
-    marginBottom: 16,
+  },
+  sectionAction: {
+    fontSize: 13,
+    fontFamily: 'Inter_700Bold',
+    color: MizanColors.mintPrimary,
   },
   accountsList: {
     gap: 12,
@@ -293,6 +349,23 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: MizanColors.borderLight,
+  },
+  emptyAccountPill: {
+    minWidth: 220,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: MizanColors.borderLight,
+  },
+  emptyAccountText: {
+    fontSize: 13,
+    fontFamily: 'Inter_700Bold',
+    color: MizanColors.textPrimary,
   },
   accountIconBox: {
     width: 32,
@@ -319,6 +392,17 @@ const styles = StyleSheet.create({
   emptyText: {
     fontFamily: 'Inter_400Regular',
     color: MizanColors.textMuted,
+  },
+  emptyButton: {
+    marginTop: 12,
+    backgroundColor: MizanColors.mintPrimary,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  emptyButtonText: {
+    color: '#fff',
+    fontFamily: 'Inter_700Bold',
   },
   headerActions: {
     flexDirection: 'row',

@@ -1,22 +1,20 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
 import prisma from '@/lib/db';
 import { revalidatePath } from 'next/cache';
 import { isCoreProfileComplete } from '@/lib/profile/completeness';
+import { getOrCreateDbUser } from '@/lib/supabase/auth-adapter';
 
 export async function performUpdateOnboardingPhase(phase: string, data: any) {
   try {
-    const supabase = await createClient();
-    const { data: { user }, error } = await supabase.auth.getUser();
+    const userContext = await getOrCreateDbUser();
+    const user = userContext?.dbUser;
 
-    if (error || !user) {
+    if (!user) {
       return { error: 'Unauthorized' };
     }
 
-    const existingUser = await prisma.user.findUnique({
-      where: { id: user.id },
-    });
+    const existingUser = user;
 
     const nextOnboardingPhase =
       phase === 'progressive'

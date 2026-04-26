@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Bell, Stars, PlusCircle, Wallet, ShoppingBasket, Home, Car, X, Target, Calendar, TrendingUp, Lightbulb, Plus, ReceiptText, Coffee, Smartphone, Heart, GraduationCap, Zap, CheckCircle2, LayoutTemplate, Camera } from 'lucide-react';
+import { Bell, Stars, PlusCircle, Wallet, ShoppingBasket, Home, Car, X, Target, Calendar, TrendingUp, Lightbulb, Plus, ReceiptText, Coffee, Smartphone, Heart, GraduationCap, Zap, CheckCircle2, LayoutTemplate, Camera, Pencil, Trash2 } from 'lucide-react';
 import { AIBudgetForecast } from '@/components/AIBudgetForecast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { budgetTemplates } from '@/lib/data/budgetTemplates';
@@ -13,19 +13,7 @@ import { performUpdateOnboardingPhase } from '@/app/onboarding/actions';
 import { toast } from 'sonner';
 import { AppPageShell } from '@/components/AppPageShell';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
-
-const mockBudgets = [
-  { id: 1, name: 'Food & Groceries', spent: 3800, total: 5000, icon: ShoppingBasket, color: 'text-orange-600', bg: 'bg-orange-100', progressColor: 'bg-orange-500' },
-  { id: 2, name: 'Rent & Housing', spent: 8000, total: 8000, icon: Home, color: 'text-blue-600', bg: 'bg-blue-100', progressColor: 'bg-blue-500' },
-  { id: 3, name: 'Savings Target', spent: 4500, total: 10000, icon: Wallet, color: 'text-emerald-600', bg: 'bg-emerald-100', progressColor: 'bg-[#3EA63B]' },
-  { id: 4, name: 'Transport', spent: 850, total: 3000, icon: Car, color: 'text-purple-600', bg: 'bg-purple-100', progressColor: 'bg-purple-500' },
-];
-
-const mockGoals = [
-  { id: 1, name: 'Emergency Fund', target: 100000, saved: 65000, deadline: 'Jun 2026', emoji: '🛡️' },
-  { id: 2, name: 'Laptop for Work', target: 45000, saved: 28000, deadline: 'Apr 2026', emoji: '💻' },
-  { id: 3, name: 'Vacation Trip', target: 30000, saved: 8500, deadline: 'Dec 2026', emoji: '✈️' },
-];
+import { formatMoney, safePercent, toFiniteNumber } from '@mizan/shared';
 
 export default function DreamsClient({ initialBudgets, initialGoals, initialBills }: { initialBudgets: any[], initialGoals: any[], initialBills: any[] }) {
   const searchParams = useSearchParams();
@@ -52,60 +40,224 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
     }
   };
 
-  const [budgets, setBudgets] = useState(() => {
-     if (initialBudgets && initialBudgets.length > 0 && initialBudgets[0].categories) {
-       return initialBudgets[0].categories.map((c: any) => ({
-         id: c.id, 
-         name: c.name, 
-         spent: c.spent, 
-         total: c.allocated, 
-         icon: ShoppingBasket, 
-         color: c.color || 'text-slate-600', 
-         bg: 'bg-slate-100', 
-         progressColor: c.color ? `bg-${c.color.split('-')[1]}-500` : 'bg-slate-500'
-       }));
-     }
-     return mockBudgets;
-  });
+  const mapBudgetCategories = (budget: any) => {
+     if (!budget?.categories) return [];
+     return budget.categories.map((c: any) => ({
+       id: c.id,
+       name: c.name,
+       spent: toFiniteNumber(c.spent),
+       total: toFiniteNumber(c.allocated),
+       icon: ShoppingBasket,
+       color: c.color || 'text-slate-600',
+       bg: 'bg-slate-100',
+       progressColor: c.color ? `bg-${c.color.split('-')[1]}-500` : 'bg-slate-500',
+     }));
+  };
+
+  const [currentBudgetId, setCurrentBudgetId] = useState<string | null>(() => initialBudgets?.[0]?.id ?? null);
+  const [budgets, setBudgets] = useState(() => mapBudgetCategories(initialBudgets?.[0]));
   
   const [goalsState, setGoals] = useState(() => {
      if (initialGoals && initialGoals.length > 0) return initialGoals;
-     return mockGoals;
+     return [];
   });
   const [showNewGoal, setShowNewGoal] = useState(false);
+  const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
   const [showExpenseLogger, setShowExpenseLogger] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [showBudgetCategory, setShowBudgetCategory] = useState(false);
+  const [editingBudgetCategoryId, setEditingBudgetCategoryId] = useState<string | null>(null);
   const [newGoal, setNewGoal] = useState({ name: '', target: '' });
+  const [budgetCategoryForm, setBudgetCategoryForm] = useState({ name: '', allocated: '', spent: '' });
   const [expense, setExpense] = useState({ amount: '', category: '', note: '' });
   const [expenseSuccess, setExpenseSuccess] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const totalBudget = budgets.reduce((s: number, b: any) => s + b.total, 0);
   const totalSpent = budgets.reduce((s: number, b: any) => s + b.spent, 0);
-  const budgetPercent = Math.round((totalSpent / totalBudget) * 100);
+  const budgetPercent = Math.min(100, safePercent(totalSpent, totalBudget));
 
   const addGoalRef = useFocusTrap(showNewGoal, () => setShowNewGoal(false));
   const loggerRef = useFocusTrap(showExpenseLogger, () => setShowExpenseLogger(false));
   const templatesRef = useFocusTrap(showTemplates, () => setShowTemplates(false));
+  const budgetCategoryRef = useFocusTrap(showBudgetCategory, () => setShowBudgetCategory(false));
   const goalStepRef = useFocusTrap(isGoalOnboarding, () => router.push('/dreams'));
+
+  const persistBudgetCategories = async (nextCategories: any[]) => {
+    const totalLimit = nextCategories.reduce((sum, category) => sum + toFiniteNumber(category.total), 0);
+    const payloadCategories = nextCategories.map((category) => ({
+      ...(typeof category.id === 'string' ? { id: category.id } : {}),
+      name: category.name,
+      allocated: toFiniteNumber(category.total),
+      spent: toFiniteNumber(category.spent),
+      color: category.color,
+    }));
+
+    const now = new Date();
+    const response = await fetch('/api/v1/budgets', {
+      method: currentBudgetId ? 'PATCH' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(currentBudgetId
+        ? { id: currentBudgetId, totalLimit, categories: payloadCategories }
+        : {
+            month: now.getMonth() + 1,
+            year: now.getFullYear(),
+            totalLimit,
+            categories: payloadCategories,
+          }),
+    });
+
+    if (!response.ok) throw new Error('Failed to save budget');
+    const savedBudget = await response.json();
+    setCurrentBudgetId(savedBudget.id);
+    setBudgets(mapBudgetCategories(savedBudget));
+    router.refresh();
+  };
+
+  const openCreateBudgetCategory = () => {
+    setEditingBudgetCategoryId(null);
+    setBudgetCategoryForm({ name: '', allocated: '', spent: '0' });
+    setShowBudgetCategory(true);
+  };
+
+  const openEditBudgetCategory = (category: any) => {
+    setEditingBudgetCategoryId(category.id);
+    setBudgetCategoryForm({
+      name: category.name || '',
+      allocated: String(toFiniteNumber(category.total)),
+      spent: String(toFiniteNumber(category.spent)),
+    });
+    setShowBudgetCategory(true);
+  };
+
+  const handleSaveBudgetCategory = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const allocated = Number(budgetCategoryForm.allocated);
+    const spent = Number(budgetCategoryForm.spent || 0);
+
+    if (!budgetCategoryForm.name.trim() || !Number.isFinite(allocated) || allocated < 0 || !Number.isFinite(spent) || spent < 0) {
+      toast.error('Enter a valid category name and amounts');
+      return;
+    }
+
+    const nextCategory = {
+      id: editingBudgetCategoryId ?? `new-${Date.now()}`,
+      name: budgetCategoryForm.name.trim(),
+      total: allocated,
+      spent,
+      icon: ShoppingBasket,
+      color: 'text-slate-600',
+      bg: 'bg-slate-100',
+      progressColor: 'bg-slate-500',
+    };
+
+    const previousCategories = budgets;
+    const nextCategories = editingBudgetCategoryId
+      ? budgets.map((category: any) => category.id === editingBudgetCategoryId ? { ...category, ...nextCategory, id: category.id } : category)
+      : [...budgets, nextCategory];
+
+    setBudgets(nextCategories);
+    setShowBudgetCategory(false);
+    try {
+      await persistBudgetCategories(nextCategories);
+      toast.success(editingBudgetCategoryId ? 'Budget category updated' : 'Budget category added');
+    } catch (err: any) {
+      setBudgets(previousCategories);
+      toast.error(err.message || 'Failed to save budget category');
+    } finally {
+      setEditingBudgetCategoryId(null);
+      setBudgetCategoryForm({ name: '', allocated: '', spent: '' });
+    }
+  };
+
+  const handleDeleteBudgetCategory = async (categoryId: string) => {
+    const previousCategories = budgets;
+    const nextCategories = budgets.filter((category: any) => category.id !== categoryId);
+    setBudgets(nextCategories);
+    try {
+      await persistBudgetCategories(nextCategories);
+      toast.success('Budget category deleted');
+    } catch (err: any) {
+      setBudgets(previousCategories);
+      toast.error(err.message || 'Failed to delete budget category');
+    }
+  };
+
+  const openCreateGoal = () => {
+    setEditingGoalId(null);
+    setNewGoal({ name: '', target: '' });
+    setShowNewGoal(true);
+  };
+
+  const openEditGoal = (goal: any) => {
+    setEditingGoalId(goal.id);
+    setNewGoal({ name: goal.name || '', target: String(toFiniteNumber(goal.target)) });
+    setShowNewGoal(true);
+  };
 
   const handleAddGoal = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newGoal.name && newGoal.target) {
       try {
         const res = await fetch('/api/v1/goals', {
-          method: 'POST',
+          method: editingGoalId ? 'PATCH' : 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: newGoal.name, target: Number(newGoal.target) })
+          body: JSON.stringify({
+            ...(editingGoalId ? { id: editingGoalId } : {}),
+            name: newGoal.name,
+            target: Number(newGoal.target),
+          })
         });
-        if (!res.ok) throw new Error('Failed to create goal');
-        const created = await res.json();
-        setGoals((g: any[]) => [...g, created]);
-        toast.success('Goal created!');
+        if (!res.ok) throw new Error(editingGoalId ? 'Failed to update goal' : 'Failed to create goal');
+        const saved = await res.json();
+        setGoals((goals: any[]) => editingGoalId
+          ? goals.map(goal => goal.id === saved.id ? saved : goal)
+          : [...goals, saved]
+        );
+        toast.success(editingGoalId ? 'Goal updated!' : 'Goal created!');
       } catch (err: any) {
-        toast.error(err.message || 'Failed to create goal');
+        toast.error(err.message || 'Failed to save goal');
       }
       setShowNewGoal(false);
+      setEditingGoalId(null);
       setNewGoal({ name: '', target: '' });
+    }
+  };
+
+  const handleDeleteGoal = async (goalId: string) => {
+    try {
+      const res = await fetch(`/api/v1/goals?id=${encodeURIComponent(goalId)}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete goal');
+      setGoals((goals: any[]) => goals.filter(goal => goal.id !== goalId));
+      toast.success('Goal deleted');
+      router.refresh();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete goal');
+    }
+  };
+
+  const handleContributeGoal = async (goal: any) => {
+    const rawAmount = window.prompt(`Add contribution to ${goal.name}`, '1000');
+    if (!rawAmount) return;
+
+    const amount = Number(rawAmount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast.error('Enter a valid contribution amount');
+      return;
+    }
+
+    const nextSaved = toFiniteNumber(goal.saved) + amount;
+    try {
+      const res = await fetch('/api/v1/goals', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: goal.id, saved: nextSaved }),
+      });
+      if (!res.ok) throw new Error('Failed to add contribution');
+      const savedGoal = await res.json();
+      setGoals((goals: any[]) => goals.map(item => item.id === savedGoal.id ? savedGoal : item));
+      toast.success(`Added ${formatMoney(amount)} to ${goal.name}`);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to add contribution');
     }
   };
 
@@ -129,6 +281,12 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
                   >
                     <LayoutTemplate className="w-3 h-3" /> Templates
                   </button>
+                  <button
+                    onClick={openCreateBudgetCategory}
+                    className="flex items-center gap-1 text-[10px] font-bold text-[#3EA63B] bg-[#3EA63B]/10 px-2 py-1 rounded-lg hover:bg-[#3EA63B]/15 transition"
+                  >
+                    <Plus className="w-3 h-3" /> Category
+                  </button>
                   <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
                     <Calendar className="w-3 h-3" /> 3 days left
                   </span>
@@ -147,21 +305,34 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
                   </div>
                 </div>
                 <div>
-                  <p className="text-2xl font-black text-slate-900">ETB {totalSpent.toLocaleString()}</p>
-                  <p className="text-xs text-slate-400 font-semibold">of ETB {totalBudget.toLocaleString()} budget</p>
+                  <p className="text-2xl font-black text-slate-900">{formatMoney(totalSpent)}</p>
+                  <p className="text-xs text-slate-400 font-semibold">of {formatMoney(totalBudget)} budget</p>
                   <p className="text-xs text-[#3EA63B] font-bold mt-1">
-                    ETB {(totalBudget - totalSpent).toLocaleString()} remaining
+                    {formatMoney(Math.max(0, totalBudget - totalSpent))} remaining
                   </p>
                 </div>
               </div>
 
               {/* Category budgets */}
+              {budgets.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+                  <Wallet className="mx-auto mb-3 h-8 w-8 text-slate-300" />
+                  <p className="text-sm font-bold text-slate-700">No budget yet</p>
+                  <p className="mt-1 text-xs text-slate-400">Choose a template to create your first monthly budget.</p>
+                  <button
+                    onClick={() => setShowTemplates(true)}
+                    className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-[#0F172A] px-3 py-2 text-xs font-bold text-white"
+                  >
+                    <LayoutTemplate className="h-3.5 w-3.5" /> Pick Template
+                  </button>
+                </div>
+              ) : (
               <div className="space-y-4">
                 {budgets.map((budget: any) => {
                   const Icon = budget.icon;
-                  const pct = Math.min(100, Math.round((budget.spent / budget.total) * 100));
+                  const pct = Math.min(100, safePercent(budget.spent, budget.total));
                   return (
-                    <div key={budget.id}>
+                    <div key={budget.id} className="rounded-xl border border-slate-100 p-3">
                       <div className="flex items-center justify-between mb-1.5">
                         <div className="flex items-center gap-2">
                           <div className={`w-8 h-8 rounded-lg ${budget.bg} flex items-center justify-center`}>
@@ -169,9 +340,27 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
                           </div>
                           <span className="text-sm font-bold text-slate-900">{budget.name}</span>
                         </div>
-                        <div className="text-right">
-                          <span className="text-xs font-bold text-slate-900">{budget.spent.toLocaleString()}</span>
-                          <span className="text-[10px] text-slate-400 font-semibold"> / {budget.total.toLocaleString()}</span>
+                        <div className="flex items-center gap-2">
+                          <div className="text-right">
+                            <span className="text-xs font-bold text-slate-900">{formatMoney(budget.spent)}</span>
+                            <span className="text-[10px] text-slate-400 font-semibold"> / {formatMoney(budget.total)}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => openEditBudgetCategory(budget)}
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200"
+                            title="Edit budget category"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteBudgetCategory(budget.id)}
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-red-50 text-red-500 hover:bg-red-100"
+                            title="Delete budget category"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
                         </div>
                       </div>
                       <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
@@ -181,6 +370,7 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
                   );
                 })}
               </div>
+              )}
             </section>
 
             {/* Bill Reminders */}
@@ -198,9 +388,21 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
                 <Target className="w-4 h-4 text-[#3EA63B]" /> Goals
               </h2>
               <div className="space-y-3">
-                {goalsState.map((goal: any) => {
-                  const pct = Math.round((goal.saved / goal.target) * 100);
-                  const remaining = goal.target - goal.saved;
+                {goalsState.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-slate-300 bg-white p-6 text-center">
+                    <Target className="mx-auto mb-3 h-8 w-8 text-slate-300" />
+                    <p className="text-sm font-bold text-slate-700">No savings goals yet</p>
+                    <p className="mt-1 text-xs text-slate-400">Create one simple target to make this screen useful.</p>
+                    <button
+                      onClick={openCreateGoal}
+                      className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-[#0F172A] px-3 py-2 text-xs font-bold text-white"
+                    >
+                      <Plus className="h-3.5 w-3.5" /> Add Goal
+                    </button>
+                  </div>
+                ) : goalsState.map((goal: any) => {
+                  const pct = Math.min(100, safePercent(goal.saved, goal.target));
+                  const remaining = Math.max(0, toFiniteNumber(goal.target) - toFiniteNumber(goal.saved));
                   return (
                     <div key={goal.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
                       <div className="flex items-center gap-3 mb-3">
@@ -208,6 +410,32 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
                         <div className="flex-1">
                           <h3 className="text-sm font-bold text-slate-900">{goal.name}</h3>
                           <p className="text-[10px] text-slate-400 font-semibold">Target: {goal.deadline ? new Date(goal.deadline).toLocaleDateString() : 'N/A'}</p>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleContributeGoal(goal)}
+                            className="inline-flex h-8 items-center justify-center rounded-lg bg-[#3EA63B]/10 px-2 text-[10px] font-black text-[#3EA63B] hover:bg-[#3EA63B]/15"
+                            title="Add contribution"
+                          >
+                            Add
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openEditGoal(goal)}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200"
+                            title="Edit goal"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteGoal(goal.id)}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-500 hover:bg-red-100"
+                            title="Delete goal"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
                         </div>
                         <div className="relative w-12 h-12">
                           <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
@@ -219,11 +447,11 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
                       </div>
                       <div className="flex justify-between items-end">
                         <div>
-                          <p className="text-sm font-black text-slate-900">ETB {goal.saved.toLocaleString()}</p>
-                          <p className="text-[10px] text-slate-400 font-semibold">of ETB {goal.target.toLocaleString()}</p>
+                          <p className="text-sm font-black text-slate-900">{formatMoney(goal.saved)}</p>
+                          <p className="text-[10px] text-slate-400 font-semibold">of {formatMoney(goal.target)}</p>
                         </div>
                         <p className="text-[10px] text-slate-400 font-semibold">
-                          ETB {remaining.toLocaleString()} to go
+                          {formatMoney(remaining)} to go
                         </p>
                       </div>
                     </div>
@@ -255,11 +483,11 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
             <section className="mt-6 grid grid-cols-2 gap-3">
               <div className="bg-white rounded-xl border border-slate-100 p-4 text-center">
                 <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Avg. Monthly Save</p>
-                <p className="text-xl font-black text-[#3EA63B]">ETB {totalBudget > 0 ? (totalBudget - totalSpent).toLocaleString() : '0'}</p>
+                <p className="text-xl font-black text-[#3EA63B]">{formatMoney(Math.max(0, totalBudget - totalSpent))}</p>
               </div>
               <div className="bg-white rounded-xl border border-slate-100 p-4 text-center">
                 <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Goals On Track</p>
-                <p className="text-xl font-black text-slate-900">{goalsState.filter((g: any) => g.saved / g.target >= 0.5).length} / {goalsState.length}</p>
+                <p className="text-xl font-black text-slate-900">{goalsState.filter((g: any) => safePercent(g.saved, g.target) >= 50).length} / {goalsState.length}</p>
               </div>
             </section>
           </div>
@@ -283,7 +511,7 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
               <ReceiptText className="w-4 h-4" />
             </button>
             <button
-              onClick={() => setShowNewGoal(true)}
+              onClick={openCreateGoal}
               className="flex items-center justify-center w-8 h-8 rounded-full bg-[var(--color-mint-primary)] text-white hover:opacity-90 transition-colors"
               title="Add Goal"
             >
@@ -300,8 +528,8 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
         <div ref={addGoalRef} className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-black text-slate-900">New Savings Goal</h3>
-              <button onClick={() => setShowNewGoal(false)} className="p-1 rounded-full hover:bg-slate-100">
+              <h3 className="text-lg font-black text-slate-900">{editingGoalId ? 'Edit Savings Goal' : 'New Savings Goal'}</h3>
+              <button onClick={() => { setShowNewGoal(false); setEditingGoalId(null); }} className="p-1 rounded-full hover:bg-slate-100">
                 <X className="w-5 h-5 text-slate-500" />
               </button>
             </div>
@@ -317,7 +545,7 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
                   placeholder="50000" className="w-full mt-1 px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#3EA63B]/30 focus:border-[#3EA63B]" />
               </div>
               <button type="submit" className="w-full py-3 rounded-xl bg-[#3EA63B] text-white font-bold hover:bg-[#339932] transition">
-                Create Goal
+                {editingGoalId ? 'Save Goal' : 'Create Goal'}
               </button>
             </form>
           </div>
@@ -448,6 +676,59 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
         )}
       </AnimatePresence>
 
+      {/* Budget Category Modal */}
+      {showBudgetCategory && (
+        <div ref={budgetCategoryRef} className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-black text-slate-900">{editingBudgetCategoryId ? 'Edit Budget Category' : 'New Budget Category'}</h3>
+              <button onClick={() => { setShowBudgetCategory(false); setEditingBudgetCategoryId(null); }} className="p-1 rounded-full hover:bg-slate-100">
+                <X className="w-5 h-5 text-slate-500" />
+              </button>
+            </div>
+            <form onSubmit={handleSaveBudgetCategory} className="space-y-4">
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Category Name</label>
+                <input
+                  type="text"
+                  value={budgetCategoryForm.name}
+                  onChange={e => setBudgetCategoryForm({ ...budgetCategoryForm, name: e.target.value })}
+                  placeholder="e.g. Groceries"
+                  className="w-full mt-1 px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#3EA63B]/30 focus:border-[#3EA63B]"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Allocated (ETB)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={budgetCategoryForm.allocated}
+                    onChange={e => setBudgetCategoryForm({ ...budgetCategoryForm, allocated: e.target.value })}
+                    placeholder="5000"
+                    className="w-full mt-1 px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#3EA63B]/30 focus:border-[#3EA63B]"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Spent (ETB)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={budgetCategoryForm.spent}
+                    onChange={e => setBudgetCategoryForm({ ...budgetCategoryForm, spent: e.target.value })}
+                    placeholder="0"
+                    className="w-full mt-1 px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#3EA63B]/30 focus:border-[#3EA63B]"
+                  />
+                </div>
+              </div>
+              <button type="submit" className="w-full py-3 rounded-xl bg-[#3EA63B] text-white font-bold hover:bg-[#339932] transition">
+                {editingBudgetCategoryId ? 'Save Category' : 'Add Category'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* ── Budget Templates Modal ── */}
       {showTemplates && (
         <div ref={templatesRef} className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-4"
@@ -483,7 +764,7 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
                     // Persist via API
                     try {
                       const now = new Date();
-                      await fetch('/api/v1/budgets', {
+                      const response = await fetch('/api/v1/budgets', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -493,6 +774,10 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
                           categories: newBudgets.map(b => ({ name: b.name, allocated: b.total }))
                         })
                       });
+                      if (!response.ok) throw new Error('Failed to apply budget template');
+                      const savedBudget = await response.json();
+                      setCurrentBudgetId(savedBudget.id);
+                      setBudgets(mapBudgetCategories(savedBudget));
                       toast.success('Budget template applied!');
                     } catch {
                       toast.error('Budget saved locally only');

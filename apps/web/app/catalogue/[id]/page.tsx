@@ -3,9 +3,12 @@ import prisma from '@/lib/db';
 import Link from 'next/link';
 import { ArrowLeft, CheckCircle2, ShieldCheck, Building2, Calendar, FileText, BadgePercent, Zap, Globe, AlertTriangle, Clock, Banknote } from 'lucide-react';
 import ApplyButton from '@/components/CatalogueApplyButton';
+import { ProductBookmarkButton } from '@/components/ProductBookmarkButton';
 import { ProductRatings } from '@/components/ProductRatings';
 import { LoanSuitability } from '@/components/LoanSuitability';
 import { LoanCalculator } from '@/components/LoanCalculator';
+import { getAuthUser } from '@/lib/supabase/auth-adapter';
+import { getMatchExplanation, getProductFacts, getProductTrustMeta } from '@mizan/shared';
 
 export default async function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const resolvedParams = await params;
@@ -22,7 +25,19 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     const provider = product.provider ?? (product.bankId
         ? await prisma.provider.findUnique({ where: { slug: product.bankId } })
         : null);
+    const authUser = await getAuthUser().catch(() => null);
+    const bookmark = authUser ? await prisma.productBookmark.findUnique({
+        where: {
+            userId_productId: {
+                userId: authUser.id,
+                productId: product.id
+            }
+        }
+    }) : null;
     const providerHref = provider?.slug ? `/catalogue/bank/${provider.slug}` : '/catalogue';
+    const facts = getProductFacts(product);
+    const trust = getProductTrustMeta(product);
+    const matchExplanation = getMatchExplanation(product);
 
     const formatInterest = (val: number) => val < 1 ? (val * 100).toFixed(0) : val.toFixed(0);
     const interestDisplay = product.interestMax && product.interestMax > (product.interestRate || 0)
@@ -50,9 +65,10 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                                 Interest‑Free
                             </span>
                         )}
-                        <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
-                            <ShieldCheck className="w-4 h-4" /> Verified
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 ${trust.tone === 'good' ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'}`}>
+                            {trust.tone === 'good' ? <ShieldCheck className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />} {trust.label}
                         </span>
+                        <ProductBookmarkButton productId={product.id} initialBookmarked={Boolean(bookmark)} />
                     </div>
                 </div>
             </header>
@@ -76,11 +92,31 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                     </Link>
                     <h1 className="text-3xl font-black text-slate-900 leading-tight mb-2">{product.title || product.name}</h1>
                     <p className="text-slate-500 text-sm leading-relaxed">{product.description}</p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                        <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wider ${trust.tone === 'good' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                            {trust.label}
+                        </span>
+                        <span className="rounded-full bg-white px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500 border border-slate-100">
+                            {trust.freshness}
+                        </span>
+                    </div>
                     {product.genderBased && (
                         <span className="inline-block mt-3 bg-pink-50 text-pink-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
                             Gender-Focused Product
                         </span>
                     )}
+                </section>
+
+                <section className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm mb-8">
+                    <h2 className="text-sm font-black text-slate-900 mb-4 uppercase tracking-wide">Why This May Fit</h2>
+                    <p className="text-sm text-slate-600 leading-relaxed mb-4">{matchExplanation}</p>
+                    <div className="flex flex-wrap gap-2">
+                        {facts.map((fact) => (
+                            <span key={`${fact.label}-${fact.value}`} className={`text-[10px] font-bold px-2.5 py-1 rounded-md ${fact.positive ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-50 text-slate-600'}`}>
+                                {fact.label}: {fact.value}
+                            </span>
+                        ))}
+                    </div>
                 </section>
 
                 {/* Highlight Cards */}
@@ -161,6 +197,9 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                                     </ul>
                                 </div>
                             )}
+                            {(!product.eligibility || (Array.isArray(product.eligibility) && product.eligibility.length === 0)) && (!product.requirements || (Array.isArray(product.requirements) && product.requirements.length === 0)) && (
+                                <p className="text-xs text-slate-500">Requirements are still being cleaned up for this product. Check with the provider before applying.</p>
+                            )}
                             {product.requirements && (Array.isArray(product.requirements) ? product.requirements.length > 0 : true) && (
                                 <div>
                                     <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">Documents</h4>
@@ -229,6 +268,38 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                         </div>
                     </section>
                 )}
+                <section className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm mt-6">
+                    <h3 className="text-sm font-black text-slate-900 mb-3 flex items-center gap-2 uppercase tracking-wide">
+                        <ShieldCheck className="w-4 h-4 text-[#3EA63B]" /> Data Quality
+                    </h3>
+                    <div className="grid gap-3 md:grid-cols-3">
+                        <div>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Status</p>
+                            <p className={`text-sm font-bold ${trust.tone === 'good' ? 'text-[#3EA63B]' : 'text-amber-700'}`}>{trust.label}</p>
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Freshness</p>
+                            <p className="text-sm font-bold text-slate-900">{trust.freshness}</p>
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Source</p>
+                            {product.sourceUrl ? (
+                                <a href={product.sourceUrl} target="_blank" rel="noreferrer" className="text-sm font-bold text-[#3EA63B] hover:underline">
+                                    {product.sourceName || product.sourceUrl}
+                                </a>
+                            ) : (
+                                <p className="text-sm font-bold text-slate-900">{trust.source}</p>
+                            )}
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Confidence</p>
+                            <p className="text-sm font-bold text-slate-900">{product.dataConfidence != null ? `${product.dataConfidence}%` : 'Pending'}</p>
+                        </div>
+                    </div>
+                    <a href={`mailto:support@mizan.app?subject=Incorrect product info: ${encodeURIComponent(product.title || product.name || product.id)}`} className="mt-4 inline-flex text-xs font-black text-[#3EA63B] hover:underline">
+                        Report incorrect information
+                    </a>
+                </section>
                 {/* Loan Calculator — only for loan products */}
                 {isCreditProduct && (
                     <LoanCalculator

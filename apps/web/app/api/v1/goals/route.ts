@@ -6,10 +6,12 @@ import { z } from 'zod';
 const goalSchema = z.object({
     name: z.string().min(1),
     emoji: z.string().optional(),
-    target: z.number().positive(),
+    target: z.coerce.number().positive(),
     deadline: z.string().or(z.date()).nullable().optional(),
-    saved: z.number().min(0).optional(),
+    saved: z.coerce.number().min(0).optional(),
 });
+
+const goalUpdateSchema = goalSchema.partial();
 
 export async function GET(req: Request) {
     try {
@@ -77,7 +79,7 @@ export async function PATCH(req: Request) {
             return NextResponse.json({ error: 'Missing goal ID' }, { status: 400 });
         }
 
-        const result = goalSchema.safeParse(rest);
+        const result = goalUpdateSchema.safeParse(rest);
         if (!result.success) {
             return NextResponse.json({ error: 'Invalid input', details: result.error.format() }, { status: 400 });
         }

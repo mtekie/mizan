@@ -9,18 +9,13 @@ import { getBankById, getBanksWithProducts } from '@/lib/data/bankLookup';
 import { EmptyState } from '@/components/EmptyState';
 import { AppPageShell } from '@/components/AppPageShell';
 
-const filterTabs = [
-  { key: 'all', label: 'All', icon: '✨' },
-  { key: 'SAVINGS', label: 'Savings', icon: '💰' },
-  { key: 'CREDIT', label: 'Loans', icon: '🏦' },
-  { key: 'INSURANCE', label: 'Insurance', icon: '🛡️' },
-  { key: 'PAYMENT', label: 'Payments', icon: '📱' },
-] as const;
-
 export function CatalogueClient({ products, categories }: { products: any[], categories: readonly any[] }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
   const [selectedInstitution, setSelectedInstitution] = useState<string | null>(null);
+  const [digitalOnly, setDigitalOnly] = useState(false);
+  const [interestFreeOnly, setInterestFreeOnly] = useState(false);
+  const [audienceFilter, setAudienceFilter] = useState('');
 
   // Filter products
   const filteredProducts = useMemo(() => {
@@ -31,6 +26,21 @@ export function CatalogueClient({ products, categories }: { products: any[], cat
     if (selectedInstitution) {
       result = result.filter(p => (p.bankId || p.instituteId || p.providerId) === selectedInstitution);
     }
+    if (digitalOnly) {
+      result = result.filter(p => p.digital);
+    }
+    if (interestFreeOnly) {
+      result = result.filter(p => p.interestFree);
+    }
+    if (audienceFilter) {
+      const terms = audienceFilter === 'student'
+        ? ['student', 'education', 'teen', 'youth']
+        : ['salary', 'salaried', 'employee', 'payroll'];
+      result = result.filter(p => {
+        const haystack = `${p.title || ''} ${p.name || ''} ${p.description || ''}`.toLowerCase();
+        return terms.some(term => haystack.includes(term));
+      });
+    }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(p =>
@@ -40,7 +50,7 @@ export function CatalogueClient({ products, categories }: { products: any[], cat
       );
     }
     return result;
-  }, [products, activeFilter, selectedInstitution, searchQuery]);
+  }, [products, activeFilter, selectedInstitution, digitalOnly, interestFreeOnly, audienceFilter, searchQuery]);
 
   // Get institution data
   const { banks: institutionBanks, counts: productCounts } = useMemo(
@@ -73,7 +83,7 @@ export function CatalogueClient({ products, categories }: { products: any[], cat
       <div className="space-y-6">
         {/* Filter Pills */}
         <div className="flex gap-2 overflow-x-auto hide-scrollbar -mx-6 px-6 pb-1">
-          {filterTabs.map(f => (
+          {categories.map(f => (
             <button
               key={f.key}
               onClick={() => { setActiveFilter(f.key); setSelectedInstitution(null); }}
@@ -128,6 +138,36 @@ export function CatalogueClient({ products, categories }: { products: any[], cat
           onSelect={handleInstitutionSelect}
         />
 
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setDigitalOnly(value => !value)}
+            className={`rounded-xl px-3 py-2 text-xs font-bold transition ${digitalOnly ? 'bg-[#3EA63B] text-white' : 'bg-white text-slate-600 border border-slate-100'}`}
+          >
+            Digital only
+          </button>
+          <button
+            type="button"
+            onClick={() => setInterestFreeOnly(value => !value)}
+            className={`rounded-xl px-3 py-2 text-xs font-bold transition ${interestFreeOnly ? 'bg-[#3EA63B] text-white' : 'bg-white text-slate-600 border border-slate-100'}`}
+          >
+            Interest-free
+          </button>
+          {[
+            { key: 'student', label: 'Student' },
+            { key: 'salaried', label: 'Salaried' },
+          ].map(option => (
+            <button
+              key={option.key}
+              type="button"
+              onClick={() => setAudienceFilter(value => value === option.key ? '' : option.key)}
+              className={`rounded-xl px-3 py-2 text-xs font-bold transition ${audienceFilter === option.key ? 'bg-[#0F172A] text-white' : 'bg-white text-slate-600 border border-slate-100'}`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+
         {selectedInstitution && (() => {
           const bank = getBankById(selectedInstitution);
           return bank ? (
@@ -155,11 +195,29 @@ export function CatalogueClient({ products, categories }: { products: any[], cat
 
         {/* Products List */}
         {filteredProducts.length === 0 ? (
-          <EmptyState
-            icon={Landmark}
-            title="No products found"
-            description="Try adjusting your filters or search terms to find financial products."
-          />
+          <div className="space-y-4">
+            <EmptyState
+              icon={Landmark}
+              title="No products found"
+              description="Try clearing filters or searching by provider, product type, or use case."
+            />
+            <div className="flex justify-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery('');
+                  setActiveFilter('all');
+                  setSelectedInstitution(null);
+                  setDigitalOnly(false);
+                  setInterestFreeOnly(false);
+                  setAudienceFilter('');
+                }}
+                className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-black text-white shadow-sm hover:bg-slate-800"
+              >
+                Clear filters
+              </button>
+            </div>
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-12">
             {filteredProducts.map((product: any) => {

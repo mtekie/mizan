@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { getAuthUser } from '@/lib/supabase/auth-adapter';
+import { getOrCreateDbUser } from '@/lib/supabase/auth-adapter';
 
 // WatermelonDB Sync Schema Scaffolding
 export async function POST(req: Request) {
   try {
-    const user = await getAuthUser(req);
+    const userContext = await getOrCreateDbUser(req);
+    const user = userContext?.dbUser;
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

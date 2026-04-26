@@ -1,11 +1,11 @@
 import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
 import prisma from '@/lib/db';
 import LedgerClient from './LedgerClient';
+import { getOrCreateDbUser } from '@/lib/supabase/auth-adapter';
 
 export default async function LedgerPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const userContext = await getOrCreateDbUser();
+  const user = userContext?.dbUser;
 
   if (!user) {
     redirect('/login');

@@ -4,13 +4,13 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Bell, Lightbulb, Plus, TrendingUp, ArrowDownRight, ArrowUpRight, ChevronRight, Sparkles } from 'lucide-react';
 import { AppPageShell } from '@/components/AppPageShell';
-import { MizanCard } from '@/components/ui/MizanCard'; // Assuming this exists or using div with mint-card
 import { OnboardingPrompt } from '@/components/OnboardingPrompt';
 import { Nudge } from '@/components/Nudge';
 import { useNudges } from '@/hooks/useNudges';
 import { MintDonutChart, MintBudgetBar } from '@/components/MintCharts';
 import { SmartProfilePrompt } from '@/components/SmartProfilePrompt';
 import { ProfileCompleteness } from '@/components/ProfileCompleteness';
+import { formatMoney, formatSignedMoney, safePercent } from '@mizan/shared';
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -45,7 +45,7 @@ export default function DashboardClient({ user, accounts, transactions, summary,
     { text: `You're saving ${summary.savingsRate}% of your income this month — that's excellent! Keep it up.`, emoji: '🎯' },
     { text: summary.monthlyOut > 20000 ? "Your spending is a bit high this week. Try checking your 'Entertainment' category." : "Your coffee spend is down 12% from last month. Small wins add up!", emoji: '☕' },
     { text: "Tip: Setting aside 500 ETB weekly builds an emergency fund faster than monthly lump sums.", emoji: '💡' },
-    { text: `Your net worth is now ${summary.netWorth.toLocaleString()} ETB. You're making great progress!`, emoji: '📈' },
+    { text: `Your net worth is now ${formatMoney(summary.netWorth)}. You're making great progress!`, emoji: '📈' },
   ];
 
   useEffect(() => {
@@ -132,7 +132,7 @@ export default function DashboardClient({ user, accounts, transactions, summary,
                         <p className="text-[11px] text-[var(--color-mint-text-muted)]">{tx.source || 'Manual'}</p>
                       </div>
                       <p className={`text-sm font-extrabold ${tx.amount < 0 ? 'text-[var(--color-mint-text)]' : 'text-[var(--color-mint-deep)]'}`}>
-                        {tx.amount > 0 ? '+' : ''}{tx.amount.toLocaleString()} <span className="text-[10px] font-semibold text-[var(--color-mint-text-muted)]">ETB</span>
+                        {formatSignedMoney(tx.amount)}
                       </p>
                     </div>
                   ))}
@@ -168,13 +168,13 @@ export default function DashboardClient({ user, accounts, transactions, summary,
                 <div className="flex-1 min-w-0">
                   <h4 className="text-sm font-bold text-[var(--color-mint-text)]">{summary.topGoal?.name || 'My Savings'}</h4>
                   <p className="text-[11px] text-[var(--color-mint-text-muted)]">
-                    {summary.topGoal ? `${summary.topGoal.saved.toLocaleString()} / ${summary.topGoal.target.toLocaleString()}` : '0 / 0'}
+                    {summary.topGoal ? `${formatMoney(summary.topGoal.saved)} / ${formatMoney(summary.topGoal.target)}` : 'No goal yet'}
                   </p>
                   <div className="flex items-center gap-2 mt-1.5">
                     <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full bg-[var(--color-mint-primary)]"
-                        style={{ width: `${summary.topGoal ? (summary.topGoal.saved / summary.topGoal.target * 100) : 0}%` }}
+                        style={{ width: `${summary.topGoal ? Math.min(100, safePercent(summary.topGoal.saved, summary.topGoal.target)) : 0}%` }}
                       />
                     </div>
                   </div>

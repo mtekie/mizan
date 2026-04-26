@@ -11,6 +11,7 @@ import { Bell, ChevronRight, Plus, ArrowUpRight, ArrowDownLeft, CreditCard, Smar
 import { useStore } from '../../lib/store';
 import { SmartProfilePrompt } from '../../components/SmartProfilePrompt';
 import { ProfileCompleteness } from '../../components/ProfileCompleteness';
+import { formatMoney } from '@mizan/shared';
 
 import { api } from '../../lib/api';
 
@@ -123,7 +124,7 @@ export default function DashboardScreen() {
         <View style={styles.netWorthHeader}>
           <View>
             <Text style={styles.netWorthLabel}>Net Worth</Text>
-            <Text style={styles.netWorthValue}>ETB {summary.netWorth.toLocaleString()}</Text>
+            <Text style={styles.netWorthValue}>{formatMoney(summary.netWorth)}</Text>
           </View>
           <TouchableOpacity 
             style={styles.addAccountBtn} 
@@ -137,11 +138,11 @@ export default function DashboardScreen() {
         <View style={styles.cashFlowRow}>
           <View style={styles.cashFlowItem}>
             <Text style={styles.cashFlowLabel}>Income</Text>
-            <Text style={styles.cashFlowValue}>{summary.monthlyIn.toLocaleString()}</Text>
+            <Text style={styles.cashFlowValue}>{formatMoney(summary.monthlyIn)}</Text>
           </View>
           <View style={styles.cashFlowItem}>
             <Text style={styles.cashFlowLabel}>Expenses</Text>
-            <Text style={styles.cashFlowValue}>{summary.monthlyOut.toLocaleString()}</Text>
+            <Text style={styles.cashFlowValue}>{formatMoney(summary.monthlyOut)}</Text>
           </View>
         </View>
       </MizanCard>
@@ -152,12 +153,12 @@ export default function DashboardScreen() {
           <Text style={styles.cardTitle}>September spending</Text>
           <ChevronRight color={MizanColors.mintPrimary} size={16} />
         </View>
-        <Text style={styles.spendingSubtitle}>You've spent {summary.monthlyOut.toLocaleString()} so far</Text>
+        <Text style={styles.spendingSubtitle}>You've spent {formatMoney(summary.monthlyOut)} so far</Text>
         
         <View style={styles.donutPlaceholder}>
           <View style={styles.donutCenter}>
             <Text style={styles.donutLabel}>This month</Text>
-            <Text style={styles.donutValue}>{summary.monthlyOut.toLocaleString()}</Text>
+            <Text style={styles.donutValue}>{formatMoney(summary.monthlyOut)}</Text>
           </View>
         </View>
         

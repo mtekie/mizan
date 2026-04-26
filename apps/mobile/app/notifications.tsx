@@ -45,13 +45,13 @@ export default function NotificationsScreen() {
         keyExtractor={item => item.id}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
-          !loading && (
+          !loading ? (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyEmoji}>🔔</Text>
               <Text style={styles.emptyTitle}>All caught up!</Text>
               <Text style={styles.emptyText}>You don't have any notifications at the moment.</Text>
             </View>
-          )
+          ) : null
         }
         renderItem={({ item }) => (
           <MizanCard style={[styles.card, item.unread && styles.unreadCard]}>
@@ -60,7 +60,7 @@ export default function NotificationsScreen() {
             </View>
             <View style={styles.content}>
               <Text style={styles.cardTitle}>{item.title}</Text>
-              <Text style={styles.cardDesc}>{item.desc}</Text>
+              <Text style={styles.cardDesc}>{item.desc || item.subtitle}</Text>
               <Text style={styles.cardTime}>{item.time || 'Today'}</Text>
             </View>
             {item.unread && <View style={styles.unreadDot} />}
@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
   list: { padding: 24, paddingBottom: 40 },
   card: { flexDirection: 'row', gap: 16, marginBottom: 12, padding: 16 },
   unreadCard: { borderColor: MizanColors.mintLight, borderWidth: 1 },
-  iconContainer: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyCenter: 'center' },
+  iconContainer: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   content: { flex: 1 },
   cardTitle: { fontSize: 16, fontFamily: 'Inter_700Bold', color: MizanColors.textPrimary },
   cardDesc: { fontSize: 14, fontFamily: 'Inter_400Regular', color: MizanColors.textMuted, marginTop: 4 },

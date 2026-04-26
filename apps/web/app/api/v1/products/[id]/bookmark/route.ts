@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { getAuthUser } from '@/lib/supabase/auth-adapter';
+import { getOrCreateDbUser } from '@/lib/supabase/auth-adapter';
 
 export async function POST(
     req: Request,
@@ -8,7 +8,8 @@ export async function POST(
 ) {
     try {
         const { id } = await params;
-        const user = await getAuthUser(req);
+        const userContext = await getOrCreateDbUser(req);
+        const user = userContext?.dbUser;
 
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -40,7 +41,8 @@ export async function DELETE(
 ) {
     try {
         const { id } = await params;
-        const user = await getAuthUser(req);
+        const userContext = await getOrCreateDbUser(req);
+        const user = userContext?.dbUser;
 
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

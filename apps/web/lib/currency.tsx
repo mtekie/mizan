@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { formatNumber, toFiniteNumber } from '@mizan/shared';
 
 type Rates = Record<string, number>;
 
@@ -18,7 +19,7 @@ const CurrencyContext = createContext<CurrencyContextType>({
     setCurrency: () => { },
     rates: { ETB: 1 },
     convert: (a) => a,
-    format: (a) => `ETB ${a.toLocaleString()}`,
+    format: (a) => `ETB ${formatNumber(a)}`,
     loading: false,
 });
 
@@ -62,9 +63,10 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
 
     const convert = (amount: number, from = 'ETB', to?: string) => {
         const target = to || currency;
-        if (from === target) return amount;
+        const safeAmount = toFiniteNumber(amount);
+        if (from === target) return safeAmount;
         // Convert from source to ETB first, then to target
-        const inETB = from === 'ETB' ? amount : amount / (rates[from] || 1);
+        const inETB = from === 'ETB' ? safeAmount : safeAmount / (rates[from] || 1);
         return inETB * (rates[target] || 1);
     };
 
@@ -72,7 +74,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
         const c = cur || currency;
         const converted = c === 'ETB' ? amount : convert(amount, 'ETB', c);
         const sym = symbols[c] || c;
-        return `${sym} ${converted.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+        return `${sym} ${formatNumber(converted)}`;
     };
 
     return (

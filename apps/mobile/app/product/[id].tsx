@@ -3,21 +3,20 @@ import {
   View, 
   Text, 
   StyleSheet, 
-  SafeAreaView, 
   ScrollView, 
   TouchableOpacity, 
   Image,
   ActivityIndicator,
-  Dimensions,
-  Share
+  Share,
+  Linking,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { MizanColors, MizanRadii, MizanSpacing } from '@mizan/ui-tokens';
+import { MizanColors, MizanRadii } from '@mizan/ui-tokens';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { 
   ChevronLeft, 
   Bookmark, 
   Share2, 
-  Star, 
   Info, 
   CheckCircle2,
   Building2,
@@ -27,12 +26,12 @@ import {
 } from 'lucide-react-native';
 import { api } from '../../lib/api';
 import { ScoreBadge } from '../../components/marketplace/ScoreBadge';
-
-const { width } = Dimensions.get('window');
+import { getMatchExplanation, getProductFacts, getProductProviderName, getProductTitle, getProductTrustMeta } from '@mizan/shared';
 
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -85,11 +84,16 @@ export default function ProductDetailScreen() {
   const handleShare = async () => {
     try {
       await Share.share({
-        message: `Check out ${product.name} from ${product.provider?.name} on Mizan!`,
+        message: `Check out ${getProductTitle(product)} from ${getProductProviderName(product)} on Mizan!`,
       });
     } catch (error) {
       console.error('Sharing failed:', error);
     }
+  };
+
+  const handleReport = () => {
+    const subject = encodeURIComponent(`Incorrect product info: ${getProductTitle(product)}`);
+    Linking.openURL(`mailto:support@mizan.app?subject=${subject}`);
   };
 
   if (loading) {
@@ -116,10 +120,13 @@ export default function ProductDetailScreen() {
     );
   }
 
+  const facts = getProductFacts(product);
+  const trust = getProductTrustMeta(product);
+  const matchExplanation = getMatchExplanation(product);
+
   return (
     <View style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.navbar}>
+        <View style={[styles.navbar, { paddingTop: insets.top + 8 }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.navButton}>
             <ChevronLeft size={24} color={MizanColors.textPrimary} />
           </TouchableOpacity>
@@ -136,7 +143,6 @@ export default function ProductDetailScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      </SafeAreaView>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.hero}>
@@ -147,18 +153,32 @@ export default function ProductDetailScreen() {
              {product.provider?.logoUrl && (
                <Image source={{ uri: product.provider.logoUrl }} style={styles.providerLogo} />
              )}
-             <Text style={styles.providerName}>{product.provider?.name}</Text>
+             <Text style={styles.providerName}>{getProductProviderName(product)}</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>{product.name}</Text>
+          <Text style={styles.title}>{getProductTitle(product)}</Text>
           
           <View style={styles.badgeRow}>
             <ScoreBadge score={product.personalizedScore} />
-            {product.isVerified && (
-               <View style={styles.verifiedBadge}>
-                 <CheckCircle2 size={14} color={MizanColors.mintPrimary} />
-                 <Text style={styles.verifiedText}>Verified</Text>
+               <View style={[styles.verifiedBadge, trust.tone === 'warn' && styles.reviewBadge]}>
+                 {trust.tone === 'good' ? (
+                   <CheckCircle2 size={14} color={MizanColors.mintPrimary} />
+                 ) : (
+                   <Info size={14} color="#B45309" />
+                 )}
+                 <Text style={[styles.verifiedText, trust.tone === 'warn' && styles.reviewText]}>{trust.label}</Text>
                </View>
-            )}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Why This May Fit</Text>
+          <Text style={styles.description}>{matchExplanation}</Text>
+          <View style={styles.factWrap}>
+            {facts.map(fact => (
+              <View key={`${fact.label}-${fact.value}`} style={[styles.factChip, fact.positive && styles.factChipPositive]}>
+                <Text style={[styles.factChipText, fact.positive && styles.factChipTextPositive]}>{fact.label}: {fact.value}</Text>
+              </View>
+            ))}
           </View>
         </View>
 
@@ -168,21 +188,21 @@ export default function ProductDetailScreen() {
               <Percent size={18} color={MizanColors.mintPrimary} />
             </View>
             <Text style={styles.metricLabel}>Rate</Text>
-            <Text style={styles.metricValue}>{product.interestRate ? `${product.interestRate}%` : 'Variable'}</Text>
+            <Text style={styles.metricValue} numberOfLines={1}>{facts[0]?.value || 'Variable'}</Text>
           </View>
           <View style={styles.metricCard}>
             <View style={styles.metricIconBox}>
               <Calendar size={18} color={MizanColors.mintPrimary} />
             </View>
             <Text style={styles.metricLabel}>Term</Text>
-            <Text style={styles.metricValue}>{product.attributes?.term || 'Flexible'}</Text>
+            <Text style={styles.metricValue} numberOfLines={1}>{product.term || product.attributes?.term || 'Flexible'}</Text>
           </View>
           <View style={styles.metricCard}>
             <View style={styles.metricIconBox}>
               <Wallet size={18} color={MizanColors.mintPrimary} />
             </View>
             <Text style={styles.metricLabel}>Amount</Text>
-            <Text style={styles.metricValue}>{product.attributes?.maxAmount || 'Varies'}</Text>
+            <Text style={styles.metricValue} numberOfLines={1}>{product.maxAmount || product.attributes?.maxAmount || product.minBalance || 'Varies'}</Text>
           </View>
         </View>
 
@@ -193,12 +213,40 @@ export default function ProductDetailScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Requirements</Text>
-          {product.eligibility?.map((item: string, idx: number) => (
+          {(product.eligibility?.length ? product.eligibility : product.requirements || []).map((item: string, idx: number) => (
             <View key={idx} style={styles.requirementRow}>
               <CheckCircle2 size={16} color={MizanColors.textMuted} />
               <Text style={styles.requirementText}>{item}</Text>
             </View>
           ))}
+          {!product.eligibility?.length && !product.requirements?.length && (
+            <Text style={styles.description}>Requirements are still being cleaned up for this product. Check with the provider before applying.</Text>
+          )}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Data Quality</Text>
+          <View style={styles.qualityCard}>
+            <View>
+              <Text style={styles.qualityLabel}>Status</Text>
+              <Text style={[styles.qualityValue, trust.tone === 'warn' && styles.qualityValueWarn]}>{trust.label}</Text>
+            </View>
+            <View>
+              <Text style={styles.qualityLabel}>Freshness</Text>
+              <Text style={styles.qualityValue}>{trust.freshness}</Text>
+            </View>
+            <View>
+              <Text style={styles.qualityLabel}>Source</Text>
+              <Text style={styles.qualityValue}>{trust.source}</Text>
+            </View>
+            <View>
+              <Text style={styles.qualityLabel}>Confidence</Text>
+              <Text style={styles.qualityValue}>{product.dataConfidence != null ? `${product.dataConfidence}%` : 'Pending'}</Text>
+            </View>
+            <TouchableOpacity style={styles.reportButton} onPress={handleReport}>
+              <Text style={styles.reportText}>Report incorrect information</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.providerSection}>
@@ -213,7 +261,7 @@ export default function ProductDetailScreen() {
         </View>
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) + 16 }]}>
         <TouchableOpacity 
           style={styles.applyButton}
           onPress={handleApply}
@@ -241,15 +289,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: MizanColors.mintBg,
   },
-  safeArea: {
-    backgroundColor: '#fff',
-  },
   navbar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    height: 56,
+    paddingBottom: 8,
+    backgroundColor: '#fff',
   },
   navButton: {
     width: 40,
@@ -311,6 +357,12 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_700Bold',
     color: MizanColors.mintPrimary,
   },
+  reviewBadge: {
+    backgroundColor: '#FEF3C7',
+  },
+  reviewText: {
+    color: '#B45309',
+  },
   metricsGrid: {
     flexDirection: 'row',
     paddingHorizontal: 24,
@@ -344,6 +396,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Inter_900Black',
     color: MizanColors.textPrimary,
+    textAlign: 'center',
   },
   section: {
     paddingHorizontal: 24,
@@ -360,6 +413,29 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     color: MizanColors.textSecondary,
     lineHeight: 24,
+  },
+  factWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 14,
+  },
+  factChip: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  factChipPositive: {
+    backgroundColor: MizanColors.mintPrimary + '10',
+  },
+  factChipText: {
+    fontSize: 11,
+    fontFamily: 'Inter_700Bold',
+    color: MizanColors.textSecondary,
+  },
+  factChipTextPositive: {
+    color: MizanColors.mintPrimary,
   },
   requirementRow: {
     flexDirection: 'row',
@@ -385,6 +461,36 @@ const styles = StyleSheet.create({
     padding: 20,
     gap: 16,
   },
+  qualityCard: {
+    backgroundColor: MizanColors.mintBg,
+    borderRadius: MizanRadii.lg,
+    padding: 16,
+    gap: 12,
+  },
+  qualityLabel: {
+    fontSize: 10,
+    fontFamily: 'Inter_700Bold',
+    color: MizanColors.textMuted,
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  qualityValue: {
+    fontSize: 13,
+    fontFamily: 'Inter_700Bold',
+    color: MizanColors.textPrimary,
+  },
+  qualityValueWarn: {
+    color: '#B45309',
+  },
+  reportButton: {
+    alignSelf: 'flex-start',
+    paddingTop: 4,
+  },
+  reportText: {
+    fontSize: 12,
+    fontFamily: 'Inter_700Bold',
+    color: MizanColors.mintPrimary,
+  },
   providerInfo: {
     flex: 1,
   },
@@ -407,7 +513,6 @@ const styles = StyleSheet.create({
     right: 0,
     backgroundColor: '#fff',
     padding: 24,
-    paddingBottom: 40,
     borderTopWidth: 1,
     borderTopColor: MizanColors.borderMuted,
   },

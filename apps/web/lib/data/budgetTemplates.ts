@@ -46,6 +46,20 @@ export const budgetTemplates: BudgetTemplate[] = [
         ],
     },
     {
+        id: 'salaried',
+        name: 'Salaried',
+        emoji: '🏢',
+        description: 'Predictable paycheck, savings-first',
+        categories: [
+            { name: 'Rent & Housing', pct: 30, icon: Home, color: 'text-blue-600', bg: 'bg-blue-100', progressColor: 'bg-blue-500' },
+            { name: 'Savings', pct: 25, icon: Wallet, color: 'text-[#3EA63B]', bg: 'bg-[#3EA63B]/10', progressColor: 'bg-[#3EA63B]' },
+            { name: 'Food & Groceries', pct: 20, icon: ShoppingBasket, color: 'text-orange-600', bg: 'bg-orange-100', progressColor: 'bg-orange-500' },
+            { name: 'Transport', pct: 10, icon: Car, color: 'text-purple-600', bg: 'bg-purple-100', progressColor: 'bg-purple-500' },
+            { name: 'Utilities', pct: 10, icon: Zap, color: 'text-amber-600', bg: 'bg-amber-100', progressColor: 'bg-amber-500' },
+            { name: 'Lifestyle', pct: 5, icon: Coffee, color: 'text-pink-600', bg: 'bg-pink-100', progressColor: 'bg-pink-500' },
+        ],
+    },
+    {
         id: 'family',
         name: 'Family',
         emoji: '👨‍👩‍👧',

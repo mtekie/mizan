@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { Bell, Calendar, Check, ChevronDown, ChevronUp, Home, Phone, Shield, Zap, Wifi, CreditCard, Plus, X, Trash2 } from 'lucide-react';
-import { createBill, markBillPaid, deleteBill } from '@/app/dreams/actions';
+import { createBill, markBillPaid, deleteBill, skipBillThisMonth } from '@/app/dreams/actions';
 import { toast } from 'sonner';
+import { formatMoney } from '@mizan/shared';
 
 type Bill = {
     id: string;
@@ -16,7 +17,15 @@ type Bill = {
     dueDay: number;
     frequency?: string;
     isPaid: boolean;
+    lastSkipped?: Date | string | null;
 };
+
+function isSameMonth(value?: Date | string | null) {
+    if (!value) return false;
+    const date = new Date(value);
+    const now = new Date();
+    return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
+}
 
 const categoryMap = [
     { label: 'Rent', icon: Home, color: 'text-blue-600', bg: 'bg-blue-50' },
@@ -41,6 +50,7 @@ function hydrateBill(rawBill: any): Bill {
         dueDay: Number(rawBill.dueDay) || 1,
         frequency: rawBill.frequency || 'Monthly',
         isPaid: Boolean(rawBill.isPaid),
+        lastSkipped: rawBill.lastSkipped,
     };
 }
 
@@ -54,7 +64,8 @@ export function BillReminders({ initialBills }: { initialBills?: any[] }) {
     const [newBill, setNewBill] = useState({ name: '', amount: '', category: '', dueDay: '' });
 
     const today = new Date().getDate();
-    const unpaid = bills.filter(b => !b.isPaid);
+    const skipped = bills.filter(b => !b.isPaid && isSameMonth(b.lastSkipped));
+    const unpaid = bills.filter(b => !b.isPaid && !isSameMonth(b.lastSkipped));
     const overdue = unpaid.filter(b => b.dueDay < today);
     const upcoming = unpaid.filter(b => b.dueDay >= today).sort((a, b) => a.dueDay - b.dueDay);
     const paid = bills.filter(b => b.isPaid);
@@ -62,13 +73,25 @@ export function BillReminders({ initialBills }: { initialBills?: any[] }) {
 
     const markPaid = async (id: string) => {
         // Optimistic UI
-        setBills(bs => bs.map(b => b.id === id ? { ...b, isPaid: true } : b));
+        setBills(bs => bs.map(b => b.id === id ? { ...b, isPaid: true, lastSkipped: null } : b));
         try {
             await markBillPaid(id, true);
             toast.success('Bill marked as paid');
         } catch (e: any) {
             toast.error('Failed to mark bill as paid');
             setBills(bs => bs.map(b => b.id === id ? { ...b, isPaid: false } : b));
+        }
+    };
+
+    const skipMonth = async (id: string) => {
+        const skippedAt = new Date();
+        setBills(bs => bs.map(b => b.id === id ? { ...b, isPaid: false, lastSkipped: skippedAt } : b));
+        try {
+            await skipBillThisMonth(id);
+            toast.success('Bill skipped for this month');
+        } catch (e: any) {
+            toast.error('Failed to skip bill');
+            setBills(bs => bs.map(b => b.id === id ? { ...b, lastSkipped: null } : b));
         }
     };
 
@@ -90,7 +113,7 @@ export function BillReminders({ initialBills }: { initialBills?: any[] }) {
         const cat = categoryMap.find(c => c.label === newBill.category);
         
         try {
-            await createBill({
+            const savedBill = await createBill({
                 name: newBill.name,
                 amount: Number(newBill.amount),
                 category: newBill.category,
@@ -98,20 +121,7 @@ export function BillReminders({ initialBills }: { initialBills?: any[] }) {
             });
             toast.success('Bill reminder created');
             
-            // Note: Since createBill calls revalidatePath('/dreams'), the page will refresh 
-            // and pass the new bill via props soon. But we'll optimistically add it locally.
-        setBills(bs => [...bs, {
-            id: String(Date.now()),
-            name: newBill.name,
-            amount: Number(newBill.amount),
-            category: newBill.category,
-            icon: cat?.icon || Bell,
-            color: cat?.color || 'text-slate-600',
-            bg: cat?.bg || 'bg-slate-50',
-            dueDay: Number(newBill.dueDay),
-            frequency: 'Monthly',
-            isPaid: false,
-        }]);
+        setBills(bs => [...bs, hydrateBill(savedBill)]);
         setNewBill({ name: '', amount: '', category: '', dueDay: '' });
         setShowAdd(false);
         } catch (e: any) {
@@ -133,7 +143,7 @@ export function BillReminders({ initialBills }: { initialBills?: any[] }) {
                     )}
                 </div>
                 <div className="flex items-center gap-3">
-                    <span className="text-xs font-bold text-slate-500">{totalDue.toLocaleString()} ETB due</span>
+                    <span className="text-xs font-bold text-slate-500">{formatMoney(totalDue)} due</span>
                     {expanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
                 </div>
             </button>
@@ -146,7 +156,7 @@ export function BillReminders({ initialBills }: { initialBills?: any[] }) {
                             <p className="text-[9px] font-black text-red-500 uppercase tracking-widest mb-2">⚠ Overdue</p>
                             <div className="space-y-2">
                                 {overdue.map(bill => (
-                                    <BillRow key={bill.id} bill={bill} today={today} onPay={markPaid} onRemove={removeBill} isOverdue />
+                                    <BillRow key={bill.id} bill={bill} today={today} onPay={markPaid} onSkip={skipMonth} onRemove={removeBill} isOverdue />
                                 ))}
                             </div>
                         </div>
@@ -158,7 +168,7 @@ export function BillReminders({ initialBills }: { initialBills?: any[] }) {
                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Upcoming</p>
                             <div className="space-y-2">
                                 {upcoming.map(bill => (
-                                    <BillRow key={bill.id} bill={bill} today={today} onPay={markPaid} onRemove={removeBill} />
+                                    <BillRow key={bill.id} bill={bill} today={today} onPay={markPaid} onSkip={skipMonth} onRemove={removeBill} />
                                 ))}
                             </div>
                         </div>
@@ -171,6 +181,17 @@ export function BillReminders({ initialBills }: { initialBills?: any[] }) {
                             <div className="space-y-2">
                                 {paid.map(bill => (
                                     <BillRow key={bill.id} bill={bill} today={today} onPay={markPaid} onRemove={removeBill} isPaid />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {skipped.length > 0 && (
+                        <div className="mb-4">
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Skipped This Month</p>
+                            <div className="space-y-2">
+                                {skipped.map(bill => (
+                                    <BillRow key={bill.id} bill={bill} today={today} onPay={markPaid} onSkip={skipMonth} onRemove={removeBill} isSkipped />
                                 ))}
                             </div>
                         </div>
@@ -218,27 +239,32 @@ export function BillReminders({ initialBills }: { initialBills?: any[] }) {
     );
 }
 
-function BillRow({ bill, today, onPay, onRemove, isOverdue, isPaid }: {
-    bill: Bill; today: number; onPay: (id: string) => void; onRemove: (id: string) => void; isOverdue?: boolean; isPaid?: boolean;
+function BillRow({ bill, today, onPay, onSkip, onRemove, isOverdue, isPaid, isSkipped }: {
+    bill: Bill; today: number; onPay: (id: string) => void; onSkip?: (id: string) => void; onRemove: (id: string) => void; isOverdue?: boolean; isPaid?: boolean; isSkipped?: boolean;
 }) {
     const Icon = bill.icon;
     const daysUntil = bill.dueDay - today;
     return (
-        <div className={`flex items-center gap-3 p-3 rounded-xl transition ${isOverdue ? 'bg-red-50 border border-red-100' : isPaid ? 'bg-slate-50 opacity-60' : 'bg-slate-50'}`}>
+        <div className={`flex items-center gap-3 p-3 rounded-xl transition ${isOverdue ? 'bg-red-50 border border-red-100' : isPaid || isSkipped ? 'bg-slate-50 opacity-60' : 'bg-slate-50'}`}>
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${bill.bg}`}>
                 <Icon className={`w-4 h-4 ${bill.color}`} />
             </div>
             <div className="flex-1 min-w-0">
-                <p className={`text-xs font-bold truncate ${isPaid ? 'line-through text-slate-400' : 'text-slate-900'}`}>{bill.name}</p>
+                <p className={`text-xs font-bold truncate ${isPaid || isSkipped ? 'line-through text-slate-400' : 'text-slate-900'}`}>{bill.name}</p>
                 <p className="text-[9px] text-slate-400 font-bold flex items-center gap-1">
                     <Calendar className="w-2.5 h-2.5" />
-                    {isPaid ? 'Paid' : isOverdue ? `${Math.abs(daysUntil)} days overdue` : daysUntil === 0 ? 'Due today' : `Due in ${daysUntil} days`}
+                    {isPaid ? 'Paid' : isSkipped ? 'Skipped this month' : isOverdue ? `${Math.abs(daysUntil)} days overdue` : daysUntil === 0 ? 'Due today' : `Due in ${daysUntil} days`}
                 </p>
             </div>
-            <span className={`text-xs font-black ${isOverdue ? 'text-red-600' : 'text-slate-900'}`}>{bill.amount.toLocaleString()}</span>
-            {!isPaid && (
+            <span className={`text-xs font-black ${isOverdue ? 'text-red-600' : 'text-slate-900'}`}>{formatMoney(bill.amount)}</span>
+            {!isPaid && !isSkipped && (
                 <button onClick={() => onPay(bill.id)} className="text-[9px] font-bold text-[#3EA63B] bg-[#3EA63B]/10 px-2 py-1 rounded-lg hover:bg-[#3EA63B]/20 transition">
                     <Check className="w-3 h-3" />
+                </button>
+            )}
+            {!isPaid && !isSkipped && onSkip && (
+                <button onClick={() => onSkip(bill.id)} className="text-[9px] font-bold text-slate-500 bg-slate-200/70 px-2 py-1 rounded-lg hover:bg-slate-200 transition">
+                    Skip
                 </button>
             )}
             <button onClick={() => onRemove(bill.id)} className="text-slate-300 hover:text-red-400 transition">

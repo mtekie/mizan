@@ -9,28 +9,42 @@ import {
   ActivityIndicator,
   FlatList,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MizanColors, MizanRadii } from '@mizan/ui-tokens';
 import { Search, SlidersHorizontal, Bell } from 'lucide-react-native';
 import { api } from '../../lib/api';
 import { AppScreenShell } from '../../components/ui/AppScreenShell';
+import { productCategories } from '@mizan/shared';
 
 // Marketplace Components
 import { CategoryPill } from '../../components/marketplace/CategoryPill';
 import { ProductCard } from '../../components/marketplace/ProductCard';
 import { ProfileBridge } from '../../components/marketplace/ProfileBridge';
 
-const CATEGORIES = [
-  { id: 'all', label: 'All', icon: '✨' },
-  { id: 'SAVINGS', label: 'Savings', icon: '💰' },
-  { id: 'CREDIT', label: 'Loans', icon: '🏦' },
-  { id: 'INSURANCE', label: 'Insurance', icon: '🛡️' },
-  { id: 'PAYMENT', label: 'Payments', icon: '📱' },
-  { id: 'COMMUNITY', label: 'Community', icon: '🤝' },
-];
+const CATEGORY_ICONS: Record<string, string> = {
+  all: '✨',
+  SAVINGS: '💰',
+  CREDIT: '🏦',
+  INSURANCE: '🛡️',
+  PAYMENT: '📱',
+  CAPITAL_MARKET: '📈',
+  COMMUNITY: '🤝',
+};
+
+const CATEGORIES = productCategories.map(category => ({
+  id: category.key,
+  label: category.label,
+  icon: CATEGORY_ICONS[category.key] || '•',
+}));
 
 export default function CatalogueScreen() {
   const router = useRouter();
+  const routeParams = useLocalSearchParams<{
+    digital?: string;
+    interestFree?: string;
+    providerIds?: string;
+    audience?: string;
+  }>();
   const initialLoadDone = useRef(false);
   const [activeCategory, setActiveCategory] = useState('all');
   const [search, setSearch] = useState('');
@@ -45,6 +59,7 @@ export default function CatalogueScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [skip, setSkip] = useState(0);
   const [hasMore, setHasMore] = useState(true);
+  const [productTotal, setProductTotal] = useState(0);
   const PAGE_SIZE = 10;
 
   const onRefresh = useCallback(async () => {
@@ -94,9 +109,13 @@ export default function CatalogueScreen() {
       if (category !== 'all') params.class = category;
       if (searchTerm) params.search = searchTerm;
       if (providerId) params.providerId = providerId;
+      if (routeParams.providerIds) params.providerIds = String(routeParams.providerIds);
+      if (routeParams.digital === 'true') params.digital = 'true';
+      if (routeParams.interestFree === 'true') params.interestFree = 'true';
+      if (routeParams.audience) params.audience = String(routeParams.audience);
       
-      const all = await api.products.list(params);
-      const allArray = Array.isArray(all) ? all : [];
+      const page = await api.products.listPage(params);
+      const allArray = Array.isArray(page.data) ? page.data : [];
       
       if (currentSkip === 0) {
         setProducts(allArray);
@@ -104,7 +123,8 @@ export default function CatalogueScreen() {
         setProducts(prev => [...(Array.isArray(prev) ? prev : []), ...allArray]);
       }
       
-      setHasMore(allArray.length === PAGE_SIZE);
+      setHasMore(Boolean(page.hasMore));
+      setProductTotal(page.total ?? allArray.length);
       setSkip(currentSkip);
     } catch (e: any) {
       setError('Could not load products. Make sure the server is running.');
@@ -112,7 +132,7 @@ export default function CatalogueScreen() {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, []);
+  }, [routeParams.audience, routeParams.digital, routeParams.interestFree, routeParams.providerIds]);
 
   // Initial load
   useEffect(() => {
@@ -162,10 +182,34 @@ export default function CatalogueScreen() {
             returnKeyType="search"
           />
         </View>
-        <TouchableOpacity style={styles.filterButton} onPress={() => router.push('/filter')}>
+        <TouchableOpacity
+          style={styles.filterButton}
+          onPress={() => router.push({
+            pathname: '/filter',
+            params: {
+              digital: routeParams.digital,
+              interestFree: routeParams.interestFree,
+              providerIds: routeParams.providerIds,
+              audience: routeParams.audience,
+            },
+          })}
+        >
           <SlidersHorizontal size={20} color={MizanColors.mintPrimary} />
         </TouchableOpacity>
       </View>
+
+      {(routeParams.digital === 'true' || routeParams.interestFree === 'true' || routeParams.audience || routeParams.providerIds) && (
+        <View style={styles.activeFiltersRow}>
+          {routeParams.digital === 'true' && <Text style={styles.activeFilter}>Digital</Text>}
+          {routeParams.interestFree === 'true' && <Text style={styles.activeFilter}>Interest-free</Text>}
+          {routeParams.audience === 'student' && <Text style={styles.activeFilter}>Student</Text>}
+          {routeParams.audience === 'salaried' && <Text style={styles.activeFilter}>Salaried</Text>}
+          {routeParams.providerIds && <Text style={styles.activeFilter}>Providers</Text>}
+          <TouchableOpacity onPress={() => router.replace('/(tabs)/catalogue')}>
+            <Text style={styles.clearFiltersInline}>Clear</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <ScrollView 
         horizontal 
@@ -250,7 +294,7 @@ export default function CatalogueScreen() {
         <Text style={styles.sectionTitle}>
           {activeCategory === 'all' ? 'All Products' : CATEGORIES.find(c => c.id === activeCategory)?.label || 'Products'}
         </Text>
-        <Text style={styles.countText}>{products.length} found</Text>
+        <Text style={styles.countText}>{productTotal || products.length} found</Text>
       </View>
       {error && (
         <View style={styles.errorBanner}>
@@ -301,8 +345,21 @@ export default function CatalogueScreen() {
               <Text style={styles.emptyText}>
                 {activeCategory !== 'all' 
                   ? `No ${CATEGORIES.find(c => c.id === activeCategory)?.label || ''} products available yet.`
-                  : 'No products matching your criteria.'}
+                  : 'No products matching your criteria. Try a provider name, product type, or a broader filter.'}
               </Text>
+              {(activeCategory !== 'all' || activeProvider || search) && (
+                <TouchableOpacity
+                  style={styles.clearButton}
+                  onPress={() => {
+                    setActiveCategory('all');
+                    setActiveProvider(null);
+                    setSearch('');
+                    fetchProducts('all', '', null, 0);
+                  }}
+                >
+                  <Text style={styles.clearButtonText}>Clear filters</Text>
+                </TouchableOpacity>
+              )}
             </View>
           )
         }
@@ -366,6 +423,29 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
+  activeFiltersRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: -10,
+    marginBottom: 18,
+  },
+  activeFilter: {
+    overflow: 'hidden',
+    borderRadius: 999,
+    backgroundColor: MizanColors.mintPrimary + '12',
+    color: MizanColors.mintPrimary,
+    fontSize: 11,
+    fontFamily: 'Inter_700Bold',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  clearFiltersInline: {
+    fontSize: 12,
+    fontFamily: 'Inter_700Bold',
+    color: MizanColors.textSecondary,
+  },
   categoryScroll: {
     marginHorizontal: -24,
   },
@@ -425,6 +505,18 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     color: '#64748B',
     textAlign: 'center',
+  },
+  clearButton: {
+    marginTop: 18,
+    backgroundColor: MizanColors.mintPrimary,
+    borderRadius: MizanRadii.md,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+  },
+  clearButtonText: {
+    fontSize: 13,
+    fontFamily: 'Inter_700Bold',
+    color: '#fff',
   },
   errorBanner: {
     marginHorizontal: 24,

@@ -94,6 +94,7 @@ model Transaction {
   id        String   @id @default(cuid())
   userId    String   @db.Uuid
   accountId String?
+  billId    String?
   title     String
   titleAmh  String?
   amount    Float
@@ -103,7 +104,10 @@ model Transaction {
 
   user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   account Account? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  bill    Bill?    @relation(fields: [billId], references: [id], onDelete: SetNull)
   importedMessage ImportedMessage?
+
+  @@index([billId])
 }
 
 model ImportBatch {
@@ -209,8 +213,10 @@ model Bill {
   category  String // 'Utilities', 'Subscription', 'Rent'
   isPaid    Boolean   @default(false)
   lastPaid  DateTime?
+  lastSkipped DateTime?
   createdAt DateTime  @default(now())
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
 }
 
 model Notification {
@@ -247,6 +253,14 @@ model Product {
   isActive   Boolean @default(true)
   isFeatured Boolean @default(false)
   isVerified Boolean @default(true) // false = data quality flag
+
+  // Source & trust metadata
+  sourceName     String?
+  sourceUrl      String?
+  sourceType     String?
+  lastReviewedAt DateTime?
+  reviewedBy     String?
+  dataConfidence Int?
 
   // ── Legacy fields (kept for backward compat during migration) ──
   category               String? // 'Banks', 'BNPL', 'Insurance', 'MFIs', 'SACCOs'
@@ -291,6 +305,8 @@ model Product {
   @@index([productClass])
   @@index([providerId])
   @@index([productType])
+  @@index([isVerified])
+  @@index([lastReviewedAt])
 }
 
 // ══════════════════════════════════════════════════
