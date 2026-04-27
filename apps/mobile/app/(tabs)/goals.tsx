@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, Modal, TextInput } from 'react-native';
 import { MizanColors, MizanSpacing, MizanRadii } from '@mizan/ui-tokens';
-import { Check, Plus } from 'lucide-react-native';
+import { Check, Plus, Lightbulb, ReceiptText } from 'lucide-react-native';
 import BottomSheet from '@gorhom/bottom-sheet';
 import { MintGoalSheet } from '../../components/forms/MintGoalSheet';
 import { MizanCard } from '../../components/ui/MizanCard';
@@ -256,6 +256,23 @@ export default function GoalsScreen() {
         })}
       </View>
 
+      {/* Plan Insight / Budget Forecast */}
+      <MizanCard style={[styles.billCard, { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0', borderWidth: 1 }]}>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
+          <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: MizanColors.mintPrimary, justifyContent: 'center', alignItems: 'center' }}>
+            <Lightbulb size={16} color="#fff" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 13, fontFamily: 'Inter_700Bold', color: MizanColors.mintDark, marginBottom: 4 }}>Plan Insight</Text>
+            <Text style={{ fontSize: 12, fontFamily: 'Inter_400Regular', color: MizanColors.textPrimary, lineHeight: 18 }}>
+              {goals.length > 0
+                ? `At your current saving rate, you'll hit your ${goals[0]?.name || 'goal'} target ${budgetProgress < 0.7 ? 'ahead of schedule' : 'on time'}! ${budgetProgress < 0.5 ? 'Consider redirecting surplus to another goal.' : ''}`
+                : 'Set a savings goal to start getting personalized insights about your progress.'}
+            </Text>
+          </View>
+        </View>
+      </MizanCard>
+
       <View style={[styles.sectionHeader, { marginTop: 24 }]}>
         <Text style={styles.sectionTitle}>Savings Goals</Text>
       </View>
@@ -265,12 +282,19 @@ export default function GoalsScreen() {
   return (
     <AppScreenShell
       title="Goals"
+      subtitle="Budgets, bills, and savings goals"
+      variant="plain"
       onRefresh={loadData}
       refreshing={loading}
       actions={
-        <TouchableOpacity style={styles.iconButton} onPress={() => sheetRef.current?.expand()}>
-          <Plus color={MizanColors.mintPrimary} size={24} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <TouchableOpacity style={styles.iconButton}>
+            <ReceiptText color={MizanColors.textPrimary} size={20} />
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.iconButton, { backgroundColor: MizanColors.mintPrimary }]} onPress={() => sheetRef.current?.expand()}>
+            <Plus color="#fff" size={20} />
+          </TouchableOpacity>
+        </View>
       }
     >
       <FlatList
@@ -313,6 +337,20 @@ export default function GoalsScreen() {
           );
         }}
       />
+
+      {/* Quick Stats */}
+      <View style={{ flexDirection: 'row', gap: 12, marginTop: 16, paddingHorizontal: 4 }}>
+        <MizanCard style={{ flex: 1, padding: 14, alignItems: 'center' }}>
+          <Text style={{ fontSize: 10, fontFamily: 'Inter_700Bold', color: MizanColors.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>Avg. Monthly Save</Text>
+          <Text style={{ fontSize: 18, fontFamily: 'Inter_900Black', color: MizanColors.mintPrimary }}>{formatMoney(Math.max(0, totalBudget - totalSpent))}</Text>
+        </MizanCard>
+        <MizanCard style={{ flex: 1, padding: 14, alignItems: 'center' }}>
+          <Text style={{ fontSize: 10, fontFamily: 'Inter_700Bold', color: MizanColors.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>Goals On Track</Text>
+          <Text style={{ fontSize: 18, fontFamily: 'Inter_900Black', color: MizanColors.textPrimary }}>
+            {goals.filter((g: any) => safePercent(g.saved, g.target) >= 50).length} / {goals.length}
+          </Text>
+        </MizanCard>
+      </View>
 
       <MintGoalSheet sheetRef={sheetRef} onClose={() => sheetRef.current?.close()} onSave={handleSaveGoal} />
       <Modal visible={showBillModal} transparent animationType="slide" onRequestClose={() => setShowBillModal(false)}>

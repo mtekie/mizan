@@ -1,18 +1,14 @@
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
-import { MizanColors, MizanTypography } from '@mizan/ui-tokens';
-import { Settings, LogOut, Shield, CircleUser, Target, HelpCircle, Info } from 'lucide-react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { MizanColors } from '@mizan/ui-tokens';
+import { Settings, LogOut, Shield, CircleUser, HelpCircle, Info, ChevronRight, Building2, TrendingUp, ShieldCheck } from 'lucide-react-native';
 import { MizanCard } from '../../components/ui/MizanCard';
 import { useStore } from '../../lib/store';
 import { supabase } from '../../lib/auth';
 import { router } from 'expo-router';
-
 import { AppScreenShell } from '../../components/ui/AppScreenShell';
-import { TrendingUp } from 'lucide-react-native';
-
-import { CheckCircle2, ChevronRight, Building2 } from 'lucide-react-native';
 import { api } from '../../lib/api';
-import { demoAccounts } from '@mizan/shared';
+import { demoAccounts, formatMoney } from '@mizan/shared';
 
 export default function ProfileScreen() {
   const { profile, isGuest, setGuest, setProfile } = useStore();
@@ -45,24 +41,41 @@ export default function ProfileScreen() {
     router.replace('/(auth)/login');
   };
 
+  const score = (profile as any)?.mizanScore ?? 690;
+  const scoreLabel = score > 750 ? 'Excellent' : score > 600 ? 'Good' : 'Fair';
+
   return (
-    <AppScreenShell title="Me">
-      <View style={styles.header}>
+    <AppScreenShell
+      title="Me"
+      subtitle="Manage your identity and connected accounts"
+      variant="hero"
+      actions={
+        <TouchableOpacity
+          onPress={() => router.push('/settings' as any)}
+          style={styles.settingsBtn}
+        >
+          <Settings color="#fff" size={20} />
+        </TouchableOpacity>
+      }
+    >
+      {/* Profile Identity */}
+      <View style={styles.profileCard}>
         <View style={styles.avatarContainer}>
           <CircleUser color={MizanColors.mintDark} size={64} />
           <View style={styles.statusBadge}>
-            <CheckCircle2 color={MizanColors.mintPrimary} size={18} fill="#fff" />
+            <ShieldCheck color={MizanColors.mintPrimary} size={18} />
           </View>
         </View>
         <View style={styles.headerText}>
           <Text style={styles.name}>{isGuest ? 'Guest User' : (profile.fullName || 'User')}</Text>
-          <View style={styles.statusRow}>
-            <Text style={styles.email}>{isGuest ? 'Limited Preview Mode' : `@${profile.username || 'username'}`}</Text>
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>Verified</Text>
-            </View>
-          </View>
+          <Text style={styles.email}>{isGuest ? 'Limited Preview Mode' : `@${profile.username || 'username'}`}</Text>
         </View>
+        <TouchableOpacity
+          style={styles.editProfileBtn}
+          onPress={() => router.push('/score?action=complete-profile')}
+        >
+          <Text style={styles.editProfileText}>{profile?.isComplete ? 'Edit Profile' : 'Complete Profile'}</Text>
+        </TouchableOpacity>
       </View>
 
       {isGuest && (
@@ -74,19 +87,55 @@ export default function ProfileScreen() {
         </MizanCard>
       )}
 
+      {/* Profile Verification */}
+      {!isGuest && (
+        <MizanCard style={styles.verificationCard}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            <View style={styles.verificationIcon}>
+              <ShieldCheck color="#059669" size={24} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.verificationTitle}>Verified Identity</Text>
+              <Text style={styles.verificationSubtitle}>Your profile meets standard requirements for tier 2 banking.</Text>
+            </View>
+          </View>
+        </MizanCard>
+      )}
+
+      {/* Mizan Score Card */}
+      <TouchableOpacity onPress={() => router.push('/score')}>
+        <MizanCard style={styles.scoreCard}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            <View style={styles.scoreIcon}>
+              <TrendingUp color={MizanColors.mintPrimary} size={24} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.scoreTitle}>Mizan Score</Text>
+              <Text style={styles.scoreSubtitle}>{scoreLabel} • Last updated today</Text>
+            </View>
+            <View style={{ alignItems: 'flex-end' }}>
+              <Text style={styles.scoreValue}>{score}</Text>
+              <Text style={styles.scoreLabel}>{scoreLabel}</Text>
+            </View>
+            <ChevronRight size={18} color={MizanColors.textMuted} />
+          </View>
+        </MizanCard>
+      </TouchableOpacity>
+
+      {/* Connected Accounts with Balances */}
       <Text style={styles.sectionTitle}>Connected Accounts</Text>
       <MizanCard style={styles.accountsCard}>
         {accounts.map((acc, idx) => (
           <View key={acc.id}>
             <TouchableOpacity style={styles.accountRow}>
-              <View style={styles.accountIconBox}>
-                <Building2 size={20} color={MizanColors.mintPrimary} />
+              <View style={[styles.accountIconBox, { backgroundColor: acc.color ? acc.color + '18' : MizanColors.mintBg }]}>
+                <Building2 size={20} color={acc.color || MizanColors.mintPrimary} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.accountName}>{acc.name}</Text>
-                <Text style={styles.accountBank}>{acc.bank || 'CBE'}</Text>
+                <Text style={styles.accountBank}>{acc.type} • {acc.number || 'N/A'}</Text>
               </View>
-              <ChevronRight size={20} color={MizanColors.textMuted} />
+              <Text style={styles.accountBalance}>{formatMoney(acc.balance ?? 0)}</Text>
             </TouchableOpacity>
             {idx < accounts.length - 1 && <View style={styles.divider} />}
           </View>
@@ -96,45 +145,46 @@ export default function ProfileScreen() {
         )}
       </MizanCard>
 
-      <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Preferences</Text>
+      {/* Security & Privacy */}
+      <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Security & Privacy</Text>
+      <MizanCard style={styles.securityCard}>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 14 }}>
+          <View style={styles.securityIcon}>
+            <Shield color="#fff" size={20} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.securityTitle}>Your data is encrypted</Text>
+            <Text style={styles.securitySubtitle}>Bank-grade protocols. We never share your personal information without explicit consent.</Text>
+            <TouchableOpacity style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 4 }} onPress={() => router.push('/settings' as any)}>
+              <Text style={{ fontSize: 12, fontFamily: 'Inter_700Bold', color: MizanColors.mintPrimary }}>Review security settings</Text>
+              <ChevronRight size={14} color={MizanColors.mintPrimary} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </MizanCard>
+
+      {/* Settings & Support Links */}
+      <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Settings & Support</Text>
       <MizanCard style={styles.menuCard}>
-        <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/score')}>
-          <TrendingUp color={MizanColors.mintPrimary} size={20} />
-          <Text style={styles.menuText}>Mizan Score</Text>
-        </TouchableOpacity>
-        <View style={styles.divider} />
         <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/settings' as any)}>
           <Settings color={MizanColors.textPrimary} size={20} />
           <Text style={styles.menuText}>Settings</Text>
+          <ChevronRight size={16} color={MizanColors.textMuted} style={{ marginLeft: 'auto' }} />
         </TouchableOpacity>
         <View style={styles.divider} />
-        <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
-          <LogOut color={MizanColors.mintCoral} size={20} />
-          <Text style={[styles.menuText, { color: MizanColors.mintCoral }]}>Log Out</Text>
-        </TouchableOpacity>
-      </MizanCard>
-
-      <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Support & Feedback</Text>
-      <MizanCard style={styles.menuCard}>
         <TouchableOpacity style={styles.menuItem}>
           <HelpCircle color={MizanColors.mintPrimary} size={20} />
           <Text style={styles.menuText}>Send Feedback</Text>
+          <ChevronRight size={16} color={MizanColors.textMuted} style={{ marginLeft: 'auto' }} />
         </TouchableOpacity>
         <View style={styles.divider} />
-        <TouchableOpacity style={styles.menuItem}>
-          <Shield color={MizanColors.mintPrimary} size={20} />
-          <Text style={styles.menuText}>Report a Bug</Text>
-        </TouchableOpacity>
-      </MizanCard>
-
-      <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Legal & Transparency</Text>
-      <MizanCard style={styles.menuCard}>
         <TouchableOpacity 
           style={styles.menuItem}
           onPress={() => router.push({ pathname: '/legal', params: { type: 'privacy' } })}
         >
           <Info color={MizanColors.textMuted} size={20} />
           <Text style={styles.menuText}>Privacy Policy</Text>
+          <ChevronRight size={16} color={MizanColors.textMuted} style={{ marginLeft: 'auto' }} />
         </TouchableOpacity>
         <View style={styles.divider} />
         <TouchableOpacity 
@@ -143,6 +193,13 @@ export default function ProfileScreen() {
         >
           <Shield color={MizanColors.textMuted} size={20} />
           <Text style={styles.menuText}>Terms of Service</Text>
+          <ChevronRight size={16} color={MizanColors.textMuted} style={{ marginLeft: 'auto' }} />
+        </TouchableOpacity>
+        <View style={styles.divider} />
+        <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
+          <LogOut color="#EF4444" size={20} />
+          <Text style={[styles.menuText, { color: '#EF4444' }]}>Log Out</Text>
+          <ChevronRight size={16} color={MizanColors.textMuted} style={{ marginLeft: 'auto' }} />
         </TouchableOpacity>
       </MizanCard>
 
@@ -155,28 +212,22 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
+  settingsBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
-    gap: 16,
+    justifyContent: 'center',
+  },
+  profileCard: {
+    alignItems: 'center',
     marginBottom: 24,
     marginTop: 8,
   },
-  headerText: {
-    flex: 1,
-  },
-  name: {
-    fontSize: 20,
-    fontFamily: 'Inter_700Bold',
-    color: MizanColors.textPrimary,
-  },
-  email: {
-    fontSize: 15,
-    fontFamily: 'Inter_400Regular',
-    color: MizanColors.textMuted,
-  },
   avatarContainer: {
     position: 'relative',
+    marginBottom: 12,
   },
   statusBadge: {
     position: 'absolute',
@@ -186,93 +237,38 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     overflow: 'hidden',
   },
-  statusRow: {
-    flexDirection: 'row',
+  headerText: {
     alignItems: 'center',
-    gap: 8,
+    marginBottom: 12,
+  },
+  name: {
+    fontSize: 22,
+    fontFamily: 'Inter_900Black',
+    color: MizanColors.textPrimary,
+  },
+  email: {
+    fontSize: 13,
+    fontFamily: 'Inter_400Regular',
+    color: MizanColors.textMuted,
     marginTop: 2,
   },
-  badge: {
-    backgroundColor: MizanColors.mintBg,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
+  editProfileBtn: {
+    backgroundColor: MizanColors.mintPrimary,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 16,
   },
-  badgeText: {
-    fontSize: 10,
+  editProfileText: {
+    fontSize: 13,
     fontFamily: 'Inter_700Bold',
-    color: MizanColors.mintDark,
-    textTransform: 'uppercase',
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontFamily: 'Inter_700Bold',
-    color: MizanColors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 12,
-    marginLeft: 4,
-  },
-  accountsCard: {
-    padding: 4,
-    marginBottom: 8,
-  },
-  accountRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    gap: 12,
-  },
-  accountIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: MizanColors.mintBg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  accountName: {
-    fontSize: 15,
-    fontFamily: 'Inter_600SemiBold',
-    color: MizanColors.textPrimary,
-  },
-  accountBank: {
-    fontSize: 12,
-    fontFamily: 'Inter_400Regular',
-    color: MizanColors.textMuted,
-  },
-  emptyAccounts: {
-    padding: 16,
-    fontFamily: 'Inter_400Regular',
-    fontSize: 14,
-    color: MizanColors.textMuted,
-    textAlign: 'center',
-  },
-  menuCard: {
-    padding: 4,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    gap: 12,
-  },
-  menuText: {
-    fontSize: 16,
-    fontFamily: 'Inter_600SemiBold',
-    color: MizanColors.textPrimary,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#F1F5F9',
-    marginLeft: 52,
+    color: '#fff',
   },
   guestNotice: {
-    backgroundColor: MizanColors.mintCoral + '10',
-    borderColor: MizanColors.mintCoral,
+    backgroundColor: '#FEF2F2',
+    borderColor: '#EF4444',
     borderWidth: 1,
     padding: 16,
-    marginBottom: 24,
+    marginBottom: 16,
   },
   guestNoticeText: {
     fontFamily: 'Inter_400Regular',
@@ -291,6 +287,158 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_700Bold',
     color: '#fff',
     fontSize: 14,
+  },
+  verificationCard: {
+    padding: 16,
+    marginBottom: 16,
+    backgroundColor: '#ECFDF5',
+    borderColor: '#A7F3D0',
+    borderWidth: 1,
+  },
+  verificationIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: '#D1FAE5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  verificationTitle: {
+    fontSize: 15,
+    fontFamily: 'Inter_700Bold',
+    color: MizanColors.textPrimary,
+  },
+  verificationSubtitle: {
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    color: MizanColors.textMuted,
+    marginTop: 2,
+  },
+  scoreCard: {
+    padding: 16,
+    marginBottom: 16,
+  },
+  scoreIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: MizanColors.mintBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scoreTitle: {
+    fontSize: 15,
+    fontFamily: 'Inter_700Bold',
+    color: MizanColors.textPrimary,
+  },
+  scoreSubtitle: {
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    color: MizanColors.textMuted,
+    marginTop: 2,
+  },
+  scoreValue: {
+    fontSize: 28,
+    fontFamily: 'Inter_900Black',
+    color: MizanColors.mintDark,
+  },
+  scoreLabel: {
+    fontSize: 10,
+    fontFamily: 'Inter_700Bold',
+    color: MizanColors.mintPrimary,
+    textTransform: 'uppercase',
+  },
+  sectionTitle: {
+    fontSize: 12,
+    fontFamily: 'Inter_700Bold',
+    color: MizanColors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+    marginBottom: 12,
+    marginLeft: 4,
+  },
+  accountsCard: {
+    padding: 4,
+    marginBottom: 8,
+  },
+  accountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    gap: 12,
+  },
+  accountIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  accountName: {
+    fontSize: 15,
+    fontFamily: 'Inter_700Bold',
+    color: MizanColors.textPrimary,
+  },
+  accountBank: {
+    fontSize: 11,
+    fontFamily: 'Inter_400Regular',
+    color: MizanColors.textMuted,
+  },
+  accountBalance: {
+    fontSize: 15,
+    fontFamily: 'Inter_900Black',
+    color: MizanColors.textPrimary,
+  },
+  emptyAccounts: {
+    padding: 16,
+    fontFamily: 'Inter_400Regular',
+    fontSize: 14,
+    color: MizanColors.textMuted,
+    textAlign: 'center',
+  },
+  securityCard: {
+    padding: 16,
+    backgroundColor: '#0F172A',
+    marginBottom: 8,
+  },
+  securityIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  securityTitle: {
+    fontSize: 15,
+    fontFamily: 'Inter_700Bold',
+    color: '#fff',
+  },
+  securitySubtitle: {
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    color: '#94A3B8',
+    marginTop: 2,
+    lineHeight: 18,
+  },
+  menuCard: {
+    padding: 4,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    gap: 12,
+  },
+  menuText: {
+    fontSize: 15,
+    fontFamily: 'Inter_600SemiBold',
+    color: MizanColors.textPrimary,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#F1F5F9',
+    marginLeft: 52,
   },
   footerInfo: {
     padding: 40,

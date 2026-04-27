@@ -75,9 +75,19 @@ export default function DashboardScreen() {
     ] : [])
   };
 
+  const recentTransactions = dashboardData?.recentTransactions ?? (isGuest ? [
+    { id: 'r1', title: 'Kaldi Coffee', category: 'Food', amount: -120, source: 'telebirr' },
+    { id: 'r2', title: 'Salary Deposit', category: 'Income', amount: 35000, source: 'CBE' },
+    { id: 'r3', title: 'Shoa Supermarket', category: 'Groceries', amount: -890, source: 'CBE Birr' },
+  ] : []);
+
+  const totalBudget = summary.budgets.reduce((s: number, b: any) => s + (b.allocated || 0), 0);
+  const totalSpent = summary.budgets.reduce((s: number, b: any) => s + (b.spent || 0), 0);
+  const budgetPct = totalBudget > 0 ? Math.min(100, Math.round((totalSpent / totalBudget) * 100)) : 0;
+
   return (
     <AppScreenShell
-      title="This Month"
+      title="Home"
       variant="hero"
       refreshing={refreshing}
       onRefresh={loadData}
@@ -88,6 +98,7 @@ export default function DashboardScreen() {
       }
     >
       <ProfileCompleteness user={profile} />
+      <SmartProfilePrompt />
       <SmsPermissionCard />
 
       {/* Mizan Score Preview */}
@@ -118,68 +129,87 @@ export default function DashboardScreen() {
         <QuickAction icon={CreditCard} label="Pay" color="#8B5CF6" />
         <QuickAction icon={Smartphone} label="Airtime" color="#F59E0B" />
       </View>
-      
-      {/* Net Worth Summary */}
-      <MizanCard variant="primary" style={styles.card}>
-        <View style={styles.netWorthHeader}>
-          <View>
-            <Text style={styles.netWorthLabel}>Net Worth</Text>
-            <Text style={styles.netWorthValue}>{formatMoney(summary.netWorth)}</Text>
+
+      {/* Insight Card */}
+      <MizanCard style={[styles.card, { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0', borderWidth: 1 }]}>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
+          <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: MizanColors.mintPrimary, justifyContent: 'center', alignItems: 'center' }}>
+            <TrendingUp size={16} color="#fff" />
           </View>
-          <TouchableOpacity 
-            style={styles.addAccountBtn} 
-            onPress={() => accountSheetRef.current?.expand()}
-          >
-            <Plus size={16} color="#FFF" style={{ marginRight: 6 }} />
-            <Text style={styles.addAccountBtnText}>Add Account</Text>
-          </TouchableOpacity>
-        </View>
-        
-        <View style={styles.cashFlowRow}>
-          <View style={styles.cashFlowItem}>
-            <Text style={styles.cashFlowLabel}>Income</Text>
-            <Text style={styles.cashFlowValue}>{formatMoney(summary.monthlyIn)}</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 12, fontFamily: 'Inter_700Bold', color: MizanColors.mintDark, marginBottom: 4 }}>Mizan Insight</Text>
+            <Text style={{ fontSize: 13, fontFamily: 'Inter_400Regular', color: MizanColors.textPrimary, lineHeight: 18 }}>
+              {summary.monthlyOut > 20000
+                ? "Your spending is a bit high this month. Consider reviewing your Entertainment category."
+                : "You're doing great! Your spending is well under control this month."}
+            </Text>
           </View>
-          <View style={styles.cashFlowItem}>
-            <Text style={styles.cashFlowLabel}>Expenses</Text>
-            <Text style={styles.cashFlowValue}>{formatMoney(summary.monthlyOut)}</Text>
-          </View>
-        </View>
-      </MizanCard>
-      
-      {/* Spending Card (Fake Donut) */}
-      <MizanCard variant="primary" style={styles.card}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>September spending</Text>
-          <ChevronRight color={MizanColors.mintPrimary} size={16} />
-        </View>
-        <Text style={styles.spendingSubtitle}>You've spent {formatMoney(summary.monthlyOut)} so far</Text>
-        
-        <View style={styles.donutPlaceholder}>
-          <View style={styles.donutCenter}>
-            <Text style={styles.donutLabel}>This month</Text>
-            <Text style={styles.donutValue}>{formatMoney(summary.monthlyOut)}</Text>
-          </View>
-        </View>
-        
-        <View style={styles.legendContainer}>
-          <View style={styles.legendItem}><View style={[styles.dot, {backgroundColor: '#45BFA0'}]}/><Text style={styles.legendText}>Auto</Text></View>
-          <View style={styles.legendItem}><View style={[styles.dot, {backgroundColor: '#F5A623'}]}/><Text style={styles.legendText}>Food</Text></View>
-          <View style={styles.legendItem}><View style={[styles.dot, {backgroundColor: '#E8734A'}]}/><Text style={styles.legendText}>Fun</Text></View>
         </View>
       </MizanCard>
 
-      {/* Budgets Card */}
-      <MizanCard variant="primary" style={styles.card}>
-         <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>Monthly budgets</Text>
-          <ChevronRight color={MizanColors.mintPrimary} size={16} />
+      {/* Mini Money Summary — links to Money tab */}
+      <TouchableOpacity onPress={() => router.push('/(tabs)/ledger')}>
+        <MizanCard style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>Balance</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Text style={{ fontSize: 12, fontFamily: 'Inter_700Bold', color: MizanColors.mintPrimary }}>Details</Text>
+              <ChevronRight size={14} color={MizanColors.mintPrimary} />
+            </View>
+          </View>
+          <Text style={{ fontSize: 22, fontFamily: 'Inter_900Black', color: MizanColors.textPrimary, marginTop: 4 }}>{formatMoney(summary.netWorth)}</Text>
+        </MizanCard>
+      </TouchableOpacity>
+
+      {/* Mini Budget Summary — links to Goals tab */}
+      <TouchableOpacity onPress={() => router.push('/(tabs)/goals')}>
+        <MizanCard style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>Budget</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Text style={{ fontSize: 12, fontFamily: 'Inter_700Bold', color: MizanColors.mintPrimary }}>Details</Text>
+              <ChevronRight size={14} color={MizanColors.mintPrimary} />
+            </View>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: 4 }}>
+            <Text style={{ fontSize: 15, fontFamily: 'Inter_700Bold', color: MizanColors.textPrimary }}>{budgetPct}% used</Text>
+            <Text style={{ fontSize: 12, fontFamily: 'Inter_400Regular', color: MizanColors.textMuted }}>
+              {formatMoney(totalSpent)} / {formatMoney(totalBudget)}
+            </Text>
+          </View>
+          <View style={{ height: 6, backgroundColor: MizanColors.mintBg, borderRadius: 3, overflow: 'hidden', marginTop: 8 }}>
+            <View style={{ height: '100%', width: `${budgetPct}%`, backgroundColor: budgetPct > 90 ? '#EF4444' : MizanColors.mintPrimary, borderRadius: 3 }} />
+          </View>
+        </MizanCard>
+      </TouchableOpacity>
+
+      {/* Recent Transactions */}
+      <MizanCard style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>Recent Activity</Text>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/ledger')} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Text style={{ fontSize: 12, fontFamily: 'Inter_700Bold', color: MizanColors.mintPrimary }}>See all</Text>
+            <ChevronRight size={14} color={MizanColors.mintPrimary} />
+          </TouchableOpacity>
         </View>
-        <View style={{ marginTop: 16 }}>
-          {summary.budgets.map((b: any) => (
-            <MintBudgetBar key={b.id} spent={b.spent} total={b.allocated} title={b.name} />
-          ))}
-        </View>
+        {recentTransactions.length === 0 ? (
+          <Text style={{ fontSize: 13, fontFamily: 'Inter_400Regular', color: MizanColors.textMuted, marginTop: 8, textAlign: 'center', paddingVertical: 12 }}>No transactions yet.</Text>
+        ) : (
+          recentTransactions.slice(0, 3).map((tx: any, idx: number) => (
+            <View key={tx.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderTopWidth: idx > 0 ? 1 : 0, borderTopColor: '#F1F5F9' }}>
+              <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: tx.amount > 0 ? MizanColors.mintBg : '#F1F5F9', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+                <Text style={{ fontSize: 16 }}>{tx.amount > 0 ? '💰' : '💳'}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 14, fontFamily: 'Inter_700Bold', color: MizanColors.textPrimary }}>{tx.title}</Text>
+                <Text style={{ fontSize: 11, fontFamily: 'Inter_400Regular', color: MizanColors.textMuted }}>{tx.source || 'Manual'}</Text>
+              </View>
+              <Text style={{ fontSize: 14, fontFamily: 'Inter_700Bold', color: tx.amount > 0 ? MizanColors.mintDark : MizanColors.textPrimary }}>
+                {tx.amount > 0 ? '+' : ''}{formatMoney(Math.abs(tx.amount))}
+              </Text>
+            </View>
+          ))
+        )}
       </MizanCard>
 
       <MintAccountSheet 
@@ -201,7 +231,6 @@ export default function DashboardScreen() {
           }
         }}
       />
-      <SmartProfilePrompt />
     </AppScreenShell>
   );
 }

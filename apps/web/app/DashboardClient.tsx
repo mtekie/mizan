@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Bell, Lightbulb, Plus, TrendingUp, ArrowDownRight, ArrowUpRight, ChevronRight, Sparkles } from 'lucide-react';
+import { Bell, Lightbulb, Plus, TrendingUp, ArrowDownRight, ArrowUpRight, ChevronRight, Sparkles, Send, CreditCard, Smartphone } from 'lucide-react';
 import { AppPageShell } from '@/components/AppPageShell';
 import { OnboardingPrompt } from '@/components/OnboardingPrompt';
 import { Nudge } from '@/components/Nudge';
@@ -60,7 +60,7 @@ export default function DashboardClient({ user, accounts, transactions, summary,
 
   return (
     <AppPageShell
-      title="Overview"
+      title="Home"
       variant="hero"
       actions={
         <Link href="/notifications" className="relative p-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/10">
@@ -84,6 +84,41 @@ export default function DashboardClient({ user, accounts, transactions, summary,
             {accounts.length === 0 && !activeNudge && (
                 <OnboardingPrompt type="accounts" userName={user?.name?.split(' ')[0]} />
             )}
+
+            {/* Mizan Score Preview */}
+            <Link href="/score" className="mint-card animate-slide-up flex items-center gap-4 group hover:shadow-md transition-shadow" style={{ animationDelay: '0.1s' }}>
+              <div className="w-12 h-12 rounded-2xl bg-[var(--color-mint-primary)]/10 flex items-center justify-center shrink-0">
+                <TrendingUp className="w-5 h-5 text-[var(--color-mint-primary)]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-[var(--color-mint-text)]">Mizan Score</p>
+                <p className="text-[11px] text-[var(--color-mint-text-muted)]">Improving • Last updated today</p>
+              </div>
+              <div className="text-right">
+                <p className="text-2xl font-black text-[var(--color-mint-deep)]">{user?.score || user?.mizanScore || 720}</p>
+                <p className="text-[10px] font-bold text-[var(--color-mint-primary)] uppercase">
+                  {(user?.score || user?.mizanScore || 720) > 750 ? 'Excellent' : (user?.score || user?.mizanScore || 720) > 600 ? 'Good' : 'Fair'}
+                </p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-[var(--color-mint-primary)] transition-colors" />
+            </Link>
+
+            {/* Quick Actions */}
+            <div className="grid grid-cols-4 gap-3 animate-slide-up" style={{ animationDelay: '0.15s' }}>
+              {[
+                { icon: ArrowUpRight, label: 'Send', color: '#3B82F6', bg: 'bg-blue-50' },
+                { icon: ArrowDownRight, label: 'Request', color: '#10B981', bg: 'bg-emerald-50' },
+                { icon: CreditCard, label: 'Pay', color: '#8B5CF6', bg: 'bg-purple-50' },
+                { icon: Smartphone, label: 'Airtime', color: '#F59E0B', bg: 'bg-amber-50' },
+              ].map(action => (
+                <button key={action.label} className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-all group">
+                  <div className={`w-10 h-10 rounded-xl ${action.bg} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                    <action.icon className="w-5 h-5" style={{ color: action.color }} />
+                  </div>
+                  <span className="text-[11px] font-bold text-slate-600">{action.label}</span>
+                </button>
+              ))}
+            </div>
 
             {/* AI Insight Card */}
             <div className="mint-card animate-slide-up relative overflow-hidden" style={{ animationDelay: '0.2s' }}>

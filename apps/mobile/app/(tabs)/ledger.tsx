@@ -115,6 +115,9 @@ export default function LedgerScreen() {
     </View>
   );
 
+  const totalExpenses = transactions.filter(t => t.amount < 0).reduce((sum, t) => sum + Math.abs(t.amount), 0);
+  const spendingPercent = totalBalance > 0 ? Math.min(100, Math.round((totalExpenses / totalBalance) * 100)) : 0;
+
   const renderSpendingSummary = () => (
     <View style={styles.spendingSection}>
       <Text style={styles.sectionTitle}>Spending Summary</Text>
@@ -122,17 +125,19 @@ export default function LedgerScreen() {
         <View style={styles.spendingHeader}>
           <View>
             <Text style={styles.spendingLabel}>This Month</Text>
-            <Text style={styles.spendingValue}>12,300 ETB</Text>
+            <Text style={styles.spendingValue}>{formatMoney(totalExpenses)}</Text>
           </View>
           <View style={styles.spendingChange}>
             <TrendingDown size={14} color={MizanColors.mintPrimary} />
-            <Text style={styles.spendingChangeText}>-8%</Text>
+            <Text style={styles.spendingChangeText}>{spendingPercent}% of balance</Text>
           </View>
         </View>
         <View style={styles.spendingBarBg}>
-          <View style={[styles.spendingBarFill, { width: '65%', backgroundColor: MizanColors.mintPrimary }]} />
+          <View style={[styles.spendingBarFill, { width: `${spendingPercent}%`, backgroundColor: spendingPercent > 80 ? '#EF4444' : MizanColors.mintPrimary }]} />
         </View>
-        <Text style={styles.spendingNote}>You have spent 65% of your food budget.</Text>
+        <Text style={styles.spendingNote}>
+          {spendingPercent > 80 ? 'Spending is high relative to your balance.' : 'Your spending is on track this month.'}
+        </Text>
       </MizanCard>
     </View>
   );

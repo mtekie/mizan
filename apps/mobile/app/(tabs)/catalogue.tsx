@@ -307,6 +307,8 @@ export default function CatalogueScreen() {
   return (
     <AppScreenShell
       title="Find"
+      subtitle="Discover financial products tailored for your goals"
+      variant="hero"
       scrollable={false}
       onRefresh={onRefresh}
       refreshing={refreshing}
