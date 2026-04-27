@@ -9,6 +9,7 @@ This handoff summarizes the current Sprint 1-3 implementation state.
 - Sprint 1 manual money foundations are implemented across web and mobile.
 - Sprint 2 Find/product catalogue improvements are implemented with source metadata and admin data-quality support.
 - Sprint 3 Goals, budgets, bills, and savings loop is implemented across web and mobile.
+- Sprint 4 Mizan Score, shared profile logic, and single-question nudges are implemented.
 - The local dev server runs on `http://localhost:3001`.
 
 ## Important Docs
@@ -64,6 +65,9 @@ Known lint warning:
 - Marking a bill paid creates one linked negative ledger transaction for the current month.
 - Marking a bill unpaid removes the current-month linked bill transaction.
 - Skipping a bill this month suppresses it from due totals and does not create a ledger transaction.
+- Mizan Score is calculated using a shared engine in `packages/shared/engine/score.ts`.
+- Profile completeness percentage is standardized across web and mobile using `packages/shared/logic/profile.ts`.
+- Profile enrichment nudges follow a "one-question-at-a-time" pattern with Amharic labels and "why we ask" explanations.
 
 ## Known Caveats
 
@@ -75,6 +79,6 @@ Known lint warning:
 ## Recommended Next Work
 
 1. Run the beta smoke checklist with a real user account on web and Expo.
-2. Resolve the existing `ReceiptScanner` `<img>` warning when touching that component.
-3. Begin Sprint 4: Score/Profile trust and explanation work.
-4. Add automated API tests for accounts, transactions, goals, budgets, bills, and products.
+2. Resolve any remaining mobile viewport browser verification issues.
+3. Begin Sprint 5: Verification Prototype (Self-declared vs. Linked vs. Photo).
+4. Add automated API tests for the Mizan Score engine and profile completion logic.

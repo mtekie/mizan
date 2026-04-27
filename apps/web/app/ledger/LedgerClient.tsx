@@ -28,6 +28,7 @@ export default function LedgerClient({ accounts: initialAccounts, initialTransac
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedSource, setSelectedSource] = useState('All');
   const [expandedTx, setExpandedTx] = useState<string | null>(null);
+  const [displayCount, setDisplayCount] = useState(10);
   const [showUSD, setShowUSD] = useState(false);
   const [accounts, setAccounts] = useState<any[]>(initialAccounts);
   const [transactions, setTransactions] = useState<any[]>(initialTransactions);
@@ -87,7 +88,9 @@ export default function LedgerClient({ accounts: initialAccounts, initialTransac
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  const grouped = filtered.reduce((acc, tx) => {
+  const displayed = filtered.slice(0, displayCount);
+
+  const grouped = displayed.reduce((acc, tx) => {
     const formattedDate = getFormatDate(tx.date);
     if (!acc[formattedDate]) acc[formattedDate] = [];
     acc[formattedDate].push(tx);
@@ -475,45 +478,132 @@ export default function LedgerClient({ accounts: initialAccounts, initialTransac
                     {/* On mobile we might show the date header, on desktop the date is in the row */}
                     {txs.map((tx) => {
                       return (
-                        <div key={tx.id} className="grid grid-cols-1 md:grid-cols-12 gap-4 p-4 hover:bg-slate-50 transition-colors items-center text-sm">
-                          <div className="md:col-span-2 text-slate-500">
-                            {new Date(tx.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        <div key={tx.id} className="border-b border-slate-100 last:border-0 group">
+                          <div 
+                            className="flex items-center justify-between p-3 md:grid md:grid-cols-12 md:gap-4 md:p-4 hover:bg-slate-50 transition-colors cursor-pointer"
+                            onClick={() => setExpandedTx(expandedTx === tx.id ? null : tx.id)}
+                          >
+                            {/* Date - Hidden on mobile, shown in expanded or as small text */}
+                            <div className="hidden md:block md:col-span-2 text-slate-500 text-xs">
+                              {new Date(tx.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            </div>
+
+                            {/* Main Info: Title & Category */}
+                            <div className="flex-1 md:col-span-4 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="font-bold text-slate-800 text-sm truncate">{tx.title}</p>
+                                <span className="hidden sm:inline-block px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[9px] font-bold uppercase tracking-wider">
+                                  {tx.category || 'Other'}
+                                </span>
+                              </div>
+                              <p className="md:hidden text-[10px] text-slate-400 font-medium">
+                                {new Date(tx.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} • {tx.category || 'Other'}
+                              </p>
+                            </div>
+
+                            {/* Category - Desktop Only */}
+                            <div className="hidden md:block md:col-span-2">
+                              <span className="inline-block px-2 py-0.5 bg-slate-50 text-slate-500 border border-slate-100 rounded text-[10px] font-bold">
+                                {tx.category || 'Uncategorized'}
+                              </span>
+                            </div>
+
+                            {/* Amount */}
+                            <div className={`md:col-span-2 text-right font-black text-sm ${tx.amount > 0 ? 'text-[#3EA63B]' : 'text-slate-900'}`}>
+                              {tx.amount > 0 ? '+' : ''}{fmt(tx.amount)}
+                            </div>
+
+                            {/* Actions - Desktop Only (Subtle/Hover) */}
+                            <div className="hidden md:flex md:col-span-2 justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                type="button"
+                                onClick={() => openEditTransaction(tx)}
+                                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-md transition-colors"
+                                title="Edit"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteTransaction(tx.id)}
+                                className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                                title="Delete"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+
+                            {/* Mobile Expansion Indicator */}
+                            <div className="md:hidden ml-2">
+                              <ChevronDown className={`w-4 h-4 text-slate-300 transition-transform ${expandedTx === tx.id ? 'rotate-180' : ''}`} />
+                            </div>
                           </div>
-                          <div className="md:col-span-4 font-medium text-slate-800">
-                            {tx.title}
-                          </div>
-                          <div className="md:col-span-2">
-                            <span className="inline-block px-2.5 py-1 bg-slate-100 text-slate-600 rounded-md text-xs">
-                              {tx.category || 'Uncategorized'}
-                            </span>
-                          </div>
-                          <div className={`md:col-span-2 text-right font-semibold ${tx.amount > 0 ? 'text-[#3EA63B]' : 'text-slate-700'}`}>
-                            {tx.amount > 0 ? '+' : ''}{fmt(tx.amount)}
-                          </div>
-                          <div className="md:col-span-2 flex justify-start md:justify-end gap-1">
-                            <button
-                              type="button"
-                              onClick={() => openEditTransaction(tx)}
-                              className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200"
-                              title="Edit transaction"
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteTransaction(tx.id)}
-                              className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-500 hover:bg-red-100"
-                              title="Delete transaction"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
+                          
+                          <AnimatePresence>
+                            {expandedTx === tx.id && (
+                              <motion.div 
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                className="overflow-hidden bg-slate-50/50 border-t border-slate-100"
+                              >
+                                <div className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                  <div className="grid grid-cols-2 md:flex md:items-center gap-4 md:gap-8 text-[10px] text-slate-500 uppercase tracking-widest font-bold">
+                                    <div>
+                                      <p className="mb-0.5 opacity-60">Source</p>
+                                      <p className="text-slate-700 normal-case">{tx.source || 'Manual'}</p>
+                                    </div>
+                                    <div>
+                                      <p className="mb-0.5 opacity-60">Full Date</p>
+                                      <p className="text-slate-700 normal-case">{new Date(tx.date).toLocaleDateString()} {new Date(tx.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                                    </div>
+                                    <div className="md:hidden">
+                                       <p className="mb-0.5 opacity-60">Category</p>
+                                       <p className="text-slate-700 normal-case">{tx.category || 'Uncategorized'}</p>
+                                    </div>
+                                    <div>
+                                      <p className="mb-0.5 opacity-60">USD Value</p>
+                                      <p className="text-slate-700 normal-case">${(Math.abs(tx.amount) * ETB_TO_USD).toFixed(2)}</p>
+                                    </div>
+                                  </div>
+
+                                  {/* Mobile Actions - Inside expansion for cleaner list */}
+                                  <div className="flex items-center gap-2 md:hidden pt-2 border-t border-slate-200/50">
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); openEditTransaction(tx); }}
+                                      className="flex-1 flex items-center justify-center gap-2 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600"
+                                    >
+                                      <Pencil className="w-3.5 h-3.5" /> Edit
+                                    </button>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleDeleteTransaction(tx.id); }}
+                                      className="flex-1 flex items-center justify-center gap-2 py-2 bg-red-50 border border-red-100 rounded-lg text-xs font-bold text-red-600"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" /> Delete
+                                    </button>
+                                  </div>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
                         </div>
                       );
                     })}
                   </div>
                 ))}
               </div>
+
+              {filtered.length > displayCount && (
+                <div className="p-4 border-t border-slate-100 bg-slate-50/50">
+                  <button 
+                    onClick={() => setDisplayCount(prev => prev + 20)}
+                    className="w-full py-2.5 text-xs font-bold text-slate-600 hover:text-slate-900 flex items-center justify-center gap-2 transition-colors"
+                  >
+                    View More Activity <ChevronDown className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
               {filtered.length === 0 && !loading && (
                 <div className="text-center text-slate-400 py-12">
                   <CircleDollarSign className="w-12 h-12 mx-auto text-slate-200 mb-4" />

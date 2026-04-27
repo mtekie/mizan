@@ -3,20 +3,10 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MizanColors, MizanRadii } from '@mizan/ui-tokens';
 import { ShieldCheck, ChevronRight, Trophy } from 'lucide-react-native';
 import { router } from 'expo-router';
+import { getProfileCompletion } from '@mizan/shared';
 
 export function ProfileCompleteness({ user }: { user: any }) {
-  const fields = [
-    'fullName', 
-    'username', 
-    'gender', 
-    'employmentStatus', 
-    'monthlyIncomeRange', 
-    'education', 
-    'location'
-  ];
-  
-  const completedFields = fields.filter(f => !!user?.[f]);
-  const percentage = Math.round((completedFields.length / fields.length) * 100);
+  const { percentage } = getProfileCompletion(user || {});
   
   if (percentage === 100) return null;
 

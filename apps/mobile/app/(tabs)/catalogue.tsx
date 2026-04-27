@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MizanColors, MizanRadii } from '@mizan/ui-tokens';
-import { Search, SlidersHorizontal, Bell } from 'lucide-react-native';
+import { Search, SlidersHorizontal, Bell, Info } from 'lucide-react-native';
 import { api } from '../../lib/api';
 import { AppScreenShell } from '../../components/ui/AppScreenShell';
 import { productCategories } from '@mizan/shared';
@@ -331,9 +331,17 @@ export default function CatalogueScreen() {
         onEndReached={loadMore}
         onEndReachedThreshold={0.5}
         ListFooterComponent={
-          loadingMore ? (
-            <ActivityIndicator size="small" color={MizanColors.mintPrimary} style={{ paddingVertical: 20 }} />
-          ) : null
+          <View style={{ paddingBottom: 40 }}>
+            {loadingMore && <ActivityIndicator size="small" color={MizanColors.mintPrimary} style={{ paddingVertical: 20 }} />}
+            {!loadingMore && products.length > 0 && (
+              <View style={styles.catalogueFooter}>
+                <Info size={14} color={MizanColors.textMuted} />
+                <Text style={styles.catalogueDisclaimer}>
+                  Product data is updated weekly. Specific terms and interest rates may vary by branch.
+                </Text>
+              </View>
+            )}
+          </View>
         }
         ListEmptyComponent={
           loading ? (
@@ -568,5 +576,21 @@ const styles = StyleSheet.create({
   },
   institutionLabelActive: {
     color: '#fff',
+  },
+  catalogueFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 40,
+    marginTop: 20,
+    opacity: 0.6,
+  },
+  catalogueDisclaimer: {
+    fontSize: 11,
+    fontFamily: 'Inter_400Regular',
+    color: MizanColors.textMuted,
+    textAlign: 'center',
+    lineHeight: 16,
   },
 });

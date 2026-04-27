@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
 import { MizanColors, MizanTypography } from '@mizan/ui-tokens';
-import { Settings, LogOut, Shield, CircleUser, Target } from 'lucide-react-native';
+import { Settings, LogOut, Shield, CircleUser, Target, HelpCircle, Info } from 'lucide-react-native';
 import { MizanCard } from '../../components/ui/MizanCard';
 import { useStore } from '../../lib/store';
 import { supabase } from '../../lib/auth';
@@ -12,6 +12,7 @@ import { TrendingUp } from 'lucide-react-native';
 
 import { CheckCircle2, ChevronRight, Building2 } from 'lucide-react-native';
 import { api } from '../../lib/api';
+import { demoAccounts } from '@mizan/shared';
 
 export default function ProfileScreen() {
   const { profile, isGuest, setGuest, setProfile } = useStore();
@@ -19,10 +20,7 @@ export default function ProfileScreen() {
 
   const fetchAccounts = React.useCallback(async () => {
     if (isGuest) {
-      setAccounts([
-        { id: '1', name: 'CBE Savings', bank: 'CBE' },
-        { id: '2', name: 'Telebirr', bank: 'Ethio Telecom' },
-      ]);
+      setAccounts(demoAccounts);
       return;
     }
     try {
@@ -115,6 +113,43 @@ export default function ProfileScreen() {
           <Text style={[styles.menuText, { color: MizanColors.mintCoral }]}>Log Out</Text>
         </TouchableOpacity>
       </MizanCard>
+
+      <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Support & Feedback</Text>
+      <MizanCard style={styles.menuCard}>
+        <TouchableOpacity style={styles.menuItem}>
+          <HelpCircle color={MizanColors.mintPrimary} size={20} />
+          <Text style={styles.menuText}>Send Feedback</Text>
+        </TouchableOpacity>
+        <View style={styles.divider} />
+        <TouchableOpacity style={styles.menuItem}>
+          <Shield color={MizanColors.mintPrimary} size={20} />
+          <Text style={styles.menuText}>Report a Bug</Text>
+        </TouchableOpacity>
+      </MizanCard>
+
+      <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Legal & Transparency</Text>
+      <MizanCard style={styles.menuCard}>
+        <TouchableOpacity 
+          style={styles.menuItem}
+          onPress={() => router.push({ pathname: '/legal', params: { type: 'privacy' } })}
+        >
+          <Info color={MizanColors.textMuted} size={20} />
+          <Text style={styles.menuText}>Privacy Policy</Text>
+        </TouchableOpacity>
+        <View style={styles.divider} />
+        <TouchableOpacity 
+          style={styles.menuItem}
+          onPress={() => router.push({ pathname: '/legal', params: { type: 'terms' } })}
+        >
+          <Shield color={MizanColors.textMuted} size={20} />
+          <Text style={styles.menuText}>Terms of Service</Text>
+        </TouchableOpacity>
+      </MizanCard>
+
+      <View style={styles.footerInfo}>
+        <Text style={styles.versionText}>Mizan v0.4.2 Beta</Text>
+        <Text style={styles.eduDisclaimer}>This app is for educational purposes only.</Text>
+      </View>
     </AppScreenShell>
   );
 }
@@ -256,5 +291,21 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_700Bold',
     color: '#fff',
     fontSize: 14,
-  }
+  },
+  footerInfo: {
+    padding: 40,
+    alignItems: 'center',
+    gap: 8,
+  },
+  versionText: {
+    fontSize: 12,
+    fontFamily: 'Inter_700Bold',
+    color: MizanColors.textMuted,
+  },
+  eduDisclaimer: {
+    fontSize: 11,
+    fontFamily: 'Inter_400Regular',
+    color: MizanColors.textMuted,
+    textAlign: 'center',
+  },
 });

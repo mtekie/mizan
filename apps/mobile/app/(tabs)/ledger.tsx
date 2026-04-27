@@ -8,7 +8,7 @@ import { MintTransactionSheet } from '../../components/forms/MintTransactionShee
 import { MintAccountSheet } from '../../components/forms/MintAccountSheet';
 
 import { api } from '../../lib/api';
-import { formatMoney, formatSignedMoney, Transaction } from '@mizan/shared';
+import { demoAccounts, demoTransactions, formatMoney, formatSignedMoney, Transaction } from '@mizan/shared';
 import { useStore } from '../../lib/store';
 import { Coffee, ShoppingBag, Car, Home, Smartphone, TrendingUp } from 'lucide-react-native';
 
@@ -29,27 +29,14 @@ export default function LedgerScreen() {
   const [loading, setLoading] = React.useState(true);
   const { isGuest } = useStore();
 
-  const MOCK_TRANSACTIONS: Transaction[] = [
-    { id: '1', userId: 'guest', title: 'CBE Salary', amount: 35000, category: 'Income', source: 'CBE', date: new Date().toISOString(), accountId: 'CBE' },
-    { id: '2', userId: 'guest', title: 'Grocery Shopping', amount: -2450, category: 'Food', source: 'Cash', date: new Date().toISOString(), accountId: 'CASH' },
-    { id: '3', userId: 'guest', title: 'Fuel', amount: -1200, category: 'Transport', source: 'CBE', date: new Date().toISOString(), accountId: 'CBE' },
-    { id: '4', userId: 'guest', title: 'Internet Bill', amount: -1000, category: 'Bills', source: 'telebirr', date: new Date().toISOString(), accountId: 'TELEBIRR' },
-  ];
-
-  const MOCK_ACCOUNTS = [
-    { id: '1', name: 'CBE Savings', balance: 45800, bank: 'CBE' },
-    { id: '2', name: 'Telebirr', balance: 12400, bank: 'Ethio Telecom' },
-    { id: '3', name: 'Cash', balance: 3500, bank: 'Personal' },
-  ];
-
   const sheetRef = React.useRef<BottomSheet>(null);
   const accountSheetRef = React.useRef<BottomSheet>(null);
 
   const loadData = React.useCallback(async () => {
     setLoading(true);
     if (isGuest) {
-      setTransactions(MOCK_TRANSACTIONS);
-      setAccounts(MOCK_ACCOUNTS);
+      setTransactions(demoTransactions);
+      setAccounts(demoAccounts);
       setLoading(false);
       return;
     }

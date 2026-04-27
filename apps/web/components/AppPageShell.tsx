@@ -13,6 +13,8 @@ export interface AppPageShellProps {
   backHref?: string;
   showBack?: boolean;
   actions?: React.ReactNode;
+  primaryAction?: React.ReactNode;
+  secondaryActions?: React.ReactNode;
   children: React.ReactNode;
   maxWidth?: '7xl' | '5xl' | '3xl' | 'full';
 }
@@ -30,9 +32,19 @@ export function AppPageShell({
   backHref = '/',
   showBack = false,
   actions,
+  primaryAction,
+  secondaryActions,
   children,
   maxWidth = '7xl',
 }: AppPageShellProps) {
+  const headerActions = actions || (
+    primaryAction || secondaryActions ? (
+      <>
+        {secondaryActions}
+        {primaryAction}
+      </>
+    ) : null
+  );
   
   const containerClasses = cn(
     "mx-auto px-6 md:px-8 relative z-10 w-full",
@@ -53,7 +65,7 @@ export function AppPageShell({
       <PageHeader 
         title={title}
         description={subtitle}
-        actions={actions}
+        actions={headerActions}
       />
 
       {/* Mobile Header */}
@@ -76,9 +88,9 @@ export function AppPageShell({
           )}
           <h1 className="text-xl font-black tracking-tight">{title}</h1>
         </div>
-        {actions && (
+        {headerActions && (
           <div className="flex items-center gap-2">
-            {actions}
+            {headerActions}
           </div>
         )}
       </header>

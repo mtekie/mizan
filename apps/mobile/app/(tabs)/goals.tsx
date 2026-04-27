@@ -7,7 +7,7 @@ import { MintGoalSheet } from '../../components/forms/MintGoalSheet';
 import { MizanCard } from '../../components/ui/MizanCard';
 import { api } from '../../lib/api';
 import { useStore } from '../../lib/store';
-import { formatMoney, safePercent } from '@mizan/shared';
+import { demoBills, demoBudgets, demoGoals, formatMoney, safePercent } from '@mizan/shared';
 
 import { AppScreenShell } from '../../components/ui/AppScreenShell';
 
@@ -32,27 +32,12 @@ export default function GoalsScreen() {
     return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
   }, []);
   
-  const MOCK_GOALS = [
-    { id: '1', name: 'New Car', target: 850000, saved: 150000, emoji: '🚗' },
-    { id: '2', name: 'Vacation', target: 50000, saved: 45000, emoji: '🏖️' },
-  ];
-
-  const MOCK_BUDGETS = [
-    { id: '1', category: 'Food', limit: 10000, spent: 7500 },
-    { id: '2', category: 'Transport', limit: 5000, spent: 4800 },
-  ];
-
-  const MOCK_BILLS = [
-    { id: '1', title: 'Internet', amount: 1000, dueDate: 'Tomorrow', paid: false },
-    { id: '2', title: 'Rent', amount: 15000, dueDate: 'In 5 days', paid: false },
-  ];
-
   const loadData = React.useCallback(async () => {
     setLoading(true);
     if (isGuest) {
-      setGoals(MOCK_GOALS);
-      setBudgets(MOCK_BUDGETS);
-      setBills(MOCK_BILLS);
+      setGoals(demoGoals);
+      setBudgets(demoBudgets);
+      setBills(demoBills);
       setLoading(false);
       return;
     }

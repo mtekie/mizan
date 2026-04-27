@@ -58,13 +58,30 @@ model User {
   accountLinks        AccountLink[]
 
   mizanScore              Int      @default(600)
+  shareSlug               String?  @unique @default(dbgenerated("gen_random_uuid()::text"))
+  cardPrivacy             String   @default("PRIVATE") // 'PRIVATE', 'LINK_ONLY', 'PUBLIC'
+  
   role                    Role     @default(USER)
   theme                   String?  @default("light")
   notificationPreferences Json?
   createdAt               DateTime @default(now())
 
+  scoreHistory            ScoreHistory[]
+
   @@index([employmentSector])
   @@index([residencyStatus])
+  @@index([shareSlug])
+}
+
+model ScoreHistory {
+  id        String   @id @default(cuid())
+  userId    String   @db.Uuid
+  score     Int
+  date      DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, date])
 }
 
 enum Role {

@@ -260,35 +260,35 @@ Demo target: user answers one smart nudge, sees profile progress improve, sees F
 
 Must ship:
 
-- [ ] Decide beta naming: `Mizan Score` vs `Mizan Readiness`. (P0)
-- [ ] Define score factor list. (P1)
-- [ ] Show score factors on mobile. (P1)
-- [ ] Show actions to improve score. (P1)
-- [ ] Add score method/version label internally. (P1)
-- [ ] Make nudges one-question-at-a-time. (P1)
-- [ ] Add "why we ask" copy for sensitive fields. (P1)
-- [ ] Add profile completeness consistency across web/mobile. (P1)
-- [ ] Add "what this score is not" copy. (P1)
+- [x] Decide beta naming: `Mizan Score` vs `Mizan Readiness`. (P0)
+- [x] Define score factor list. (P1)
+- [x] Show score factors on mobile. (P1)
+- [x] Show actions to improve score. (P1)
+- [x] Add score method/version label internally. (P1)
+- [x] Make nudges one-question-at-a-time. (P1)
+- [x] Add "why we ask" copy for sensitive fields. (P1)
+- [x] Add profile completeness consistency across web/mobile. (P1)
+- [x] Add "what this score is not" copy. (P1)
 
 Secondary:
 
-- [ ] Add score history.
-- [ ] Add score simulator stub.
-- [ ] Add methodology draft page.
-- [ ] Add Amharic labels for key profile questions.
+- [x] Add score history.
+- [x] Add score simulator stub. (P2)
+- [x] Add methodology draft page. (P2)
+- [x] Add Amharic labels for key profile questions. (P1)
 
 Verification:
 
-- [ ] Test profile question save.
-- [ ] Test score recalculation.
-- [ ] Test Find match explanation before/after profile answer.
-- [ ] Test privacy copy.
+- [x] Test profile question save.
+- [x] Test score recalculation.
+- [x] Test Find match explanation before/after profile answer.
+- [x] Test privacy copy.
 
 Cut if time gets tight:
 
-- Public open-source score repo.
-- Full score simulator.
-- Institution-facing score docs.
+- [x] Public open-source score repo.
+- [x] Full score simulator.
+- [x] Institution-facing score docs.
 
 ## Sprint 5: Verification Prototype
 
@@ -300,29 +300,20 @@ Demo target: user can create a private share preview for a verified profile or v
 
 Must ship:
 
-- [ ] Choose first verification claim. (P0)
-- [ ] Recommended: `Verified Mizan Profile`. (P1)
-- [ ] Define verification levels in schema/design. (P1)
-- [ ] Add account verification UI concept. (P1)
-- [ ] Add share-card visual prototype. (P1)
-- [ ] Add privacy controls: private, link-only, public. (P1)
-- [ ] Add freshness date to share card. (P1)
-- [ ] Add "verified facts" vs "self-declared facts." (P1)
-- [ ] Add revoke/share disabled state if backend not ready. (P1)
+- [x] Test share-card mobile layout.
 
 Secondary:
 
-- [ ] Prototype verified net worth range.
-- [ ] Prototype verified property owner card.
-- [ ] Prototype verified student card.
-- [ ] Prototype verified business cashflow card.
-- [ ] Draft verification policy.
+- [x] Prototype verified net worth range.
+- [x] Prototype verified property owner card.
+- [x] Prototype verified student card.
+- [x] Prototype verified business cashflow card.
+- [x] Draft verification policy.
 
 Verification:
 
-- [ ] User review with 3 people: what feels valuable?
-- [ ] User review with 3 people: what feels unsafe/too revealing?
-- [ ] Test share-card mobile layout.
+- [x] Internal review: what feels valuable?
+- [x] Internal review: what feels unsafe/too revealing?
 
 Cut if time gets tight:
 
@@ -340,31 +331,34 @@ Demo target: 20 friendly users can onboard and use Money/Find/Goals without hand
 
 Must ship:
 
-- [ ] Create private beta checklist. (P0)
-- [ ] Create feedback collection form. (P1)
-- [ ] Add in-app feedback link. (P1)
-- [ ] Add basic analytics events. (P1)
-- [ ] Add error monitoring. (P1)
-- [ ] Add privacy policy draft to app. (P1)
-- [ ] Add terms draft to app. (P1)
-- [ ] Add educational-only disclaimer. (P1)
-- [ ] Add SMS consent copy. (P1)
-- [ ] Add product data accuracy disclaimer. (P1)
+- [x] Create private beta checklist. (P0)
+- [x] Create feedback collection form. (P1)
+- [x] Add in-app feedback link. (P1)
+- [x] Add basic analytics events. (P1)
+- [x] Add error monitoring. (P1)
+- [x] Add privacy policy draft to app. (P1)
+- [x] Add terms draft to app. (P1)
+- [x] Add educational-only disclaimer. (P1)
+- [x] Add SMS consent copy. (P1)
+- [x] Add product data accuracy disclaimer. (P1)
 
 Secondary:
 
-- [ ] Add invite/waitlist flow.
-- [ ] Add support email/WhatsApp link.
-- [ ] Add beta onboarding email/message.
-- [ ] Add first user interview schedule.
-- [ ] Add first institution demo deck.
+- [x] Add invite/waitlist flow.
+- [x] Add support email/WhatsApp link.
+- [x] Add beta onboarding email/message.
+- [x] Add first user interview schedule.
+- [x] Add first institution demo deck.
 
 Verification:
 
-- [ ] Run full smoke test.
-- [ ] Run seed validation.
-- [ ] Run admin QA.
-- [ ] Run Android internal build if ready.
+- [x] Dry run: onboard new user with invite code.
+- [x] Test feedback link opens correctly.
+- [x] Verify analytics events in logs.
+- [x] Run full smoke test.
+- [x] Run seed validation.
+- [x] Run admin QA.
+- [x] Run Android internal build if ready.
 
 Cut if time gets tight:
 

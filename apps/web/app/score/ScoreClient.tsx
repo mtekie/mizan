@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, MoreHorizontal, Lightbulb, CheckCircle2, TrendingUp, CheckCircle } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, Lightbulb, CheckCircle2, TrendingUp, CheckCircle, User as UserIcon, Target, CreditCard, ShieldCheck, X, Info } from 'lucide-react';
 import Link from 'next/link';
 import { LeaderboardWidget } from '@/components/LeaderboardWidget';
 import { useState, useEffect } from 'react';
@@ -10,11 +10,20 @@ import { ProfileStep } from '@/components/onboarding/ProfileStep';
 import { PersonaStep } from '@/components/onboarding/PersonaStep';
 import { performUpdateOnboardingPhase } from '@/app/onboarding/actions';
 import { toast } from 'sonner';
-import { X } from 'lucide-react';
 import { AppPageShell } from '@/components/AppPageShell';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 
-export default function ScoreClient({ initialScore = 600, initialProfile = {} }: { initialScore: number, initialProfile?: any }) {
+const getFactorIcon = (label: string) => {
+  const lower = label.toLowerCase();
+  if (lower.includes('profile')) return UserIcon;
+  if (lower.includes('savings')) return Target;
+  if (lower.includes('budget')) return CreditCard;
+  if (lower.includes('bill')) return CheckCircle;
+  if (lower.includes('verification')) return ShieldCheck;
+  return TrendingUp;
+};
+
+export default function ScoreClient({ initialScore = 60, initialProfile = {} }: { initialScore: number, initialProfile?: any }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -36,6 +45,7 @@ export default function ScoreClient({ initialScore = 600, initialProfile = {} }:
   });
   const [step, setStep] = useState(1);
   const [score, setScore] = useState(initialScore);
+  const [factors, setFactors] = useState<any[]>([]);
   const [tip, setTip] = useState('Generating your financial recommendation...');
   const [tipLoading, setTipLoading] = useState(true);
 
@@ -63,7 +73,8 @@ export default function ScoreClient({ initialScore = 600, initialProfile = {} }:
     try {
       const res = await fetch('/api/v1/score');
       const data = await res.json();
-      if (data.score) setScore(data.score);
+      if (data.score?.score !== undefined) setScore(data.score.score);
+      if (data.score?.factors) setFactors(data.score.factors);
     } catch (e) {
       toast.error('Failed to update score');
     } finally {
@@ -72,6 +83,7 @@ export default function ScoreClient({ initialScore = 600, initialProfile = {} }:
   };
 
   useEffect(() => {
+    refreshScore();
     async function fetchTip() {
       try {
         const res = await fetch('/api/v1/ai/tip', { method: 'POST' });
@@ -92,16 +104,16 @@ export default function ScoreClient({ initialScore = 600, initialProfile = {} }:
           <div className="relative flex items-center justify-center w-64 h-64">
             <div className="absolute inset-0 rounded-full border-[20px] border-[#6ED063]/20"></div>
             <svg className="absolute inset-0 transform -rotate-90 w-full h-full drop-shadow-lg" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="40" fill="transparent" stroke="#3EA63B" strokeWidth="8" strokeLinecap="round" strokeDasharray="251.2" strokeDashoffset={`${251.2 - (251.2 * (initialScore/1000))}`}></circle>
+              <circle cx="50" cy="50" r="40" fill="transparent" stroke="#3EA63B" strokeWidth="8" strokeLinecap="round" strokeDasharray="251.2" strokeDashoffset={`${251.2 - (251.2 * (score/100))}`}></circle>
             </svg>
             <div className="flex flex-col items-center justify-center text-center z-10 bg-white w-48 h-48 rounded-full shadow-inner cursor-pointer active:scale-95 transition-transform" onClick={refreshScore}>
               <span className="text-5xl font-bold text-slate-900 tracking-tighter">{score}</span>
-              <span className="text-sm font-medium text-[#3EA63B] uppercase tracking-wider mt-1">{score > 750 ? 'Excellent' : score > 600 ? 'Good' : 'Fair'}</span>
-              <p className="text-[10px] text-slate-400 mt-2 font-bold uppercase tracking-widest">Tap to Refresh</p>
+              <span className="text-sm font-medium text-[#3EA63B] uppercase tracking-wider mt-1">{score > 80 ? 'Excellent' : score > 60 ? 'Good' : 'Fair'}</span>
+              <p className="text-[10px] text-slate-400 mt-2 font-bold uppercase tracking-widest">{loading ? 'Updating...' : 'Tap to Refresh'}</p>
             </div>
           </div>
           <p className="mt-4 text-center text-sm text-slate-600 px-8">
-            Your financial health is strong. Keep up the consistency with your Equb contributions.
+            Your Mizan Score is a reflection of your financial trust and readiness in the Ethiopian ecosystem.
           </p>
         </section>
 
@@ -125,52 +137,79 @@ export default function ScoreClient({ initialScore = 600, initialProfile = {} }:
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-slate-900">Impact Factors</h2>
-            <button className="text-xs font-semibold text-[#3EA63B] hover:underline transition-colors">View All</button>
           </div>
           <div className="flex flex-col gap-3">
-            <div className="group flex items-center gap-4 p-4 rounded-xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-all">
-              <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-green-100 text-[#3EA63B] shrink-0">
-                <CheckCircle2 className="w-6 h-6" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h4 className="font-semibold text-slate-900 truncate">Equb Consistency</h4>
-                <p className="text-xs text-slate-500 truncate">On time for 6 cycles</p>
-              </div>
-              <div className="flex flex-col items-end gap-1">
-                <span className="text-xs font-bold text-[#3EA63B] bg-[#6ED063]/10 px-2 py-1 rounded-full">+15 pts</span>
-              </div>
-            </div>
-
-            <div className="group flex items-center gap-4 p-4 rounded-xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-all">
-              <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-yellow-100 text-yellow-600 shrink-0">
-                <TrendingUp className="w-6 h-6" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h4 className="font-semibold text-slate-900 truncate">Savings Growth</h4>
-                <p className="text-xs text-slate-500 truncate">Growing, but below target</p>
-              </div>
-              <div className="flex flex-col items-end gap-1">
-                <span className="text-xs font-bold text-yellow-600 bg-yellow-100 px-2 py-1 rounded-full">Stable</span>
-              </div>
-            </div>
-
-            <div className="group flex items-center gap-4 p-4 rounded-xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-all">
-              <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-green-100 text-[#3EA63B] shrink-0">
-                <CheckCircle className="w-6 h-6" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h4 className="font-semibold text-slate-900 truncate">Utility Payments</h4>
-                <p className="text-xs text-slate-500 truncate">All bills paid on time</p>
-              </div>
-              <div className="flex flex-col items-end gap-1">
-                <span className="text-xs font-bold text-[#3EA63B] bg-[#6ED063]/10 px-2 py-1 rounded-full">+5 pts</span>
-              </div>
-            </div>
+            {factors.map((factor, idx) => {
+              const Icon = getFactorIcon(factor.label);
+              return (
+                <div key={idx} className="group flex items-center gap-4 p-4 rounded-xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-all">
+                  <div className={`flex items-center justify-center w-12 h-12 rounded-lg shrink-0 ${
+                    factor.impact === 'positive' ? 'bg-green-100 text-[#3EA63B]' : 
+                    factor.impact === 'negative' ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-600'
+                  }`}>
+                    <Icon className="w-6 h-6" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-semibold text-slate-900 truncate">{factor.label}</h4>
+                    <p className="text-xs text-slate-500 truncate">{factor.message}</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                      factor.impact === 'positive' ? 'text-[#3EA63B] bg-[#6ED063]/10' : 
+                      factor.impact === 'negative' ? 'text-red-600 bg-red-100' : 'text-yellow-600 bg-yellow-100'
+                    }`}>{factor.score}%</span>
+                  </div>
+                </div>
+              );
+            })}
+            {factors.length === 0 && !loading && (
+              <p className="text-center text-sm text-slate-500 py-4">No data available yet to calculate factors.</p>
+            )}
           </div>
         </section>
 
         {/* How You Compare */}
-        <LeaderboardWidget mizanScore={720} />
+        <LeaderboardWidget mizanScore={score} />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6">
+                <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                    <Info className="w-5 h-5 text-[#3EA63B]" />
+                    What this score is NOT
+                </h2>
+                <ul className="space-y-3">
+                    <li className="flex gap-3 text-sm text-slate-600">
+                        <div className="w-1.5 h-1.5 rounded-full bg-slate-300 mt-1.5 shrink-0" />
+                        <span>This is <strong>not</strong> a CBE or Bank Credit Score. It is an independent trust indicator.</span>
+                    </li>
+                    <li className="flex gap-3 text-sm text-slate-600">
+                        <div className="w-1.5 h-1.5 rounded-full bg-slate-300 mt-1.5 shrink-0" />
+                        <span>It does <strong>not</strong> guarantee loan approval from any financial institution.</span>
+                    </li>
+                    <li className="flex gap-3 text-sm text-slate-600">
+                        <div className="w-1.5 h-1.5 rounded-full bg-slate-300 mt-1.5 shrink-0" />
+                        <span>It is an AI-driven behavioral score based only on your activity within Mizan.</span>
+                    </li>
+                </ul>
+            </div>
+
+            <div className="bg-[#3EA63B]/5 border border-[#3EA63B]/20 rounded-2xl p-6">
+                <h2 className="text-lg font-bold text-slate-900 mb-2">Our Methodology</h2>
+                <p className="text-sm text-slate-600 mb-4 leading-relaxed">
+                    Mizan uses a proprietary algorithm (v0.1.0) to analyze your financial health across 5 dimensions: Profile, Savings, Budget, Bills, and Verification. 
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="p-3 bg-white rounded-xl border border-slate-100">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 text-left">Frequency</p>
+                        <p className="text-xs text-slate-700 text-left">Updated every 24h</p>
+                    </div>
+                    <div className="p-3 bg-white rounded-xl border border-slate-100">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 text-left">Engine</p>
+                        <p className="text-xs text-slate-700 text-left">Mizan Trust v0.1.0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
       </>
   );
 

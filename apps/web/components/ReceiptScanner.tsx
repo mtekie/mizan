@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { Camera, Upload, Loader2, CheckCircle2, X, ReceiptText } from 'lucide-react';
+import Image from 'next/image';
 
 type ExtractedData = {
   amount: string;
@@ -95,7 +96,14 @@ export function ReceiptScanner({ onExtracted }: Props) {
       {/* Preview + Scanning */}
       {preview && (
         <div className="relative rounded-2xl overflow-hidden border border-slate-200">
-          <img src={preview} alt="Receipt" className="w-full h-48 object-cover" />
+          <Image 
+            src={preview} 
+            alt="Receipt" 
+            width={400} 
+            height={200} 
+            className="w-full h-48 object-cover" 
+            unoptimized 
+          />
           <button
             onClick={() => { setPreview(null); setResult(null); }}
             className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/50 text-white flex items-center justify-center"

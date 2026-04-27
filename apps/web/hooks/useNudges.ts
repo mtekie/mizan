@@ -29,20 +29,28 @@ export function useNudges({ user, accounts, goals, mizanScore }: UseNudgesProps)
             });
         }
 
-        // 2. Profile Enrichment (Smart Questions)
+        // 2. Profile Enrichment (One-Question-at-a-Time Nudges)
         const completion = getProfileCompletion(user || {});
-        const isProfileIncomplete = completion.missingFields.some(field =>
-            ['financialPriority', 'incomeStability', 'housingStatus'].includes(field)
+        const enrichmentFields = [
+            { field: 'financialPriority', title: 'What is your top priority?', desc: 'Saving for a home, business, or education?' },
+            { field: 'riskAppetite', title: 'How do you view risk?', desc: 'Are you cautious or aggressive with investments?' },
+            { field: 'incomeStability', title: 'How stable is your income?', desc: 'Helps us tailor your resilience buffer.' },
+            { field: 'housingStatus', title: 'What is your housing status?', desc: 'Helps in calculating your net worth accuracy.' },
+        ];
+
+        const nextMissingEnrichment = enrichmentFields.find(ef => 
+            completion.missingFields.includes(ef.field as any)
         );
-        if (isProfileIncomplete && accounts.length > 0) {
+
+        if (nextMissingEnrichment && accounts.length > 0) {
             potentialNudges.push({
-                id: 'enrich-profile',
-                title: 'Personalize Mizan AI',
-                description: 'Answer 3 quick questions about your financial goals to get smarter recommendations.',
+                id: `enrich-${nextMissingEnrichment.field}`,
+                title: nextMissingEnrichment.title,
+                description: nextMissingEnrichment.desc,
                 icon: UserCircle,
                 color: 'text-purple-500 bg-purple-100',
-                link: '/score?action=complete-profile',
-                btnText: 'Personalize Now'
+                link: `/score?action=complete-profile&step=${nextMissingEnrichment.field}`,
+                btnText: 'Answer Question'
             });
         }
 

@@ -8,9 +8,11 @@ import { router } from 'expo-router';
 interface AppScreenShellProps {
   title: string;
   subtitle?: string;
-  variant?: 'hero' | 'plain';
+  variant?: 'hero' | 'plain' | 'compact';
   showBack?: boolean;
   actions?: React.ReactNode;
+  primaryAction?: React.ReactNode;
+  secondaryActions?: React.ReactNode;
   children: React.ReactNode;
   scrollable?: boolean;
   refreshing?: boolean;
@@ -29,6 +31,8 @@ export function AppScreenShell({
   variant = 'plain',
   showBack = false,
   actions,
+  primaryAction,
+  secondaryActions,
   children,
   scrollable = true,
   refreshing = false,
@@ -36,13 +40,22 @@ export function AppScreenShell({
 }: AppScreenShellProps) {
   const ContentWrapper = scrollable ? ScrollView : View;
   const insets = useSafeAreaInsets();
+  const headerActions = actions || (
+    primaryAction || secondaryActions ? (
+      <>
+        {secondaryActions}
+        {primaryAction}
+      </>
+    ) : null
+  );
 
   return (
-    <View style={[styles.container, variant === 'plain' && { backgroundColor: '#F8FAFC' }]}>
+    <View style={[styles.container, variant !== 'hero' && { backgroundColor: '#F8FAFC' }]}>
       <View
         style={[
           styles.headerWrapper,
           variant === 'hero' ? styles.heroHeader : styles.plainHeader,
+          variant === 'compact' && styles.compactHeader,
           { paddingTop: Math.max(insets.top, 12) },
         ]}
       >
@@ -68,7 +81,7 @@ export function AppScreenShell({
             </View>
           </View>
           <View style={styles.headerActions}>
-            {actions}
+            {headerActions}
           </View>
         </View>
       </View>
@@ -104,6 +117,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
+  },
+  compactHeader: {
+    paddingBottom: 12,
   },
   headerContent: {
     flexDirection: 'row',

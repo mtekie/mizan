@@ -4,12 +4,14 @@ import { MizanColors, MizanRadii, MizanTypography } from '@mizan/ui-tokens';
 import { useStore } from '../lib/store';
 import { Sparkles, X, ArrowRight, Trophy } from 'lucide-react-native';
 
-type ProfilePromptField = 'employmentStatus' | 'monthlyIncomeRange';
+type ProfilePromptField = 'employmentStatus' | 'monthlyIncomeRange' | 'financialPriority' | 'riskAppetite' | 'housingStatus';
 
 const QUESTIONS: {
   id: string;
   field: ProfilePromptField;
   label: string;
+  labelAmh?: string;
+  whyText: string;
   points: number;
   options: string[];
 }[] = [
@@ -17,6 +19,8 @@ const QUESTIONS: {
     id: '1', 
     field: 'employmentStatus', 
     label: 'What is your current employment status?', 
+    labelAmh: 'የስራ ሁኔታዎ ምንድነው?',
+    whyText: 'Helps institutions understand your income source stability.',
     points: 10,
     options: ['Employed', 'Self-Employed', 'Unemployed', 'Student']
   },
@@ -24,17 +28,49 @@ const QUESTIONS: {
     id: '2', 
     field: 'monthlyIncomeRange', 
     label: 'What is your monthly income?', 
+    labelAmh: 'የወር ገቢዎ ስንት ነው?',
+    whyText: 'Used to calculate your debt-to-income ratio for better recommendations.',
     points: 15,
     options: ['Under 10k', '10k-50k', '50k-100k', 'Over 100k']
   },
+  {
+    id: '3',
+    field: 'financialPriority',
+    label: 'What is your top financial priority?',
+    labelAmh: 'ዋናው የፋይናንስ ቅድሚያዎ ምንድነው?',
+    whyText: 'We prioritize products that match your specific goals.',
+    points: 20,
+    options: ['Saving', 'Investing', 'Debt Reduction', 'Purchasing Home']
+  },
+  {
+    id: '4',
+    field: 'riskAppetite',
+    label: 'How do you feel about investment risk?',
+    labelAmh: 'ስለ ኢንቨስትመንት ስጋት ምን ይሰማዎታል?',
+    whyText: 'Ensures we don\'t suggest high-risk products if you prefer safety.',
+    points: 20,
+    options: ['Conservative', 'Moderate', 'Aggressive']
+  },
+  {
+    id: '5',
+    field: 'housingStatus',
+    label: 'What is your current housing status?',
+    labelAmh: 'የቤት ሁኔታዎ ምንድነው?',
+    whyText: 'Rent vs. Mortgage affects your monthly available cash flow.',
+    points: 10,
+    options: ['Renting', 'Own Home', 'Living with Family']
+  }
 ];
 
+import { api } from '../lib/api';
+
 export function SmartProfilePrompt() {
-  const { profile, setProfile } = useStore();
+  const { profile, setProfile, isGuest } = useStore();
   const [currentQuestion, setCurrentQuestion] = useState<any>(null);
   const [value, setValue] = useState('');
   const [isVisible, setIsVisible] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [showWhy, setShowWhy] = useState(false);
 
   useEffect(() => {
     const nextQ = QUESTIONS.find(q => !profile[q.field]);
@@ -44,14 +80,26 @@ export function SmartProfilePrompt() {
     }
   }, [profile]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!currentQuestion || !value) return;
     
-    setProfile({ [currentQuestion.field]: value });
+    const updateData = { [currentQuestion.field]: value };
+    setProfile(updateData);
+    
+    if (!isGuest) {
+      try {
+        await api.profile.update(updateData);
+      } catch (e) {
+        console.error('Failed to sync profile nudge:', e);
+      }
+    }
+
     setIsCompleted(true);
+    setShowWhy(false);
     setTimeout(() => {
       setIsVisible(false);
       setIsCompleted(false);
+      setValue('');
     }, 2000);
   };
 
@@ -80,6 +128,19 @@ export function SmartProfilePrompt() {
               </View>
 
               <Text style={styles.questionLabel}>{currentQuestion.label}</Text>
+              {currentQuestion.labelAmh && (
+                <Text style={styles.questionLabelAmh}>{currentQuestion.labelAmh}</Text>
+              )}
+
+              <TouchableOpacity onPress={() => setShowWhy(!showWhy)} style={styles.whyButton}>
+                <Text style={styles.whyButtonText}>{showWhy ? 'Hide' : 'Why we ask?'}</Text>
+              </TouchableOpacity>
+
+              {showWhy && (
+                <View style={styles.whyBox}>
+                  <Text style={styles.whyText}>{currentQuestion.whyText}</Text>
+                </View>
+              )}
 
               <View style={styles.optionsContainer}>
                 {currentQuestion.options.map((opt: string) => (
@@ -174,7 +235,36 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#0F172A',
+    marginBottom: 4,
+  },
+  questionLabelAmh: {
+    fontSize: 16,
+    fontFamily: 'Inter_400Regular',
+    color: MizanColors.textSecondary,
+    marginBottom: 12,
+  },
+  whyButton: {
+    marginBottom: 12,
+  },
+  whyButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: MizanColors.mintPrimary,
+    textDecorationLine: 'underline',
+  },
+  whyBox: {
+    backgroundColor: MizanColors.mintBg,
+    padding: 12,
+    borderRadius: 12,
     marginBottom: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: MizanColors.mintPrimary,
+  },
+  whyText: {
+    fontSize: 13,
+    color: MizanColors.mintDark,
+    lineHeight: 18,
+    fontStyle: 'italic',
   },
   optionsContainer: {
     gap: 10,
