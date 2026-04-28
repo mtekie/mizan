@@ -7,7 +7,7 @@ import { MintGoalSheet } from '../../components/forms/MintGoalSheet';
 import { MizanCard } from '../../components/ui/MizanCard';
 import { api } from '../../lib/api';
 import { useStore } from '../../lib/store';
-import { demoBills, demoBudgets, demoGoals, formatMoney, safePercent } from '@mizan/shared';
+import { demoBills, demoBudgets, demoGoals, formatMoney, safePercent, buildBudgetOverviewVM, buildGoalsVM } from '@mizan/shared';
 
 import { AppScreenShell } from '../../components/ui/AppScreenShell';
 
@@ -166,43 +166,25 @@ export default function GoalsScreen() {
     }
   };
 
-  const budgetItems = budgets.flatMap((budget) => {
-    if (Array.isArray(budget.categories)) {
-      return budget.categories.map((category: any) => ({
-        id: category.id,
-        category: category.name,
-        limit: category.allocated,
-        spent: category.spent || 0,
-      }));
-    }
-
-    return [{
-      id: budget.id,
-      category: budget.category || 'Budget',
-      limit: budget.limit || budget.totalLimit || 0,
-      spent: budget.spent || 0,
-    }];
-  });
-  const totalBudget = budgetItems.reduce((sum, b) => sum + (Number(b.limit) || 0), 0);
-  const totalSpent = budgetItems.reduce((sum, b) => sum + (Number(b.spent) || 0), 0);
-  const budgetProgress = Math.min(safePercent(totalSpent, totalBudget) / 100, 1);
+  const budgetVM = buildBudgetOverviewVM(budgets);
+  const goalsVMData = buildGoalsVM(goals);
 
   const renderHeader = () => (
     <View style={styles.headerSection}>
-      {/* Budget Overview */}
+      {/* SECTION: budget_overview */}
       <MizanCard style={styles.budgetCard}>
         <View style={styles.budgetHeader}>
           <View>
             <Text style={styles.budgetLabel}>Monthly Budget</Text>
-            <Text style={styles.budgetAmount}>{formatMoney(totalSpent)} / {formatMoney(totalBudget)}</Text>
+            <Text style={styles.budgetAmount}>{budgetVM.totalSpentFormatted} / {budgetVM.totalBudgetFormatted}</Text>
           </View>
-          <TrendingDown size={24} color={budgetProgress > 0.9 ? '#EF4444' : MizanColors.mintPrimary} />
+          <TrendingDown size={24} color={budgetVM.isOverBudget ? '#EF4444' : MizanColors.mintPrimary} />
         </View>
         <View style={styles.budgetBarBg}>
-          <View style={[styles.budgetBarFill, { width: `${budgetProgress * 100}%`, backgroundColor: budgetProgress > 0.9 ? '#EF4444' : MizanColors.mintPrimary }]} />
+          <View style={[styles.budgetBarFill, { width: `${budgetVM.percent}%`, backgroundColor: budgetVM.isOverBudget ? '#EF4444' : MizanColors.mintPrimary }]} />
         </View>
         <Text style={styles.budgetMessage}>
-          {budgetProgress > 0.9 ? 'Careful! You are close to your limit.' : 'You are on track this month.'}
+          {budgetVM.isOverBudget ? 'Careful! You are close to your limit.' : 'You are on track this month.'}
         </Text>
       </MizanCard>
 
@@ -265,9 +247,7 @@ export default function GoalsScreen() {
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 13, fontFamily: 'Inter_700Bold', color: MizanColors.mintDark, marginBottom: 4 }}>Plan Insight</Text>
             <Text style={{ fontSize: 12, fontFamily: 'Inter_400Regular', color: MizanColors.textPrimary, lineHeight: 18 }}>
-              {goals.length > 0
-                ? `At your current saving rate, you'll hit your ${goals[0]?.name || 'goal'} target ${budgetProgress < 0.7 ? 'ahead of schedule' : 'on time'}! ${budgetProgress < 0.5 ? 'Consider redirecting surplus to another goal.' : ''}`
-                : 'Set a savings goal to start getting personalized insights about your progress.'}
+              {budgetVM.forecastText}
             </Text>
           </View>
         </View>
@@ -298,7 +278,7 @@ export default function GoalsScreen() {
       }
     >
       <FlatList
-        data={goals}
+        data={goalsVMData.goals}
         keyExtractor={item => item.id || Math.random().toString()}
         ListHeaderComponent={renderHeader}
         contentContainerStyle={styles.listContent}
@@ -311,7 +291,6 @@ export default function GoalsScreen() {
           ) : null
         }
         renderItem={({ item }) => {
-          const progress = Math.min(safePercent(item.saved, item.target) / 100, 1);
           return (
             <MizanCard style={styles.goalCard}>
               <View style={styles.goalEmojiContainer}>
@@ -320,13 +299,13 @@ export default function GoalsScreen() {
               <View style={{ flex: 1, marginLeft: 16 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                   <Text style={styles.goalName}>{item.name}</Text>
-                  <Text style={styles.percentText}>{Math.round(progress * 100)}%</Text>
+                  <Text style={styles.percentText}>{item.percent}%</Text>
                 </View>
                 <Text style={styles.goalProgress}>
-                  {formatMoney(item.saved || 0)} / {formatMoney(item.target || 0)}
+                  {item.savedFormatted} / {item.targetFormatted}
                 </Text>
                 <View style={styles.progressBarBg}>
-                  <View style={[styles.progressBarFill, { width: `${progress * 100}%` }]} />
+                  <View style={[styles.progressBarFill, { width: `${item.percent}%` }]} />
                 </View>
                 <TouchableOpacity style={styles.goalActionButton} onPress={() => setContributionGoal(item)}>
                   <Plus size={13} color={MizanColors.mintDark} />

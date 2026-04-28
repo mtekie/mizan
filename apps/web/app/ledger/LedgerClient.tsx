@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { TrendingUp, Building2, Smartphone, Users, Filter, Coffee, ArrowDownToLine, ShoppingCart, Tv, X, ChevronDown, CircleDollarSign, Download, PieChart as PieChartIcon, Calendar, Plus, ArrowRight, ArrowLeft, Send, Wallet, Sparkles, ArrowUpRight, ArrowDownRight, CreditCard, CheckCircle2, Pencil, Trash2 } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import { TrendingUp, Building2, Smartphone, Users, Filter, Coffee, ArrowDownToLine, ShoppingCart, Tv, X, ChevronDown, CircleDollarSign, Download, PieChart as PieChartIcon, Calendar, Plus, ArrowRight, ArrowLeft, ArrowRightLeft, Send, Wallet, Sparkles, ArrowUpRight, ArrowDownRight, CreditCard, CheckCircle2, Pencil, Trash2 } from 'lucide-react';
+
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -12,7 +12,7 @@ import { performUpdateOnboardingPhase } from '@/app/onboarding/actions';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/PageHeader';
 import { AppPageShell } from '@/components/AppPageShell';
-import { formatMoney, formatSignedMoney, safePercent, toFiniteNumber } from '@mizan/shared';
+import { formatMoney, formatSignedMoney, safePercent, toFiniteNumber, buildMoneySummaryVM, buildAccountsVM, buildRecentTransactionsVM, buildSpendingSummaryVM } from '@mizan/shared';
 
 type AddMode = 'transaction' | 'transfer' | null;
 type TxType = 'expense' | 'income';
@@ -23,7 +23,7 @@ const ETB_TO_USD = 0.0071;
 const txCategories = ['Income', 'Food & Drink', 'Groceries', 'Entertainment', 'Transport', 'Utilities', 'Healthcare', 'Transfer'];
 const filterCategories = ['All', 'Income', 'Food & Drink', 'Groceries', 'Entertainment'];
 
-export default function LedgerClient({ accounts: initialAccounts, initialTransactions, summary }: { accounts: any[], initialTransactions: any[], summary: any }) {
+export default function LedgerClient({ accounts: initialAccounts, initialTransactions, summary: initialSummary }: { accounts: any[], initialTransactions: any[], summary: any }) {
   const [showFilter, setShowFilter] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedSource, setSelectedSource] = useState('All');
@@ -39,6 +39,22 @@ export default function LedgerClient({ accounts: initialAccounts, initialTransac
     const timer = window.setTimeout(() => setMounted(true), 0);
     return () => window.clearTimeout(timer);
   }, []);
+
+  const summary = {
+    monthlyTrend: [
+      { month: 'Oct', income: 32000, expense: 21000 },
+      { month: 'Nov', income: 31500, expense: 23500 },
+      { month: 'Dec', income: 35000, expense: 28000 },
+      { month: 'Jan', income: 33000, expense: 22000 },
+      { month: 'Feb', income: 34000, expense: 19500 },
+      { month: 'Mar', income: 34500, expense: 24000 },
+    ]
+  };
+
+  const moneyVM = buildMoneySummaryVM(accounts, transactions);
+  const accountsVM = buildAccountsVM(accounts);
+  const recentVM = buildRecentTransactionsVM(transactions, displayCount);
+  const spendingVM = buildSpendingSummaryVM(transactions);
 
   // Add flow state
   const [addMode, setAddMode] = useState<AddMode>(null);
@@ -88,7 +104,7 @@ export default function LedgerClient({ accounts: initialAccounts, initialTransac
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  const displayed = filtered.slice(0, displayCount);
+  const displayed = buildRecentTransactionsVM(filtered, displayCount).transactions;
 
   const grouped = displayed.reduce((acc, tx) => {
     const formattedDate = getFormatDate(tx.date);
@@ -330,25 +346,26 @@ export default function LedgerClient({ accounts: initialAccounts, initialTransac
       <main className="flex-1 px-8 py-8 pb-24 md:pb-8 max-w-6xl mx-auto w-full">
 
         {/* ── Stat Strip ── */}
+        {/* SECTION: money_summary */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           <div className="bg-white rounded-xl p-3 border border-slate-200 shadow-sm">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Total Balance</span>
-            <span className="text-xl font-black text-[#0F172A]">{formatMoney(summary.totalBalance)}</span>
-            <span className="text-[10px] text-[#3EA63B] font-bold ml-1">+12%</span>
+            <span className="text-xl font-black text-[#0F172A]">{moneyVM.totalBalanceFormatted}</span>
+            <span className="text-[10px] text-[#3EA63B] font-bold ml-1">{moneyVM.changeFormatted}</span>
           </div>
           <div className="bg-white rounded-xl p-3 border border-slate-200 shadow-sm">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Monthly In</span>
-            <span className="text-xl font-black text-[#3EA63B]">{formatSignedMoney(summary.monthlyIn)}</span>
+            <span className="text-xl font-black text-[#3EA63B]">{moneyVM.monthlyInFormatted}</span>
           </div>
           <div className="bg-white rounded-xl p-3 border border-slate-200 shadow-sm">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Monthly Out</span>
-            <span className="text-xl font-black text-amber-600">-{formatMoney(summary.monthlyOut)}</span>
+            <span className="text-xl font-black text-amber-600">{moneyVM.monthlyOutFormatted}</span>
           </div>
           <div className="bg-white rounded-xl p-3 border border-slate-200 shadow-sm">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Savings Rate</span>
             <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-xl font-black text-[#0F172A]">{summary.savingsRate}%</span>
-              <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden"><div className="bg-[#3EA63B]" style={{ width: `${Math.max(0, Math.min(100, toFiniteNumber(summary.savingsRate)))}%`, height: '100%' }} /></div>
+              <span className="text-xl font-black text-[#0F172A]">{moneyVM.savingsRateFormatted}</span>
+              <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden"><div className="bg-[#3EA63B]" style={{ width: `${Math.max(0, Math.min(100, moneyVM.savingsRate))}%`, height: '100%' }} /></div>
             </div>
           </div>
         </div>
@@ -360,13 +377,13 @@ export default function LedgerClient({ accounts: initialAccounts, initialTransac
             <div className="flex gap-2">
               <button
                 onClick={openCreateAccount}
-                className="flex items-center gap-1.5 bg-white border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-50 transition"
+                className="flex items-center gap-1.5 bg-[var(--color-mint-primary)] text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-[var(--color-mint-hover)] transition"
               >
-                <Building2 className="w-3.5 h-3.5" /> Add Account
+                <Plus className="w-3.5 h-3.5" /> Add Account
               </button>
               <button
                 onClick={() => openAdd('transaction')}
-                className="flex items-center gap-1.5 bg-[#0F172A] text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-800 transition"
+                className="flex items-center gap-1.5 bg-[var(--color-mint-primary)] text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-[var(--color-mint-hover)] transition"
               >
                 <Plus className="w-3.5 h-3.5" /> Add Transaction
               </button>
@@ -375,7 +392,7 @@ export default function LedgerClient({ accounts: initialAccounts, initialTransac
                 disabled={accounts.length < 2}
                 className="flex items-center gap-1.5 bg-white border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-50 transition"
               >
-                <Send className="w-3.5 h-3.5" /> Transfer
+                <ArrowRightLeft className="w-3.5 h-3.5" /> Transfer
               </button>
             </div>
           </div>
@@ -389,7 +406,7 @@ export default function LedgerClient({ accounts: initialAccounts, initialTransac
                   <Plus className="h-3.5 w-3.5" /> Add Account
                 </button>
               </div>
-            ) : accounts.map((account) => (
+            ) : accountsVM.map((account) => (
               <div
                 key={account.id}
                 className="min-w-[220px] h-[130px] rounded-2xl p-4 text-white shadow-lg relative snap-center flex flex-col justify-between overflow-hidden shrink-0"
@@ -398,13 +415,16 @@ export default function LedgerClient({ accounts: initialAccounts, initialTransac
                 <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white/10 rounded-full blur-xl" />
                 <div className="flex justify-between items-start z-10">
                   <div>
-                    <p className="text-[10px] opacity-80 font-semibold uppercase tracking-widest">{account.type}</p>
+                    <p className="text-[10px] opacity-80 font-semibold uppercase tracking-widest">{account.typeLabel}</p>
                     <p className="text-sm font-black">{account.name}</p>
                   </div>
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
-                      onClick={() => openEditAccount(account)}
+                      onClick={() => {
+                        const originalAccount = accounts.find(a => a.id === account.id);
+                        if (originalAccount) openEditAccount(originalAccount);
+                      }}
                       className="rounded-full bg-white/15 p-1.5 text-white hover:bg-white/25"
                       title="Edit account"
                     >
@@ -422,11 +442,11 @@ export default function LedgerClient({ accounts: initialAccounts, initialTransac
                   </div>
                 </div>
                 <div className="z-10">
-                  <p className="text-xl font-black">{showUSD ? `$${(toFiniteNumber(account.balance) * ETB_TO_USD).toFixed(0)}` : formatMoney(account.balance)}</p>
-                  {account.type === 'Credit Card' && account.limit && (
-                    <p className="text-[9px] opacity-60 font-bold">/ {account.limit.toLocaleString()} Limit</p>
+                  <p className="text-xl font-black">{showUSD ? `$${(account.balance * ETB_TO_USD).toFixed(0)}` : account.balanceFormatted}</p>
+                  {account.type === 'Credit Card' && (
+                    <p className="text-[9px] opacity-60 font-bold">/ Limit</p>
                   )}
-                  {account.number && <p className="text-[9px] opacity-60 mt-0.5">Ending {String(account.number).slice(-4)}</p>}
+                  {account.number !== 'N/A' && <p className="text-[9px] opacity-60 mt-0.5">Ending {account.number.slice(-4)}</p>}
                 </div>
               </div>
             ))}
@@ -436,6 +456,7 @@ export default function LedgerClient({ accounts: initialAccounts, initialTransac
         {/* ── Main Grid ── */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Transaction List */}
+          {/* SECTION: recent_transactions */}
           <div className="lg:col-span-8">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-bold text-slate-800">Recent Activity</h2>
@@ -491,26 +512,28 @@ export default function LedgerClient({ accounts: initialAccounts, initialTransac
                             {/* Main Info: Title & Category */}
                             <div className="flex-1 md:col-span-4 min-w-0">
                               <div className="flex items-center gap-2">
+                                <div className="md:hidden text-lg w-6 h-6 flex items-center justify-center">{tx.emoji}</div>
                                 <p className="font-bold text-slate-800 text-sm truncate">{tx.title}</p>
                                 <span className="hidden sm:inline-block px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[9px] font-bold uppercase tracking-wider">
-                                  {tx.category || 'Other'}
+                                  {tx.category}
                                 </span>
                               </div>
                               <p className="md:hidden text-[10px] text-slate-400 font-medium">
-                                {new Date(tx.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} • {tx.category || 'Other'}
+                                {new Date(tx.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} • {tx.category}
                               </p>
                             </div>
 
                             {/* Category - Desktop Only */}
-                            <div className="hidden md:block md:col-span-2">
+                            <div className="hidden md:flex md:col-span-2 items-center gap-1">
+                              <span className="text-lg">{tx.emoji}</span>
                               <span className="inline-block px-2 py-0.5 bg-slate-50 text-slate-500 border border-slate-100 rounded text-[10px] font-bold">
-                                {tx.category || 'Uncategorized'}
+                                {tx.category}
                               </span>
                             </div>
 
                             {/* Amount */}
-                            <div className={`md:col-span-2 text-right font-black text-sm ${tx.amount > 0 ? 'text-[#3EA63B]' : 'text-slate-900'}`}>
-                              {tx.amount > 0 ? '+' : ''}{fmt(tx.amount)}
+                            <div className={`md:col-span-2 text-right font-black text-sm ${tx.isIncome ? 'text-[#3EA63B]' : 'text-slate-900'}`}>
+                              {showUSD ? `${tx.isIncome ? '+' : ''}$${(tx.amount * ETB_TO_USD).toFixed(2)}` : `${tx.isIncome ? '+' : ''}${tx.amountFormatted}`}
                             </div>
 
                             {/* Actions - Desktop Only (Subtle/Hover) */}
@@ -620,36 +643,26 @@ export default function LedgerClient({ accounts: initialAccounts, initialTransac
           <aside className="lg:col-span-4">
             <div className="sticky top-28 space-y-4">
               {/* Spending Breakdown */}
+              {/* SECTION: spending_summary */}
               <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                   <PieChartIcon className="w-3.5 h-3.5" /> Monthly Spending
                 </h3>
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-24 h-24 shrink-0">
-                    {mounted && (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie data={summary.spendingData} dataKey="value" cx="50%" cy="50%" innerRadius={28} outerRadius={46} paddingAngle={2}>
-                            {summary.spendingData.map((entry: any, i: number) => (
-                              <Cell key={i} fill={entry.color} />
-                            ))}
-                          </Pie>
-                        </PieChart>
-                      </ResponsiveContainer>
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-xl font-black text-slate-900">{formatMoney(summary.totalSpending)}</p>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">This Month</p>
+                <div className="flex justify-center mb-6 mt-2">
+                  <div className="w-40 h-40 rounded-full border-[12px] border-[var(--color-mint-primary)] flex items-center justify-center">
+                    <div className="text-center">
+                      <p className="text-xl font-black text-slate-900 leading-tight">{spendingVM.totalSpentFormatted}</p>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">THIS MONTH</p>
+                    </div>
                   </div>
                 </div>
                 <div className="space-y-2">
-                  {summary.spendingData.map((cat: any, i: number) => (
+                  {spendingVM.categories.map((cat, i) => (
                     <div key={i} className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
                       <span className="text-[10px] text-slate-600 flex-1">{cat.name}</span>
-                      <span className="text-[10px] font-bold text-slate-900">{formatMoney(cat.value)}</span>
-                      <span className="text-[10px] text-slate-400 w-8 text-right">{summary.totalSpending ? Math.round(cat.value / summary.totalSpending * 100) : 0}%</span>
+                      <span className="text-[10px] font-bold text-slate-900">{cat.amountFormatted}</span>
+                      <span className="text-[10px] text-slate-400 w-8 text-right">{cat.percent}%</span>
                     </div>
                   ))}
                 </div>

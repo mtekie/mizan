@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Bell, Lightbulb, Plus, TrendingUp, ArrowDownRight, ArrowUpRight, ChevronRight, Sparkles, Send, CreditCard, Smartphone } from 'lucide-react';
+import { Bell, Lightbulb, Plus, TrendingUp, ArrowDownLeft, ArrowUpRight, ChevronRight, Sparkles, Send, CreditCard, Smartphone } from 'lucide-react';
 import { AppPageShell } from '@/components/AppPageShell';
 import { OnboardingPrompt } from '@/components/OnboardingPrompt';
 import { Nudge } from '@/components/Nudge';
@@ -10,7 +10,7 @@ import { useNudges } from '@/hooks/useNudges';
 import { MintDonutChart, MintBudgetBar } from '@/components/MintCharts';
 import { SmartProfilePrompt } from '@/components/SmartProfilePrompt';
 import { ProfileCompleteness } from '@/components/ProfileCompleteness';
-import { formatMoney, formatSignedMoney, safePercent } from '@mizan/shared';
+import { formatMoney, formatSignedMoney, safePercent, getCategoryEmoji, buildRecentTransactionsVM } from '@mizan/shared';
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -19,18 +19,7 @@ function getGreeting() {
   return { en: 'Good Evening', am: 'ደህና ዋሉ' };
 }
 
-const getCategoryEmoji = (title: string, category?: string) => {
-    const t = (title || '').toLowerCase();
-    const c = (category || '').toLowerCase();
-    if (t.includes('kaldi') || t.includes('coffee') || c.includes('food') || c.includes('drink')) return '☕';
-    if (t.includes('deposit') || t.includes('transfer') || c.includes('income')) return '💰';
-    if (t.includes('supermarket') || t.includes('shoa') || c.includes('grocer')) return '🛒';
-    if (t.includes('canal') || t.includes('dstv') || c.includes('entertain')) return '📺';
-    if (t.includes('telebirr') || t.includes('mobile')) return '📱';
-    if (c.includes('transport')) return '🚐';
-    if (c.includes('health')) return '❤️';
-    return '💳';
-};
+
 
 export default function DashboardClient({ user, accounts, transactions, summary, featuredProducts }: { user: any, accounts: any[], transactions: any[], summary: any, featuredProducts: any[] }) {
   const [tipIndex, setTipIndex] = useState(0);
@@ -106,16 +95,16 @@ export default function DashboardClient({ user, accounts, transactions, summary,
             {/* Quick Actions */}
             <div className="grid grid-cols-4 gap-3 animate-slide-up" style={{ animationDelay: '0.15s' }}>
               {[
-                { icon: ArrowUpRight, label: 'Send', color: '#3B82F6', bg: 'bg-blue-50' },
-                { icon: ArrowDownRight, label: 'Request', color: '#10B981', bg: 'bg-emerald-50' },
-                { icon: CreditCard, label: 'Pay', color: '#8B5CF6', bg: 'bg-purple-50' },
-                { icon: Smartphone, label: 'Airtime', color: '#F59E0B', bg: 'bg-amber-50' },
+                { icon: ArrowUpRight, label: 'Send', color: '#3B82F6', bg: 'bg-blue-500/10' },
+                { icon: ArrowDownLeft, label: 'Request', color: '#10B981', bg: 'bg-emerald-500/10' },
+                { icon: CreditCard, label: 'Pay', color: '#8B5CF6', bg: 'bg-purple-500/10' },
+                { icon: Smartphone, label: 'Airtime', color: '#F59E0B', bg: 'bg-amber-500/10' },
               ].map(action => (
-                <button key={action.label} className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-all group">
-                  <div className={`w-10 h-10 rounded-xl ${action.bg} flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                    <action.icon className="w-5 h-5" style={{ color: action.color }} />
+                <button key={action.label} className="flex flex-col items-center gap-2 group transition-transform hover:scale-105">
+                  <div className={`w-14 h-14 rounded-[20px] ${action.bg} flex items-center justify-center`}>
+                    <action.icon className="w-6 h-6" style={{ color: action.color }} />
                   </div>
-                  <span className="text-[11px] font-bold text-slate-600">{action.label}</span>
+                  <span className="text-xs font-bold text-slate-600">{action.label}</span>
                 </button>
               ))}
             </div>
@@ -157,17 +146,17 @@ export default function DashboardClient({ user, accounts, transactions, summary,
                 </div>
               ) : (
                 <div className="divide-y divide-slate-50">
-                  {transactions.slice(0, 3).map((tx: any) => (
+                  {buildRecentTransactionsVM(transactions, 3).transactions.map((tx) => (
                     <div key={tx.id} className="flex items-center gap-4 py-3">
                       <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-lg">
-                        {getCategoryEmoji(tx.title, tx.category)}
+                        {tx.emoji}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-bold text-[var(--color-mint-text)] truncate">{tx.title}</p>
-                        <p className="text-[11px] text-[var(--color-mint-text-muted)]">{tx.source || 'Manual'}</p>
+                        <p className="text-[11px] text-[var(--color-mint-text-muted)]">{tx.source}</p>
                       </div>
-                      <p className={`text-sm font-extrabold ${tx.amount < 0 ? 'text-[var(--color-mint-text)]' : 'text-[var(--color-mint-deep)]'}`}>
-                        {formatSignedMoney(tx.amount)}
+                      <p className={`text-sm font-extrabold ${tx.isIncome ? 'text-[var(--color-mint-deep)]' : 'text-[var(--color-mint-text)]'}`}>
+                        {tx.isIncome ? '+' : '-'}{tx.amountFormatted}
                       </p>
                     </div>
                   ))}

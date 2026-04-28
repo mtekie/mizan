@@ -1,27 +1,23 @@
 import React from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
-import { MizanColors, MizanTypography } from '@mizan/ui-tokens';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ScrollView } from 'react-native';
+import { MizanColors } from '@mizan/ui-tokens';
+import { MizanComponentTokens } from '@mizan/ui-tokens';
 import { MizanCard } from '../../components/ui/MizanCard';
-import { Plus, Filter, ArrowRightLeft, PieChart, TrendingDown } from 'lucide-react-native';
+import { Plus, Filter, ArrowRightLeft, TrendingDown, Building2, TrendingUp } from 'lucide-react-native';
 import BottomSheet from '@gorhom/bottom-sheet';
 import { MintTransactionSheet } from '../../components/forms/MintTransactionSheet';
 import { MintAccountSheet } from '../../components/forms/MintAccountSheet';
-
 import { api } from '../../lib/api';
-import { demoAccounts, demoTransactions, formatMoney, formatSignedMoney, Transaction } from '@mizan/shared';
+import {
+  demoAccounts, demoTransactions, formatMoney, formatSignedMoney,
+  Transaction, buildMoneySummaryVM, buildAccountsVM,
+  buildSpendingSummaryVM, buildRecentTransactionsVM,
+  getCategoryEmoji,
+} from '@mizan/shared';
 import { useStore } from '../../lib/store';
-import { Coffee, ShoppingBag, Car, Home, Smartphone, TrendingUp } from 'lucide-react-native';
-
-const CATEGORY_ICONS: Record<string, any> = {
-  Food: Coffee,
-  Shopping: ShoppingBag,
-  Transport: Car,
-  Housing: Home,
-  Bills: Smartphone,
-  Income: TrendingUp,
-};
-
 import { AppScreenShell } from '../../components/ui/AppScreenShell';
+
+const T = MizanComponentTokens;
 
 export default function LedgerScreen() {
   const [transactions, setTransactions] = React.useState<Transaction[]>([]);
@@ -58,96 +54,126 @@ export default function LedgerScreen() {
     loadData();
   }, [loadData]);
 
-  const totalBalance = accounts.reduce((sum, acc) => sum + (acc.balance || 0), 0);
+  // ═══ SHARED VIEW MODELS ═══
+  const summaryVM = buildMoneySummaryVM(accounts, transactions);
+  const accountsVM = buildAccountsVM(accounts);
+  const spendingVM = buildSpendingSummaryVM(transactions);
+  const recentVM = buildRecentTransactionsVM(transactions, 50);
 
   const renderHeader = () => (
     <View style={styles.headerSection}>
-      {/* Balance Summary */}
-      <MizanCard style={styles.summaryCard}>
-        <Text style={styles.summaryLabel}>Total Balance</Text>
-        <Text style={styles.summaryAmount}>{formatMoney(totalBalance)}</Text>
-        <View style={styles.summaryFooter}>
-          <TrendingUp size={16} color={MizanColors.mintDark} />
-          <Text style={styles.summaryFooterText}>+12.5% this month</Text>
-        </View>
-      </MizanCard>
 
-      {/* Accounts Strip */}
-      <View style={styles.accountsSection}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Accounts</Text>
-          <TouchableOpacity onPress={() => accountSheetRef.current?.expand()}>
-            <Text style={styles.sectionAction}>Add</Text>
-          </TouchableOpacity>
-        </View>
-        <FlatList
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          data={accounts}
-          keyExtractor={item => item.id}
-          contentContainerStyle={styles.accountsList}
-          ListEmptyComponent={
-            !loading ? (
-              <TouchableOpacity style={styles.emptyAccountPill} onPress={() => accountSheetRef.current?.expand()}>
-                <Plus size={18} color={MizanColors.mintPrimary} />
-                <Text style={styles.emptyAccountText}>Add your first account</Text>
-              </TouchableOpacity>
-            ) : null
-          }
-          renderItem={({ item }) => (
-            <TouchableOpacity 
-              style={styles.accountPill}
-              onPress={() => {}}
-            >
-              <View style={styles.accountIconBox}>
-                <Home size={16} color={MizanColors.mintPrimary} />
-              </View>
-              <View>
-                <Text style={styles.accountName}>{item.name}</Text>
-                <Text style={styles.accountBalance}>{formatMoney(item.balance)}</Text>
-              </View>
-            </TouchableOpacity>
-          )}
-        />
+      {/* ── Stat Grid: matches web 2x2 layout ── */}
+      {/* SECTION: money_summary */}
+      <View style={styles.statGrid}>
+        <MizanCard style={styles.statCard}>
+          <Text style={styles.statLabel}>TOTAL BALANCE</Text>
+          <Text style={styles.statValue}>{summaryVM.totalBalanceFormatted}</Text>
+          <Text style={[styles.statBadge, { color: MizanColors.mintPrimary }]}>{summaryVM.changeFormatted}</Text>
+        </MizanCard>
+        <MizanCard style={styles.statCard}>
+          <Text style={styles.statLabel}>MONTHLY IN</Text>
+          <Text style={[styles.statValue, { color: MizanColors.mintDark }]}>{summaryVM.monthlyInFormatted}</Text>
+        </MizanCard>
+        <MizanCard style={styles.statCard}>
+          <Text style={styles.statLabel}>MONTHLY OUT</Text>
+          <Text style={[styles.statValue, { color: MizanColors.mintCoral }]}>{summaryVM.monthlyOutFormatted}</Text>
+        </MizanCard>
+        <MizanCard style={styles.statCard}>
+          <Text style={styles.statLabel}>SAVINGS RATE</Text>
+          <Text style={styles.statValue}>{summaryVM.savingsRateFormatted}</Text>
+        </MizanCard>
       </View>
 
-      <Text style={[styles.sectionTitle, { marginTop: 24, marginBottom: 12 }]}>Transactions</Text>
-    </View>
-  );
+      {/* ── Action Row: Add Account / Add Transaction / Transfer ── */}
+      <View style={styles.actionRow}>
+        <Text style={styles.sectionLabel}>MY ACCOUNTS</Text>
+        <View style={styles.actionButtons}>
+          <TouchableOpacity style={styles.actionBtn} onPress={() => accountSheetRef.current?.expand()}>
+            <Plus size={14} color="#fff" />
+            <Text style={styles.actionBtnText}>Add Account</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: MizanColors.mintDark }]} onPress={() => sheetRef.current?.expand()}>
+            <Plus size={14} color="#fff" />
+            <Text style={styles.actionBtnText}>Add Transaction</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionBtnOutline}>
+            <ArrowRightLeft size={14} color={MizanColors.textPrimary} />
+            <Text style={styles.actionBtnOutlineText}>Transfer</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
-  const totalExpenses = transactions.filter(t => t.amount < 0).reduce((sum, t) => sum + Math.abs(t.amount), 0);
-  const spendingPercent = totalBalance > 0 ? Math.min(100, Math.round((totalExpenses / totalBalance) * 100)) : 0;
+      {/* ── Account Tiles: colored cards matching web ── */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.accountsStrip}
+      >
+        {accountsVM.map((acc) => (
+          <TouchableOpacity
+            key={acc.id}
+            style={[styles.accountTile, { backgroundColor: acc.color }]}
+          >
+            <View style={styles.accountTileHeader}>
+              <View>
+                <Text style={styles.accountTileType}>{acc.typeLabel}</Text>
+                <Text style={styles.accountTileName}>{acc.bank}</Text>
+              </View>
+              <View style={styles.accountTileActions}>
+                <Building2 size={T.accountTile.iconSize} color="rgba(255,255,255,0.6)" />
+              </View>
+            </View>
+            <View style={styles.accountTileFooter}>
+              <Text style={styles.accountTileBalance}>{acc.balanceFormatted}</Text>
+              {acc.number !== 'N/A' && (
+                <Text style={styles.accountTileNumber}>Ending {acc.number.slice(-4)}</Text>
+              )}
+            </View>
+          </TouchableOpacity>
+        ))}
+        {accountsVM.length === 0 && !loading && (
+          <TouchableOpacity
+            style={[styles.accountTile, { backgroundColor: MizanColors.mintBg, borderWidth: 2, borderColor: MizanColors.mintPrimary, borderStyle: 'dashed' }]}
+            onPress={() => accountSheetRef.current?.expand()}
+          >
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+              <Plus size={24} color={MizanColors.mintPrimary} />
+              <Text style={{ fontSize: 13, fontFamily: 'Inter_700Bold', color: MizanColors.mintPrimary, marginTop: 8 }}>Add Account</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+      </ScrollView>
 
-  const renderSpendingSummary = () => (
-    <View style={styles.spendingSection}>
-      <Text style={styles.sectionTitle}>Spending Summary</Text>
+      {/* ── Spending Summary with categories ── */}
+      <Text style={[styles.sectionLabel, { marginTop: 24 }]}>MONTHLY SPENDING</Text>
       <MizanCard style={styles.spendingCard}>
-        <View style={styles.spendingHeader}>
-          <View>
-            <Text style={styles.spendingLabel}>This Month</Text>
-            <Text style={styles.spendingValue}>{formatMoney(totalExpenses)}</Text>
-          </View>
-          <View style={styles.spendingChange}>
-            <TrendingDown size={14} color={MizanColors.mintPrimary} />
-            <Text style={styles.spendingChangeText}>{spendingPercent}% of balance</Text>
+        <View style={styles.spendingRow}>
+          {/* Mini donut placeholder */}
+          <View style={styles.donutContainer}>
+            <View style={styles.donutRing}>
+              <View style={styles.donutCenter}>
+                <Text style={styles.donutValue}>{spendingVM.totalSpentFormatted}</Text>
+                <Text style={styles.donutLabel}>THIS MONTH</Text>
+              </View>
+            </View>
           </View>
         </View>
-        <View style={styles.spendingBarBg}>
-          <View style={[styles.spendingBarFill, { width: `${spendingPercent}%`, backgroundColor: spendingPercent > 80 ? '#EF4444' : MizanColors.mintPrimary }]} />
-        </View>
-        <Text style={styles.spendingNote}>
-          {spendingPercent > 80 ? 'Spending is high relative to your balance.' : 'Your spending is on track this month.'}
-        </Text>
-      </MizanCard>
-    </View>
-  );
 
-  const renderLedgerHeader = () => (
-    <>
-      {renderHeader()}
-      {renderSpendingSummary()}
-      <Text style={[styles.sectionTitle, { marginTop: 24, marginBottom: 12, paddingHorizontal: 24 }]}>Recent Transactions</Text>
-    </>
+        {/* Category breakdown */}
+        {spendingVM.categories.map((cat) => (
+          <View key={cat.name} style={styles.categoryRow}>
+            <View style={[styles.categoryDot, { backgroundColor: cat.color }]} />
+            <Text style={styles.categoryName}>{cat.name}</Text>
+            <Text style={styles.categoryAmount}>{cat.amountFormatted}</Text>
+            <Text style={styles.categoryPercent}>{cat.percent}%</Text>
+          </View>
+        ))}
+      </MizanCard>
+
+      {/* ── Section header for transactions ── */}
+      <Text style={[styles.sectionLabel, { marginTop: 24 }]}>RECENT ACTIVITY</Text>
+    </View>
   );
 
   return (
@@ -164,7 +190,7 @@ export default function LedgerScreen() {
           <TouchableOpacity style={styles.iconButton}>
             <Filter color={MizanColors.textPrimary} size={22} />
           </TouchableOpacity>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.iconButton}
             onPress={() => sheetRef.current?.expand()}
           >
@@ -173,33 +199,30 @@ export default function LedgerScreen() {
         </View>
       }
     >
+      {/* SECTION: recent_transactions */}
       <FlatList
-        data={transactions}
+        data={recentVM.transactions}
         keyExtractor={(item) => item.id}
-        ListHeaderComponent={renderLedgerHeader}
+        ListHeaderComponent={renderHeader}
         contentContainerStyle={styles.listContent}
-        renderItem={({ item }) => {
-          const Icon = CATEGORY_ICONS[item.category || ''] || ShoppingBag;
-          return (
-            <MizanCard style={styles.transactionCard}>
-              <View style={styles.transactionLeft}>
-                <View style={[styles.iconBox, { backgroundColor: item.amount > 0 ? MizanColors.mintBg : '#F1F5F9' }]}>
-                  <Icon size={20} color={item.amount > 0 ? MizanColors.mintPrimary : MizanColors.textSecondary} />
-                </View>
-                <View>
-                  <Text style={styles.txTitle}>{item.title}</Text>
-                  <Text style={styles.txDate}>{accounts.find(account => account.id === item.accountId)?.name || item.source || 'Manual'} • {item.category || 'Uncategorized'}</Text>
-                </View>
-              </View>
-              <Text style={[styles.txAmount, { color: item.amount > 0 ? MizanColors.mintDark : MizanColors.textPrimary }]}>
-                {formatSignedMoney(item.amount)}
-              </Text>
-            </MizanCard>
-          );
-        }}
+        renderItem={({ item }) => (
+          <View style={styles.txRow}>
+            <View style={[styles.txIcon, { backgroundColor: item.isIncome ? MizanColors.mintBg : '#F1F5F9' }]}>
+              <Text style={{ fontSize: 18 }}>{item.emoji}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.txTitle}>{item.title}</Text>
+              <Text style={styles.txSubtitle}>{item.source} • {item.category}</Text>
+            </View>
+            <Text style={[styles.txAmount, { color: item.isIncome ? MizanColors.mintDark : MizanColors.textPrimary }]}>
+              {item.isIncome ? '+' : ''}{item.amountFormatted}
+            </Text>
+          </View>
+        )}
         ListEmptyComponent={
           !loading ? (
             <View style={styles.emptyState}>
+              <Text style={{ fontSize: 32 }}>📭</Text>
               <Text style={styles.emptyText}>No transactions yet</Text>
               <TouchableOpacity style={styles.emptyButton} onPress={() => sheetRef.current?.expand()}>
                 <Text style={styles.emptyButtonText}>Log first transaction</Text>
@@ -209,7 +232,7 @@ export default function LedgerScreen() {
         }
       />
 
-      <MintTransactionSheet 
+      <MintTransactionSheet
         sheetRef={sheetRef}
         onClose={() => sheetRef.current?.close()}
         onSave={async (data) => {
@@ -272,130 +295,235 @@ export default function LedgerScreen() {
 
 const styles = StyleSheet.create({
   headerSection: {
-    marginBottom: 24,
+    marginBottom: 12,
   },
-  summaryCard: {
-    backgroundColor: MizanColors.mintDark,
-    padding: 24,
-    borderRadius: 24,
-    marginBottom: 24,
+
+  // ── Stat Grid (2x2) ──
+  statGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: T.statCard.gap,
+    marginBottom: 20,
   },
-  summaryLabel: {
-    fontSize: 13,
-    fontFamily: 'Inter_600SemiBold',
-    color: 'rgba(255,255,255,0.7)',
+  statCard: {
+    width: '48%' as any,
+    padding: T.statCard.padding,
+    flexGrow: 1,
+  },
+  statLabel: {
+    fontSize: T.statCard.labelSize,
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: T.statCard.labelLetterSpacing,
+    color: MizanColors.textMuted,
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    marginBottom: 6,
   },
-  summaryAmount: {
-    fontSize: 32,
+  statValue: {
+    fontSize: T.statCard.valueSize,
     fontFamily: 'Inter_900Black',
-    color: '#fff',
-    marginTop: 8,
+    color: MizanColors.textPrimary,
+  },
+  statBadge: {
+    fontSize: 12,
+    fontFamily: 'Inter_700Bold',
+    marginTop: 4,
+  },
+
+  // ── Actions ──
+  actionRow: {
     marginBottom: 16,
   },
-  summaryFooter: {
+  sectionLabel: {
+    fontSize: T.sectionHeader.titleSize,
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: T.sectionHeader.letterSpacing,
+    color: MizanColors.textMuted,
+    textTransform: 'uppercase',
+    marginBottom: T.sectionHeader.marginBottom,
+    marginLeft: 4,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  summaryFooterText: {
-    fontSize: 12,
-    fontFamily: 'Inter_700Bold',
-    color: '#fff',
-  },
-  accountsSection: {
-    marginTop: 8,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontFamily: 'Inter_900Black',
-    color: MizanColors.textPrimary,
-  },
-  sectionAction: {
-    fontSize: 13,
-    fontFamily: 'Inter_700Bold',
-    color: MizanColors.mintPrimary,
-  },
-  accountsList: {
-    gap: 12,
-  },
-  accountPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: MizanColors.borderLight,
-  },
-  emptyAccountPill: {
-    minWidth: 220,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: MizanColors.borderLight,
-  },
-  emptyAccountText: {
-    fontSize: 13,
-    fontFamily: 'Inter_700Bold',
-    color: MizanColors.textPrimary,
-  },
-  accountIconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: MizanColors.mintBg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  accountName: {
-    fontSize: 13,
-    fontFamily: 'Inter_700Bold',
-    color: MizanColors.textPrimary,
-  },
-  accountBalance: {
-    fontSize: 12,
-    fontFamily: 'Inter_400Regular',
-    color: MizanColors.textMuted,
-  },
-  emptyState: {
-    padding: 40,
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontFamily: 'Inter_400Regular',
-    color: MizanColors.textMuted,
-  },
-  emptyButton: {
-    marginTop: 12,
     backgroundColor: MizanColors.mintPrimary,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 12,
   },
-  emptyButtonText: {
+  actionBtnText: {
+    fontSize: 12,
+    fontFamily: 'Inter_700Bold',
     color: '#fff',
+  },
+  actionBtnOutline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: MizanColors.borderLight,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  actionBtnOutlineText: {
+    fontSize: 12,
+    fontFamily: 'Inter_700Bold',
+    color: MizanColors.textPrimary,
+  },
+
+  // ── Account Tiles ──
+  accountsStrip: {
+    gap: 12,
+    paddingVertical: 4,
+  },
+  accountTile: {
+    width: T.accountTile.width,
+    height: T.accountTile.height,
+    borderRadius: T.accountTile.borderRadius,
+    padding: 14,
+    justifyContent: 'space-between',
+  },
+  accountTileHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  accountTileType: {
+    fontSize: T.accountTile.typeSize,
+    fontFamily: 'Inter_700Bold',
+    color: 'rgba(255,255,255,0.7)',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  accountTileName: {
+    fontSize: T.accountTile.nameSize,
+    fontFamily: 'Inter_700Bold',
+    color: '#fff',
+    marginTop: 2,
+  },
+  accountTileActions: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  accountTileFooter: {},
+  accountTileBalance: {
+    fontSize: T.accountTile.balanceSize,
+    fontFamily: 'Inter_900Black',
+    color: '#fff',
+  },
+  accountTileNumber: {
+    fontSize: 10,
+    fontFamily: 'Inter_400Regular',
+    color: 'rgba(255,255,255,0.6)',
+    marginTop: 2,
+  },
+
+  // ── Spending ──
+  spendingCard: {
+    padding: 20,
+  },
+  spendingRow: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  donutContainer: {
+    alignItems: 'center',
+  },
+  donutRing: {
+    width: T.spendingChart.chartSize,
+    height: T.spendingChart.chartSize,
+    borderRadius: T.spendingChart.chartSize / 2,
+    borderWidth: 12,
+    borderColor: MizanColors.mintPrimary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  donutCenter: {
+    alignItems: 'center',
+  },
+  donutValue: {
+    fontSize: T.spendingChart.centerValueSize,
+    fontFamily: 'Inter_900Black',
+    color: MizanColors.textPrimary,
+  },
+  donutLabel: {
+    fontSize: T.spendingChart.centerLabelSize,
+    fontFamily: 'Inter_700Bold',
+    color: MizanColors.mintPrimary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  categoryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+  categoryDot: {
+    width: T.spendingChart.legendDotSize,
+    height: T.spendingChart.legendDotSize,
+    borderRadius: T.spendingChart.legendDotSize / 2,
+    marginRight: 8,
+  },
+  categoryName: {
+    flex: 1,
+    fontSize: T.spendingChart.legendTextSize,
+    fontFamily: 'Inter_400Regular',
+    color: MizanColors.textPrimary,
+  },
+  categoryAmount: {
+    fontSize: T.spendingChart.legendAmountSize,
+    fontFamily: 'Inter_700Bold',
+    color: MizanColors.textPrimary,
+    marginRight: 8,
+  },
+  categoryPercent: {
+    fontSize: T.spendingChart.legendAmountSize,
+    fontFamily: 'Inter_400Regular',
+    color: MizanColors.textMuted,
+    width: 30,
+    textAlign: 'right',
+  },
+
+  // ── Transactions ──
+  txRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: T.transactionRow.borderColor,
+    gap: 12,
+    minHeight: T.transactionRow.height,
+  },
+  txIcon: {
+    width: T.transactionRow.iconSize,
+    height: T.transactionRow.iconSize,
+    borderRadius: T.transactionRow.iconRadius,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  txTitle: {
+    fontSize: T.transactionRow.titleSize,
+    fontFamily: 'Inter_700Bold',
+    color: MizanColors.textPrimary,
+  },
+  txSubtitle: {
+    fontSize: T.transactionRow.subtitleSize,
+    fontFamily: 'Inter_400Regular',
+    color: MizanColors.textMuted,
+    marginTop: 2,
+  },
+  txAmount: {
+    fontSize: T.transactionRow.amountSize,
     fontFamily: 'Inter_700Bold',
   },
+
+  // ── Misc ──
   headerActions: {
     flexDirection: 'row',
     gap: 16,
@@ -411,95 +539,24 @@ const styles = StyleSheet.create({
   listContent: {
     paddingBottom: 100,
   },
-  spendingSection: {
-    paddingHorizontal: 24,
-    marginTop: 8,
-  },
-  spendingCard: {
-    padding: 20,
-    backgroundColor: '#fff',
-    borderRadius: 24,
-  },
-  spendingHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 16,
-  },
-  spendingLabel: {
-    fontSize: 13,
-    fontFamily: 'Inter_600SemiBold',
-    color: MizanColors.textMuted,
-    textTransform: 'uppercase',
-  },
-  spendingValue: {
-    fontSize: 24,
-    fontFamily: 'Inter_900Black',
-    color: MizanColors.textPrimary,
-    marginTop: 4,
-  },
-  spendingChange: {
-    flexDirection: 'row',
+  emptyState: {
+    padding: 40,
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: MizanColors.mintBg,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 10,
+    gap: 8,
   },
-  spendingChangeText: {
-    fontSize: 12,
-    fontFamily: 'Inter_700Bold',
-    color: MizanColors.mintPrimary,
-  },
-  spendingBarBg: {
-    height: 8,
-    backgroundColor: MizanColors.mintBg,
-    borderRadius: 4,
-    marginBottom: 12,
-    overflow: 'hidden',
-  },
-  spendingBarFill: {
-    height: '100%',
-    borderRadius: 4,
-  },
-  spendingNote: {
-    fontSize: 13,
+  emptyText: {
     fontFamily: 'Inter_400Regular',
-    color: MizanColors.textSecondary,
+    color: MizanColors.textMuted,
   },
-  transactionCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-    padding: 16,
-  },
-  transactionLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  iconBox: {
-    width: 40,
-    height: 40,
+  emptyButton: {
+    marginTop: 12,
+    backgroundColor: MizanColors.mintPrimary,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  txTitle: {
-    fontSize: 15,
-    fontFamily: 'Inter_700Bold',
-    color: MizanColors.textPrimary,
-  },
-  txDate: {
-    fontSize: 13,
-    fontFamily: 'Inter_400Regular',
-    color: MizanColors.textMuted,
-    marginTop: 2,
-  },
-  txAmount: {
-    fontSize: 15,
+  emptyButtonText: {
+    color: '#fff',
     fontFamily: 'Inter_700Bold',
   },
 });

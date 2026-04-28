@@ -148,7 +148,6 @@
   }
   .mint-gradient-hero {
     background: linear-gradient(180deg, #1A7A64 0%, #45BFA0 100%);
-    border-radius: 0 0 28px 28px;
   }
   .mint-card {
     background: var(--surface-card);

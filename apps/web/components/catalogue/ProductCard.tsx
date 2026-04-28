@@ -79,8 +79,8 @@ export function ProductCard({ product, bankColor, bankTextColor, simpleMode = fa
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 hover:shadow-md transition-all h-full flex flex-col">
         {/* Header with brand avatar */}
         <div className="flex items-start gap-3 mb-3">
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 ${avatarBg} ${avatarText} shadow-sm`}>
-            {logo}
+          <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg shrink-0 ${avatarBg} ${avatarText} shadow-sm`}>
+            {logo[0]}
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="font-bold text-sm text-slate-900 group-hover:text-[var(--color-primary)] transition-colors leading-tight">
@@ -89,12 +89,12 @@ export function ProductCard({ product, bankColor, bankTextColor, simpleMode = fa
             <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mt-0.5">{providerName}</p>
           </div>
           {score > 0 && (
-            <span className={`text-[10px] font-black px-2 py-1 rounded-full shrink-0 ${
+            <span className={`text-[9px] font-black px-2 py-1 rounded-md shrink-0 uppercase tracking-wider ${
               score > 85
-                ? 'text-[var(--color-primary)] bg-[var(--color-primary-muted)]'
+                ? 'text-[var(--color-mint-primary)] bg-[var(--color-mint-primary)]/10'
                 : 'text-slate-500 bg-slate-100'
             }`}>
-              {score}%
+              {score}% Match
             </span>
           )}
         </div>

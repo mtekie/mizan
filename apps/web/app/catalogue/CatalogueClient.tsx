@@ -9,6 +9,8 @@ import { getBankById, getBanksWithProducts } from '@/lib/data/bankLookup';
 import { EmptyState } from '@/components/EmptyState';
 import { AppPageShell } from '@/components/AppPageShell';
 
+import { getCategoryEmoji } from '@mizan/shared';
+
 export function CatalogueClient({ products, categories }: { products: any[], categories: readonly any[] }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
@@ -69,6 +71,7 @@ export function CatalogueClient({ products, categories }: { products: any[], cat
       variant="hero"
       actions={
         <div className="relative w-full max-w-xs">
+          {/* SECTION: product_search */}
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
           <input
             type="text"
@@ -82,6 +85,7 @@ export function CatalogueClient({ products, categories }: { products: any[], cat
     >
       <div className="space-y-6">
         {/* Filter Pills */}
+        {/* SECTION: product_categories */}
         <div className="flex gap-2 overflow-x-auto hide-scrollbar -mx-6 px-6 pb-1">
           {categories.map(f => (
             <button
@@ -89,11 +93,11 @@ export function CatalogueClient({ products, categories }: { products: any[], cat
               onClick={() => { setActiveFilter(f.key); setSelectedInstitution(null); }}
               className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
                 activeFilter === f.key
-                  ? 'bg-slate-900 text-white shadow-md'
+                  ? 'bg-[var(--color-mint-primary)] text-white shadow-md border border-[var(--color-mint-primary)]'
                   : 'bg-white text-slate-600 shadow-sm border border-slate-100'
               }`}
             >
-              {f.label}
+              {f.key === 'all' ? '✨' : getCategoryEmoji(f.key)} {f.label}
             </button>
           ))}
         </div>
@@ -194,6 +198,7 @@ export function CatalogueClient({ products, categories }: { products: any[], cat
         </p>
 
         {/* Products List */}
+        {/* SECTION: product_list */}
         {filteredProducts.length === 0 ? (
           <div className="space-y-4">
             <EmptyState

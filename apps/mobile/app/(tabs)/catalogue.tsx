@@ -10,7 +10,7 @@ import {
   FlatList,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { MizanColors, MizanRadii } from '@mizan/ui-tokens';
+import { MizanColors, MizanRadii, MizanComponentTokens } from '@mizan/ui-tokens';
 import { Search, SlidersHorizontal, Bell, Info } from 'lucide-react-native';
 import { api } from '../../lib/api';
 import { AppScreenShell } from '../../components/ui/AppScreenShell';
@@ -169,6 +169,7 @@ export default function CatalogueScreen() {
 
   const renderHeader = () => (
     <View style={styles.header}>
+      {/* SECTION: product_search */}
       <View style={styles.searchBarContainer}>
         <View style={styles.searchBar}>
           <Search size={20} color={MizanColors.textMuted} style={styles.searchIcon} />
@@ -217,6 +218,7 @@ export default function CatalogueScreen() {
         style={styles.categoryScroll}
         contentContainerStyle={styles.categoryContent}
       >
+        {/* SECTION: product_categories */}
         {CATEGORIES.map(cat => (
           <CategoryPill 
             key={cat.id}
@@ -318,6 +320,7 @@ export default function CatalogueScreen() {
         </TouchableOpacity>
       }
     >
+      {/* SECTION: product_list */}
       <FlatList
         data={products}
         keyExtractor={(item) => item.id}

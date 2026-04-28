@@ -13,7 +13,7 @@ import { performUpdateOnboardingPhase } from '@/app/onboarding/actions';
 import { toast } from 'sonner';
 import { AppPageShell } from '@/components/AppPageShell';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
-import { formatMoney, safePercent, toFiniteNumber } from '@mizan/shared';
+import { formatMoney, safePercent, toFiniteNumber, buildBudgetOverviewVM, buildGoalsVM, buildQuickStatsVM, buildForecastText } from '@mizan/shared';
 
 export default function DreamsClient({ initialBudgets, initialGoals, initialBills }: { initialBudgets: any[], initialGoals: any[], initialBills: any[] }) {
   const searchParams = useSearchParams();
@@ -72,9 +72,19 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
   const [expense, setExpense] = useState({ amount: '', category: '', note: '' });
   const [expenseSuccess, setExpenseSuccess] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
-  const totalBudget = budgets.reduce((s: number, b: any) => s + b.total, 0);
-  const totalSpent = budgets.reduce((s: number, b: any) => s + b.spent, 0);
-  const budgetPercent = Math.min(100, safePercent(totalSpent, totalBudget));
+  const budgetVM = buildBudgetOverviewVM([{
+    id: currentBudgetId || 'local',
+    categories: budgets.map((b: any) => ({
+      id: b.id,
+      name: b.name,
+      allocated: b.total,
+      spent: b.spent,
+    }))
+  } as any]);
+  
+  const goalsVMData = buildGoalsVM(goalsState);
+  const quickStatsVM = buildQuickStatsVM(budgetVM, goalsVMData);
+  const forecastText = buildForecastText(goalsVMData, budgetVM);
 
   const addGoalRef = useFocusTrap(showNewGoal, () => setShowNewGoal(false));
   const loggerRef = useFocusTrap(showExpenseLogger, () => setShowExpenseLogger(false));
@@ -268,6 +278,7 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
           {/* This Month (Left) */}
           <div className="lg:col-span-8 space-y-8">
             {/* Monthly Overview */}
+            {/* SECTION: budget_overview */}
             <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 mb-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
@@ -297,18 +308,18 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
                 <div className="relative w-24 h-24 shrink-0">
                   <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
                     <circle cx="50" cy="50" r="40" fill="none" stroke="#e2e8f0" strokeWidth="8" />
-                    <circle cx="50" cy="50" r="40" fill="none" stroke={budgetPercent > 90 ? '#ef4444' : '#3EA63B'} strokeWidth="8" strokeLinecap="round" strokeDasharray={`${budgetPercent * 2.51} 251`} />
+                    <circle cx="50" cy="50" r="40" fill="none" stroke={budgetVM.percent > 90 ? '#ef4444' : '#3EA63B'} strokeWidth="8" strokeLinecap="round" strokeDasharray={`${budgetVM.percent * 2.51} 251`} />
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-lg font-black text-slate-900">{budgetPercent}%</span>
+                    <span className="text-lg font-black text-slate-900">{budgetVM.percent}%</span>
                     <span className="text-[8px] font-bold text-slate-400 uppercase">Used</span>
                   </div>
                 </div>
                 <div>
-                  <p className="text-2xl font-black text-slate-900">{formatMoney(totalSpent)}</p>
-                  <p className="text-xs text-slate-400 font-semibold">of {formatMoney(totalBudget)} budget</p>
+                  <p className="text-2xl font-black text-slate-900">{budgetVM.totalSpentFormatted}</p>
+                  <p className="text-xs text-slate-400 font-semibold">of {budgetVM.totalBudgetFormatted} budget</p>
                   <p className="text-xs text-[#3EA63B] font-bold mt-1">
-                    {formatMoney(Math.max(0, totalBudget - totalSpent))} remaining
+                    {budgetVM.remainingFormatted} remaining
                   </p>
                 </div>
               </div>
@@ -328,22 +339,22 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
                 </div>
               ) : (
               <div className="space-y-4">
-                {budgets.map((budget: any) => {
-                  const Icon = budget.icon;
-                  const pct = Math.min(100, safePercent(budget.spent, budget.total));
+                {budgetVM.categories.map((budget: any) => {
+                  const originalBudget = budgets.find((b: any) => b.id === budget.id) || {};
+                  const Icon = originalBudget.icon || ShoppingBasket;
                   return (
                     <div key={budget.id} className="rounded-xl border border-slate-100 p-3">
                       <div className="flex items-center justify-between mb-1.5">
                         <div className="flex items-center gap-2">
-                          <div className={`w-8 h-8 rounded-lg ${budget.bg} flex items-center justify-center`}>
-                            <Icon className={`w-4 h-4 ${budget.color}`} />
+                          <div className={`w-8 h-8 rounded-lg ${originalBudget.bg || 'bg-slate-100'} flex items-center justify-center`}>
+                            <Icon className={`w-4 h-4 ${originalBudget.color || 'text-slate-600'}`} />
                           </div>
                           <span className="text-sm font-bold text-slate-900">{budget.name}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="text-right">
-                            <span className="text-xs font-bold text-slate-900">{formatMoney(budget.spent)}</span>
-                            <span className="text-[10px] text-slate-400 font-semibold"> / {formatMoney(budget.total)}</span>
+                            <span className="text-xs font-bold text-slate-900">{budget.spentFormatted}</span>
+                            <span className="text-[10px] text-slate-400 font-semibold"> / {budget.allocatedFormatted}</span>
                           </div>
                           <button
                             type="button"
@@ -364,7 +375,7 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
                         </div>
                       </div>
                       <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                        <div className={`h-full rounded-full transition-all ${pct >= 100 ? 'bg-red-500' : budget.progressColor}`} style={{ width: `${pct}%` }} />
+                        <div className={`h-full rounded-full transition-all ${budget.isOverBudget ? 'bg-red-500' : (originalBudget.progressColor || 'bg-slate-500')}`} style={{ width: `${budget.percent}%` }} />
                       </div>
                     </div>
                   );
@@ -400,16 +411,14 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
                       <Plus className="h-3.5 w-3.5" /> Add Goal
                     </button>
                   </div>
-                ) : goalsState.map((goal: any) => {
-                  const pct = Math.min(100, safePercent(goal.saved, goal.target));
-                  const remaining = Math.max(0, toFiniteNumber(goal.target) - toFiniteNumber(goal.saved));
+                ) : goalsVMData.goals.map((goal: any) => {
                   return (
                     <div key={goal.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
                       <div className="flex items-center gap-3 mb-3">
                         <span className="text-2xl">{goal.emoji}</span>
                         <div className="flex-1">
                           <h3 className="text-sm font-bold text-slate-900">{goal.name}</h3>
-                          <p className="text-[10px] text-slate-400 font-semibold">Target: {goal.deadline ? new Date(goal.deadline).toLocaleDateString() : 'N/A'}</p>
+                          <p className="text-[10px] text-slate-400 font-semibold">Target: {goal.deadline}</p>
                         </div>
                         <div className="flex items-center gap-1">
                           <button
@@ -440,18 +449,18 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
                         <div className="relative w-12 h-12">
                           <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
                             <circle cx="50" cy="50" r="40" fill="none" stroke="#e2e8f0" strokeWidth="10" />
-                            <circle cx="50" cy="50" r="40" fill="none" stroke="#3EA63B" strokeWidth="10" strokeLinecap="round" strokeDasharray={`${pct * 2.51} 251`} />
+                            <circle cx="50" cy="50" r="40" fill="none" stroke="#3EA63B" strokeWidth="10" strokeLinecap="round" strokeDasharray={`${goal.percent * 2.51} 251`} />
                           </svg>
-                          <span className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-slate-900">{pct}%</span>
+                          <span className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-slate-900">{goal.percent}%</span>
                         </div>
                       </div>
                       <div className="flex justify-between items-end">
                         <div>
-                          <p className="text-sm font-black text-slate-900">{formatMoney(goal.saved)}</p>
-                          <p className="text-[10px] text-slate-400 font-semibold">of {formatMoney(goal.target)}</p>
+                          <p className="text-sm font-black text-slate-900">{goal.savedFormatted}</p>
+                          <p className="text-[10px] text-slate-400 font-semibold">of {goal.targetFormatted}</p>
                         </div>
                         <p className="text-[10px] text-slate-400 font-semibold">
-                          {formatMoney(remaining)} to go
+                          {goal.remainingFormatted} to go
                         </p>
                       </div>
                     </div>
@@ -470,10 +479,9 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
                   <Lightbulb className="w-5 h-5" />
                 </div>
                 <div>
-              <h3 className="font-bold text-sm mb-1 text-slate-900">Plan Insight</h3>
-                  <p className="text-xs text-slate-700 leading-relaxed">
-                    At your current saving rate, you&apos;ll hit your Emergency Fund goal by <span className="font-bold text-[#3EA63B]">May 2026</span> — one month early!
-                    Consider redirecting the surplus to your Laptop Fund.
+                  <h3 className="text-sm font-bold text-slate-900 mb-1">Mizan Insight</h3>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    {forecastText}
                   </p>
                 </div>
               </div>
@@ -483,11 +491,11 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
             <section className="mt-6 grid grid-cols-2 gap-3">
               <div className="bg-white rounded-xl border border-slate-100 p-4 text-center">
                 <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Avg. Monthly Save</p>
-                <p className="text-xl font-black text-[#3EA63B]">{formatMoney(Math.max(0, totalBudget - totalSpent))}</p>
+                <p className="text-xl font-black text-[#3EA63B]">{quickStatsVM.avgMonthlySave}</p>
               </div>
               <div className="bg-white rounded-xl border border-slate-100 p-4 text-center">
                 <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Goals On Track</p>
-                <p className="text-xl font-black text-slate-900">{goalsState.filter((g: any) => safePercent(g.saved, g.target) >= 50).length} / {goalsState.length}</p>
+                <p className="text-xl font-black text-slate-900">{quickStatsVM.goalsOnTrack}</p>
               </div>
             </section>
           </div>

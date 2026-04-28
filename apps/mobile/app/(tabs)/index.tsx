@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { MizanColors, MizanSpacing, MizanRadii } from '@mizan/ui-tokens';
+import { MizanColors } from '@mizan/ui-tokens';
+import { MizanComponentTokens } from '@mizan/ui-tokens';
 import { MizanCard } from '../../components/ui/MizanCard';
-import { MintBudgetBar } from '../../components/ui/MintBudgetBar';
 import { SmsPermissionCard } from '../../components/ui/SmsPermissionCard';
 import { MintAccountSheet } from '../../components/forms/MintAccountSheet';
 import { router } from 'expo-router';
@@ -11,11 +11,16 @@ import { Bell, ChevronRight, Plus, ArrowUpRight, ArrowDownLeft, CreditCard, Smar
 import { useStore } from '../../lib/store';
 import { SmartProfilePrompt } from '../../components/SmartProfilePrompt';
 import { ProfileCompleteness } from '../../components/ProfileCompleteness';
-import { formatMoney } from '@mizan/shared';
+import {
+  formatMoney, buildMoneySummaryVM, buildBudgetOverviewVM,
+  buildRecentTransactionsVM, getCategoryEmoji,
+} from '@mizan/shared';
 
 import { api } from '../../lib/api';
 
 import { AppScreenShell } from '../../components/ui/AppScreenShell';
+
+const T = MizanComponentTokens;
 
 function QuickAction({ icon: Icon, label, color }: any) {
   return (
@@ -64,26 +69,22 @@ export default function DashboardScreen() {
     }
   }, [loadData, profile.isComplete, isGuest]);
 
-  const summary = {
-    netWorth: dashboardData?.netWorth ?? (isGuest ? 124500 : 0),
-    monthlyIn: dashboardData?.monthlyIn ?? (isGuest ? 45000 : 0),
-    monthlyOut: dashboardData?.monthlyOut ?? (isGuest ? 12300 : 0),
-    budgets: dashboardData?.budgets ?? (isGuest ? [
-      { id: '1', name: 'Housing', spent: 5000, allocated: 5000 },
-      { id: '2', name: 'Food & Dining', spent: 2400, allocated: 3000 },
-      { id: '3', name: 'Transport', spent: 1200, allocated: 1500 },
-    ] : [])
-  };
-
-  const recentTransactions = dashboardData?.recentTransactions ?? (isGuest ? [
-    { id: 'r1', title: 'Kaldi Coffee', category: 'Food', amount: -120, source: 'telebirr' },
-    { id: 'r2', title: 'Salary Deposit', category: 'Income', amount: 35000, source: 'CBE' },
-    { id: 'r3', title: 'Shoa Supermarket', category: 'Groceries', amount: -890, source: 'CBE Birr' },
+  // ═══ SHARED VIEW MODELS ═══
+  const accounts = dashboardData?.accounts ?? [];
+  const txList = dashboardData?.recentTransactions ?? (isGuest ? [
+    { id: 'r1', title: 'Kaldi Coffee', category: 'Food', amount: -120, source: 'telebirr', date: new Date().toISOString() },
+    { id: 'r2', title: 'Salary Deposit', category: 'Income', amount: 35000, source: 'CBE', date: new Date().toISOString() },
+    { id: 'r3', title: 'Shoa Supermarket', category: 'Groceries', amount: -890, source: 'CBE Birr', date: new Date().toISOString() },
+  ] : []);
+  const budgetList = dashboardData?.budgets ?? (isGuest ? [
+    { id: '1', name: 'Housing', spent: 5000, allocated: 5000 },
+    { id: '2', name: 'Food & Dining', spent: 2400, allocated: 3000 },
+    { id: '3', name: 'Transport', spent: 1200, allocated: 1500 },
   ] : []);
 
-  const totalBudget = summary.budgets.reduce((s: number, b: any) => s + (b.allocated || 0), 0);
-  const totalSpent = summary.budgets.reduce((s: number, b: any) => s + (b.spent || 0), 0);
-  const budgetPct = totalBudget > 0 ? Math.min(100, Math.round((totalSpent / totalBudget) * 100)) : 0;
+  const moneyVM = buildMoneySummaryVM(accounts, txList as any);
+  const budgetVM = buildBudgetOverviewVM(budgetList as any);
+  const recentVM = buildRecentTransactionsVM(txList as any, 3);
 
   return (
     <AppScreenShell
@@ -131,15 +132,15 @@ export default function DashboardScreen() {
       </View>
 
       {/* Insight Card */}
-      <MizanCard style={[styles.card, { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0', borderWidth: 1 }]}>
+      <MizanCard style={[styles.card, { backgroundColor: T.insightCard.bgColor, borderColor: T.insightCard.borderColor, borderWidth: 1 }]}>
         <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
-          <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: MizanColors.mintPrimary, justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ width: T.insightCard.iconSize, height: T.insightCard.iconSize, borderRadius: T.insightCard.iconRadius, backgroundColor: MizanColors.mintPrimary, justifyContent: 'center', alignItems: 'center' }}>
             <TrendingUp size={16} color="#fff" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 12, fontFamily: 'Inter_700Bold', color: MizanColors.mintDark, marginBottom: 4 }}>Mizan Insight</Text>
-            <Text style={{ fontSize: 13, fontFamily: 'Inter_400Regular', color: MizanColors.textPrimary, lineHeight: 18 }}>
-              {summary.monthlyOut > 20000
+            <Text style={{ fontSize: T.insightCard.titleSize, fontFamily: 'Inter_700Bold', color: MizanColors.mintDark, marginBottom: 4 }}>Mizan Insight</Text>
+            <Text style={{ fontSize: T.insightCard.bodySize, fontFamily: 'Inter_400Regular', color: MizanColors.textPrimary, lineHeight: T.insightCard.bodyLineHeight }}>
+              {moneyVM.monthlyOut > 20000
                 ? "Your spending is a bit high this month. Consider reviewing your Entertainment category."
                 : "You're doing great! Your spending is well under control this month."}
             </Text>
@@ -157,7 +158,7 @@ export default function DashboardScreen() {
               <ChevronRight size={14} color={MizanColors.mintPrimary} />
             </View>
           </View>
-          <Text style={{ fontSize: 22, fontFamily: 'Inter_900Black', color: MizanColors.textPrimary, marginTop: 4 }}>{formatMoney(summary.netWorth)}</Text>
+          <Text style={{ fontSize: T.statCard.valueSize, fontFamily: 'Inter_900Black', color: MizanColors.textPrimary, marginTop: 4 }}>{moneyVM.totalBalanceFormatted}</Text>
         </MizanCard>
       </TouchableOpacity>
 
@@ -172,13 +173,13 @@ export default function DashboardScreen() {
             </View>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: 4 }}>
-            <Text style={{ fontSize: 15, fontFamily: 'Inter_700Bold', color: MizanColors.textPrimary }}>{budgetPct}% used</Text>
+            <Text style={{ fontSize: 15, fontFamily: 'Inter_700Bold', color: MizanColors.textPrimary }}>{budgetVM.percent}% used</Text>
             <Text style={{ fontSize: 12, fontFamily: 'Inter_400Regular', color: MizanColors.textMuted }}>
-              {formatMoney(totalSpent)} / {formatMoney(totalBudget)}
+              {budgetVM.totalSpentFormatted} / {budgetVM.totalBudgetFormatted}
             </Text>
           </View>
-          <View style={{ height: 6, backgroundColor: MizanColors.mintBg, borderRadius: 3, overflow: 'hidden', marginTop: 8 }}>
-            <View style={{ height: '100%', width: `${budgetPct}%`, backgroundColor: budgetPct > 90 ? '#EF4444' : MizanColors.mintPrimary, borderRadius: 3 }} />
+          <View style={{ height: T.progressBar.height, backgroundColor: T.progressBar.trackColor, borderRadius: T.progressBar.borderRadius, overflow: 'hidden', marginTop: 8 }}>
+            <View style={{ height: '100%', width: `${budgetVM.percent}%`, backgroundColor: budgetVM.percent > T.progressBar.dangerThreshold ? '#EF4444' : MizanColors.mintPrimary, borderRadius: T.progressBar.borderRadius }} />
           </View>
         </MizanCard>
       </TouchableOpacity>
@@ -192,20 +193,20 @@ export default function DashboardScreen() {
             <ChevronRight size={14} color={MizanColors.mintPrimary} />
           </TouchableOpacity>
         </View>
-        {recentTransactions.length === 0 ? (
+        {recentVM.transactions.length === 0 ? (
           <Text style={{ fontSize: 13, fontFamily: 'Inter_400Regular', color: MizanColors.textMuted, marginTop: 8, textAlign: 'center', paddingVertical: 12 }}>No transactions yet.</Text>
         ) : (
-          recentTransactions.slice(0, 3).map((tx: any, idx: number) => (
-            <View key={tx.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderTopWidth: idx > 0 ? 1 : 0, borderTopColor: '#F1F5F9' }}>
-              <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: tx.amount > 0 ? MizanColors.mintBg : '#F1F5F9', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
-                <Text style={{ fontSize: 16 }}>{tx.amount > 0 ? '💰' : '💳'}</Text>
+          recentVM.transactions.map((tx, idx) => (
+            <View key={tx.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderTopWidth: idx > 0 ? 1 : 0, borderTopColor: T.transactionRow.borderColor }}>
+              <View style={{ width: T.transactionRow.iconSize, height: T.transactionRow.iconSize, borderRadius: T.transactionRow.iconRadius, backgroundColor: tx.isIncome ? MizanColors.mintBg : '#F1F5F9', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+                <Text style={{ fontSize: 16 }}>{tx.emoji}</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 14, fontFamily: 'Inter_700Bold', color: MizanColors.textPrimary }}>{tx.title}</Text>
-                <Text style={{ fontSize: 11, fontFamily: 'Inter_400Regular', color: MizanColors.textMuted }}>{tx.source || 'Manual'}</Text>
+                <Text style={{ fontSize: T.transactionRow.titleSize, fontFamily: 'Inter_700Bold', color: MizanColors.textPrimary }}>{tx.title}</Text>
+                <Text style={{ fontSize: T.transactionRow.subtitleSize, fontFamily: 'Inter_400Regular', color: MizanColors.textMuted }}>{tx.source}</Text>
               </View>
-              <Text style={{ fontSize: 14, fontFamily: 'Inter_700Bold', color: tx.amount > 0 ? MizanColors.mintDark : MizanColors.textPrimary }}>
-                {tx.amount > 0 ? '+' : ''}{formatMoney(Math.abs(tx.amount))}
+              <Text style={{ fontSize: T.transactionRow.amountSize, fontFamily: 'Inter_700Bold', color: tx.isIncome ? MizanColors.mintDark : MizanColors.textPrimary }}>
+                {tx.isIncome ? '+' : ''}{tx.amountFormatted}
               </Text>
             </View>
           ))
@@ -301,7 +302,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_700Bold',
     fontSize: 32,
     color: '#fff',
-    marginBottom: MizanSpacing.lg,
+    marginBottom: 24,
   },
   netWorthHeader: {
     flexDirection: 'row',
@@ -312,7 +313,7 @@ const styles = StyleSheet.create({
     backgroundColor: MizanColors.mintPrimary,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: MizanRadii.full,
+    borderRadius: 9999,
     flexDirection: 'row',
     alignItems: 'center',
     shadowColor: '#000',
@@ -330,7 +331,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.1)',
-    paddingTop: MizanSpacing.md,
+    paddingTop: 16,
   },
   cashFlowItem: {
     flex: 1,

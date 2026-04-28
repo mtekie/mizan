@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MizanColors } from '@mizan/ui-tokens';
+import { MizanComponentTokens } from '@mizan/ui-tokens';
 import { Settings, LogOut, Shield, CircleUser, HelpCircle, Info, ChevronRight, Building2, TrendingUp, ShieldCheck } from 'lucide-react-native';
 import { MizanCard } from '../../components/ui/MizanCard';
 import { useStore } from '../../lib/store';
@@ -8,7 +9,9 @@ import { supabase } from '../../lib/auth';
 import { router } from 'expo-router';
 import { AppScreenShell } from '../../components/ui/AppScreenShell';
 import { api } from '../../lib/api';
-import { demoAccounts, formatMoney } from '@mizan/shared';
+import { demoAccounts, formatMoney, buildProfileVM, buildAccountsVM } from '@mizan/shared';
+
+const T = MizanComponentTokens;
 
 export default function ProfileScreen() {
   const { profile, isGuest, setGuest, setProfile } = useStore();
@@ -43,6 +46,7 @@ export default function ProfileScreen() {
 
   const score = (profile as any)?.mizanScore ?? 690;
   const scoreLabel = score > 750 ? 'Excellent' : score > 600 ? 'Good' : 'Fair';
+  const accountsVM = buildAccountsVM(accounts);
 
   return (
     <AppScreenShell
@@ -125,27 +129,28 @@ export default function ProfileScreen() {
       {/* Connected Accounts with Balances */}
       <Text style={styles.sectionTitle}>Connected Accounts</Text>
       <MizanCard style={styles.accountsCard}>
-        {accounts.map((acc, idx) => (
+        {accountsVM.map((acc, idx) => (
           <View key={acc.id}>
             <TouchableOpacity style={styles.accountRow}>
-              <View style={[styles.accountIconBox, { backgroundColor: acc.color ? acc.color + '18' : MizanColors.mintBg }]}>
-                <Building2 size={20} color={acc.color || MizanColors.mintPrimary} />
+              <View style={[styles.accountIconBox, { backgroundColor: acc.color + '18' }]}>
+                <Building2 size={T.accountTile.iconSize} color={acc.color} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.accountName}>{acc.name}</Text>
-                <Text style={styles.accountBank}>{acc.type} • {acc.number || 'N/A'}</Text>
+                <Text style={styles.accountBank}>{acc.type} • {acc.number}</Text>
               </View>
-              <Text style={styles.accountBalance}>{formatMoney(acc.balance ?? 0)}</Text>
+              <Text style={styles.accountBalance}>{acc.balanceFormatted}</Text>
             </TouchableOpacity>
-            {idx < accounts.length - 1 && <View style={styles.divider} />}
+            {idx < accountsVM.length - 1 && <View style={styles.divider} />}
           </View>
         ))}
-        {accounts.length === 0 && (
+        {accountsVM.length === 0 && (
           <Text style={styles.emptyAccounts}>No accounts connected.</Text>
         )}
       </MizanCard>
 
       {/* Security & Privacy */}
+      {/* SECTION: security_privacy */}
       <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Security & Privacy</Text>
       <MizanCard style={styles.securityCard}>
         <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 14 }}>
@@ -164,6 +169,7 @@ export default function ProfileScreen() {
       </MizanCard>
 
       {/* Settings & Support Links */}
+      {/* SECTION: settings_links */}
       <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Settings & Support</Text>
       <MizanCard style={styles.menuCard}>
         <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/settings' as any)}>

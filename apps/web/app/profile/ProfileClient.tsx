@@ -3,16 +3,11 @@
 import { Settings, User as UserIcon, ShieldCheck, CreditCard, ChevronRight, PlusCircle, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 import { AppPageShell } from '@/components/AppPageShell';
-import { formatMoney } from '@mizan/shared';
+import { buildProfileVM, buildAccountsVM } from '@mizan/shared';
 
 export default function ProfileClient({ user, accounts }: { user: any, accounts: any[] }) {
-  const displayAccounts = accounts.map((a: any) => ({
-    name: a.name, value: a.balance, color: a.color || '#68246D', type: a.type, number: a.number || 'N/A'
-  }));
-
-  const initial = user.name?.[0] || 'U';
-  const score = user.mizanScore || user.score || 600;
-  const scoreLabel = score > 750 ? 'Excellent' : score > 600 ? 'Good' : 'Fair';
+  const profileVM = buildProfileVM(user, accounts);
+  const accountsVM = buildAccountsVM(accounts);
 
   return (
     <AppPageShell
@@ -20,24 +15,28 @@ export default function ProfileClient({ user, accounts }: { user: any, accounts:
       subtitle="Manage your identity and connected accounts"
       variant="hero"
       actions={
-        <Link href="/settings" className="flex items-center gap-2 bg-white/20 text-white px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-white/30 transition-colors">
-          <Settings className="w-4 h-4" />
-          Settings
-        </Link>
+        <>
+          {/* SECTION: settings_links */}
+          <Link href="/settings" className="flex items-center gap-2 bg-white/20 text-white px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-white/30 transition-colors">
+            <Settings className="w-4 h-4" />
+            Settings
+          </Link>
+        </>
       }
     >
       <div className="md:grid md:grid-cols-12 md:gap-8 space-y-6 md:space-y-0">
         <div className="md:col-span-4 space-y-6">
           {/* Profile Card */}
+          {/* SECTION: profile_identity */}
           <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 text-center flex flex-col items-center">
             <div className="w-24 h-24 rounded-full bg-[var(--color-mint-primary)] text-white flex items-center justify-center text-4xl font-black border-4 border-white shadow-lg mb-4 transition-transform hover:scale-105">
-              {initial}
+              {profileVM.initial}
             </div>
-            <h2 className="text-xl font-black text-slate-800">{user.name || 'User'}</h2>
+            <h2 className="text-xl font-black text-slate-800">{profileVM.name}</h2>
             <p className="text-xs font-semibold text-slate-400 mb-6">{user.email}</p>
             
             <Link href="/score?action=complete-profile" className="inline-flex items-center justify-center bg-[var(--color-mint-primary)] text-white px-6 py-3 rounded-2xl text-xs font-black w-full hover:opacity-90 transition-all shadow-md">
-              {user.isProfileComplete ? 'Edit Profile' : 'Complete Profile Setup'}
+              {profileVM.isComplete ? 'Edit Profile' : 'Complete Profile Setup'}
             </Link>
           </div>
 
@@ -60,7 +59,7 @@ export default function ProfileClient({ user, accounts }: { user: any, accounts:
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-black text-slate-800">Mizan Score</p>
-              <p className="text-[11px] font-medium text-slate-500">{score} • {scoreLabel}</p>
+              <p className="text-[11px] font-medium text-slate-500">{profileVM.score} • {profileVM.scoreLabel}</p>
             </div>
             <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-[var(--color-mint-primary)] transition-colors" />
           </Link>
@@ -72,7 +71,7 @@ export default function ProfileClient({ user, accounts }: { user: any, accounts:
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h3 className="text-lg font-black text-slate-900">Connected Accounts</h3>
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Live balances from {displayAccounts.length} sources</p>
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Live balances from {accountsVM.length} sources</p>
               </div>
               <button className="flex items-center gap-2 bg-[var(--color-mint-primary)]/10 text-[var(--color-mint-primary)] px-4 py-2 rounded-xl text-xs font-bold hover:bg-[var(--color-mint-primary)]/20 transition-colors">
                 <PlusCircle className="w-4 h-4" /> Add New
@@ -80,19 +79,19 @@ export default function ProfileClient({ user, accounts }: { user: any, accounts:
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {displayAccounts.map((a: any, i: number) => (
-                <div key={i} className="flex items-center justify-between p-4 rounded-2xl border border-slate-50 hover:bg-slate-50 transition-colors group">
+              {accountsVM.map((a) => (
+                <div key={a.id} className="flex items-center justify-between p-4 rounded-2xl border border-slate-50 hover:bg-slate-50 transition-colors group">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-sm transition-transform group-hover:scale-110" style={{ backgroundColor: a.color }}>
                       <CreditCard className="w-6 h-6" />
                     </div>
                     <div>
                       <p className="text-sm font-black text-slate-800">{a.name}</p>
-                      <p className="text-[10px] font-bold text-slate-400">{a.type} • {a.number}</p>
+                      <p className="text-[10px] font-bold text-slate-400">{a.typeLabel} • {a.number}</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-black text-slate-900">{formatMoney(a.value)}</p>
+                    <p className="text-sm font-black text-slate-900">{a.balanceFormatted}</p>
                   </div>
                 </div>
               ))}
@@ -100,6 +99,7 @@ export default function ProfileClient({ user, accounts }: { user: any, accounts:
           </div>
           
           {/* Security Overview Peek */}
+          {/* SECTION: security_privacy */}
           <div className="bg-slate-900 rounded-3xl p-8 text-white relative overflow-hidden">
             <div className="absolute top-0 right-0 p-4 opacity-10">
               <ShieldCheck className="w-32 h-32" />
