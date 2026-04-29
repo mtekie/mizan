@@ -23,7 +23,9 @@ const getFactorIcon = (label: string) => {
   return TrendingUp;
 };
 
-export default function ScoreClient({ initialScore = 60, initialProfile = {} }: { initialScore: number, initialProfile?: any }) {
+import type { ScoreScreenDataContract } from '@mizan/shared';
+
+export default function ScoreClient({ scoreScreen, initialProfile = {} }: { scoreScreen: ScoreScreenDataContract, initialProfile?: any }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -44,10 +46,10 @@ export default function ScoreClient({ initialScore = 60, initialProfile = {} }: 
     behavioralStyle: initialProfile.behavioralStyle || '',
   });
   const [step, setStep] = useState(1);
-  const [score, setScore] = useState(initialScore);
-  const [factors, setFactors] = useState<any[]>([]);
-  const [tip, setTip] = useState('Generating your financial recommendation...');
-  const [tipLoading, setTipLoading] = useState(true);
+  const [score, setScore] = useState(scoreScreen.value);
+  const [factors, setFactors] = useState<any[]>(scoreScreen.factors);
+  const [tip, setTip] = useState(scoreScreen.tip || 'Generating your financial recommendation...');
+  const [tipLoading, setTipLoading] = useState(false);
 
   const isProfileOnboarding = searchParams.get('action') === 'complete-profile';
   const profileOverlayRef = useFocusTrap(isProfileOnboarding, () => router.push('/score'));
@@ -71,10 +73,13 @@ export default function ScoreClient({ initialScore = 60, initialProfile = {} }: 
   const refreshScore = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/v1/score');
+      const res = await fetch('/api/v1/score-screen');
       const data = await res.json();
-      if (data.score?.score !== undefined) setScore(data.score.score);
-      if (data.score?.factors) setFactors(data.score.factors);
+      if (data.scoreScreen) {
+        setScore(data.scoreScreen.value);
+        setFactors(data.scoreScreen.factors);
+        setTip(data.scoreScreen.tip);
+      }
     } catch (e) {
       toast.error('Failed to update score');
     } finally {
@@ -83,19 +88,8 @@ export default function ScoreClient({ initialScore = 60, initialProfile = {} }: 
   };
 
   useEffect(() => {
-    refreshScore();
-    async function fetchTip() {
-      try {
-        const res = await fetch('/api/v1/ai/tip', { method: 'POST' });
-        const data = await res.json();
-        setTip(data.tip);
-      } catch (e) {
-        setTip("Increase your monthly savings to boost your resilience.");
-      } finally {
-        setTipLoading(false);
-      }
-    }
-    fetchTip();
+    // Score is already loaded from SSR via the contract.
+    // If we wanted to fetch a fresh tip dynamically, we could do it here.
   }, []);
 
   const content = (

@@ -15,6 +15,9 @@ interface UseNudgesProps {
 export function useNudges({ user, accounts, goals, mizanScore }: UseNudgesProps) {
     const nudges = useMemo(() => {
         const potentialNudges: NudgeProps[] = [];
+        const isDismissed = (id: string) => (
+            typeof window !== 'undefined' && localStorage.getItem(`mizan_nudge_dismissed_${id}`)
+        );
 
         // 1. Priority: Setup Accounts (Fundamental)
         if (accounts.length === 0) {
@@ -81,7 +84,7 @@ export function useNudges({ user, accounts, goals, mizanScore }: UseNudgesProps)
         }
 
         // 5. Interest-Free Check (Contextual for Ethiopia)
-        if (user && user.interestFree === false && !localStorage.getItem('mizan_nudge_dismissed_interest-free-check')) {
+        if (user && user.interestFree === false && !isDismissed('interest-free-check')) {
             // We only show this if they haven't set it yet
             potentialNudges.push({
                 id: 'interest-free-check',
@@ -96,10 +99,7 @@ export function useNudges({ user, accounts, goals, mizanScore }: UseNudgesProps)
 
         // Filter out dismissed nudges
         return potentialNudges.filter(nudge => {
-            if (typeof window !== 'undefined') {
-                return !localStorage.getItem(`mizan_nudge_dismissed_${nudge.id}`);
-            }
-            return true;
+            return !isDismissed(nudge.id);
         });
     }, [user, accounts, goals, mizanScore]);
 

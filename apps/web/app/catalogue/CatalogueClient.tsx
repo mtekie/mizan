@@ -9,9 +9,9 @@ import { getBankById, getBanksWithProducts } from '@/lib/data/bankLookup';
 import { EmptyState } from '@/components/EmptyState';
 import { AppPageShell } from '@/components/AppPageShell';
 
-import { getCategoryEmoji } from '@mizan/shared';
+import type { FindScreenDataContract } from '@mizan/shared';
 
-export function CatalogueClient({ products, categories }: { products: any[], categories: readonly any[] }) {
+export function CatalogueClient({ products, find }: { products: any[], find: FindScreenDataContract }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
   const [selectedInstitution, setSelectedInstitution] = useState<string | null>(null);
@@ -87,7 +87,7 @@ export function CatalogueClient({ products, categories }: { products: any[], cat
         {/* Filter Pills */}
         {/* SECTION: product_categories */}
         <div className="flex gap-2 overflow-x-auto hide-scrollbar -mx-6 px-6 pb-1">
-          {categories.map(f => (
+          {find.categories.map(f => (
             <button
               key={f.key}
               onClick={() => { setActiveFilter(f.key); setSelectedInstitution(null); }}
@@ -97,7 +97,7 @@ export function CatalogueClient({ products, categories }: { products: any[], cat
                   : 'bg-white text-slate-600 shadow-sm border border-slate-100'
               }`}
             >
-              {f.key === 'all' ? '✨' : getCategoryEmoji(f.key)} {f.label}
+              {f.key === 'all' ? '✨' : ''} {f.label}
             </button>
           ))}
         </div>
@@ -204,7 +204,7 @@ export function CatalogueClient({ products, categories }: { products: any[], cat
             <EmptyState
               icon={Landmark}
               title="No products found"
-              description="Try clearing filters or searching by provider, product type, or use case."
+              description={find.states.empty.description}
             />
             <div className="flex justify-center">
               <button
@@ -219,7 +219,7 @@ export function CatalogueClient({ products, categories }: { products: any[], cat
                 }}
                 className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-black text-white shadow-sm hover:bg-slate-800"
               >
-                Clear filters
+                {find.states.empty.actionLabel}
               </button>
             </div>
           </div>

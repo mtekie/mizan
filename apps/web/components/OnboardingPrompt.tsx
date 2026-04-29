@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react';
 import { X, ArrowRight, Wallet, Target, UserCircle } from 'lucide-react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import { appendParityQuery } from '@/lib/parity-query';
 
 type PromptType = 'accounts' | 'profile' | 'budget';
 
@@ -14,6 +16,7 @@ interface OnboardingPromptProps {
 
 export function OnboardingPrompt({ type, userName }: OnboardingPromptProps) {
     const [isVisible, setIsVisible] = useState(false);
+    const searchParams = useSearchParams();
 
     useEffect(() => {
         // Check local storage so we don't nag if dismissed recently
@@ -83,7 +86,7 @@ export function OnboardingPrompt({ type, userName }: OnboardingPromptProps) {
                         <h3 className="text-sm font-bold text-slate-900 mb-1">{current.title}</h3>
                         <p className="text-xs text-slate-500 leading-relaxed mb-3">{current.desc}</p>
                         
-                        <Link href={current.link} className="inline-flex items-center gap-1.5 text-xs font-bold text-[#3EA63B] hover:text-[#2e7d2c] transition-colors">
+                        <Link href={appendParityQuery(current.link, searchParams)} className="inline-flex items-center gap-1.5 text-xs font-bold text-[#3EA63B] hover:text-[#2e7d2c] transition-colors">
                             {current.btnText} <ArrowRight className="w-3.5 h-3.5" />
                         </Link>
                     </div>

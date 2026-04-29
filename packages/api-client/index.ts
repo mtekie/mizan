@@ -1,4 +1,4 @@
-import { Account, Transaction, User, Goal, Product, Asset } from '@mizan/shared';
+import { Account, Transaction, User, Goal, Product, Asset, FindScreenApiResponse, GoalsScreenApiResponse, HomeScreenApiResponse, MoneyScreenApiResponse, NotificationsScreenApiResponse, ProfileScreenApiResponse, ScoreScreenApiResponse, ProductDetailApiResponse, ProviderDetailApiResponse, SettingsScreenDataContract, SettingsUpdateRequest } from '@mizan/shared';
 
 export interface ApiClientConfig {
   baseUrl: string;
@@ -49,7 +49,12 @@ export class MizanAPI {
 
   // Dashboard
   dashboard = {
-    get: () => this.fetch<any>('/api/v1/dashboard'),
+    get: () => this.fetch<HomeScreenApiResponse>('/api/v1/dashboard'),
+  };
+
+  // Ledger / Money screen payload
+  ledger = {
+    get: () => this.fetch<MoneyScreenApiResponse>('/api/v1/ledger'),
   };
 
   // Accounts
@@ -70,6 +75,7 @@ export class MizanAPI {
   
   // Goals
   goals = {
+    screen: () => this.fetch<GoalsScreenApiResponse>('/api/v1/goals-screen'),
     list: () => this.fetch<Goal[]>('/api/v1/goals'),
     create: (data: Partial<Goal>) => this.fetch<Goal>('/api/v1/goals', { method: 'POST', body: JSON.stringify(data) }),
     update: (data: Partial<Goal> & { id: string }) => this.fetch<Goal>('/api/v1/goals', { method: 'PATCH', body: JSON.stringify(data) }),
@@ -98,6 +104,7 @@ export class MizanAPI {
       return this.fetch<any[]>(`/api/v1/providers${qs}`);
     },
     get: (slug: string) => this.fetch<any>(`/api/v1/providers/${slug}`),
+    screen: (slug: string) => this.fetch<ProviderDetailApiResponse>(`/api/v1/provider-screen/${slug}`),
   };
 
   // Product Types (Taxonomy)
@@ -106,6 +113,11 @@ export class MizanAPI {
       const qs = params ? `?${new URLSearchParams(params).toString()}` : '';
       return this.fetch<any[]>(`/api/v1/product-types${qs}`);
     },
+  };
+
+  // Find / Catalogue screen bootstrap
+  catalogue = {
+    bootstrap: () => this.fetch<FindScreenApiResponse>('/api/v1/catalogue/bootstrap'),
   };
 
   // Tags
@@ -130,10 +142,17 @@ export class MizanAPI {
       return this.fetch<PaginatedResponse<any>>(`/api/v1/products${qs}`);
     },
     get: (id: string) => this.fetch<any>(`/api/v1/products/${id}`),
+    screen: (id: string) => this.fetch<ProductDetailApiResponse>(`/api/v1/product-screen/${id}`),
     bookmark: (id: string, method: 'POST' | 'DELETE') => this.fetch<any>(`/api/v1/products/${id}/bookmark`, { method }),
     apply: (id: string) => this.fetch<any>(`/api/v1/products/${id}/apply`, { method: 'POST' }),
     review: (id: string, data: { rating: number; comment?: string }) => 
       this.fetch<any>(`/api/v1/products/${id}/reviews`, { method: 'POST', body: JSON.stringify(data) }),
+  };
+
+  // Settings
+  settings = {
+    screen: () => this.fetch<SettingsScreenDataContract>('/api/v1/settings'),
+    update: (data: Partial<SettingsUpdateRequest>) => this.fetch<SettingsScreenDataContract>('/api/v1/settings', { method: 'PATCH', body: JSON.stringify(data) }),
   };
 
   // Account Links
@@ -153,16 +172,19 @@ export class MizanAPI {
 
   // Notifications
   notifications = {
+    screen: () => this.fetch<NotificationsScreenApiResponse>('/api/v1/notifications-screen'),
     list: () => this.fetch<any[]>('/api/v1/notifications'),
   };
 
   // Score
   score = {
+    screen: () => this.fetch<ScoreScreenApiResponse>('/api/v1/score-screen'),
     get: () => this.fetch<any>('/api/v1/score'),
   };
 
   // Profile
   profile = {
+    screen: () => this.fetch<ProfileScreenApiResponse>('/api/v1/profile-screen'),
     get: () => this.fetch<User>('/api/v1/profile'),
     update: (data: Partial<User>) => this.fetch<User>('/api/v1/profile', { method: 'PATCH', body: JSON.stringify(data) }),
   };

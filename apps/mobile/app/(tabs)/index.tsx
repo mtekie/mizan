@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { ActivityIndicator, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MizanColors } from '@mizan/ui-tokens';
 import { MizanComponentTokens } from '@mizan/ui-tokens';
 import { MizanCard } from '../../components/ui/MizanCard';
@@ -12,8 +12,13 @@ import { useStore } from '../../lib/store';
 import { SmartProfilePrompt } from '../../components/SmartProfilePrompt';
 import { ProfileCompleteness } from '../../components/ProfileCompleteness';
 import {
-  formatMoney, buildMoneySummaryVM, buildBudgetOverviewVM,
-  buildRecentTransactionsVM, getCategoryEmoji,
+  demoAccounts,
+  demoBudgets,
+  demoGoals,
+  demoTransactions,
+  demoUser,
+  buildHomeScreenDataContract,
+  type HomeScreenApiResponse,
 } from '@mizan/shared';
 
 import { api } from '../../lib/api';
@@ -34,12 +39,19 @@ function QuickAction({ icon: Icon, label, color }: any) {
 }
 
 export default function DashboardScreen() {
-  const [dashboardData, setDashboardData] = React.useState<any>(null);
+  const [dashboardData, setDashboardData] = React.useState<HomeScreenApiResponse | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
+  const [loadError, setLoadError] = React.useState(false);
   const accountSheetRef = React.useRef<BottomSheet>(null);
 
   const loadData = React.useCallback(async () => {
+    setLoadError(false);
+    if (!dashboardData) {
+      setLoading(true);
+    } else {
+      setRefreshing(true);
+    }
     try {
       const data = await api.dashboard.get();
       setDashboardData(data);
@@ -47,12 +59,14 @@ export default function DashboardScreen() {
       console.error('Failed to load dashboard:', error);
       if (error?.message?.includes('401') || error?.status === 401) {
         router.replace('/(auth)/login');
+      } else {
+        setLoadError(true);
       }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [dashboardData]);
 
   const { profile, isGuest } = useStore();
 
@@ -69,22 +83,76 @@ export default function DashboardScreen() {
     }
   }, [loadData, profile.isComplete, isGuest]);
 
-  // ═══ SHARED VIEW MODELS ═══
-  const accounts = dashboardData?.accounts ?? [];
-  const txList = dashboardData?.recentTransactions ?? (isGuest ? [
-    { id: 'r1', title: 'Kaldi Coffee', category: 'Food', amount: -120, source: 'telebirr', date: new Date().toISOString() },
-    { id: 'r2', title: 'Salary Deposit', category: 'Income', amount: 35000, source: 'CBE', date: new Date().toISOString() },
-    { id: 'r3', title: 'Shoa Supermarket', category: 'Groceries', amount: -890, source: 'CBE Birr', date: new Date().toISOString() },
-  ] : []);
-  const budgetList = dashboardData?.budgets ?? (isGuest ? [
-    { id: '1', name: 'Housing', spent: 5000, allocated: 5000 },
-    { id: '2', name: 'Food & Dining', spent: 2400, allocated: 3000 },
-    { id: '3', name: 'Transport', spent: 1200, allocated: 1500 },
-  ] : []);
+  // ═══ SHARED SCREEN CONTRACT ═══
+  const screenProfile = isGuest ? demoUser : profile;
+  const accounts = dashboardData?.accounts ?? (isGuest ? demoAccounts : []);
+  const txList = dashboardData?.recentTransactions ?? (isGuest ? demoTransactions.slice(0, 5) : []);
+  const budgetList = dashboardData?.budgets ?? (isGuest ? demoBudgets : []);
+  const homeContract = dashboardData?.home ?? buildHomeScreenDataContract({
+    user: screenProfile,
+    accounts: accounts as any,
+    transactions: isGuest ? demoTransactions : txList as any,
+    budgets: budgetList as any,
+    goals: isGuest ? demoGoals : [],
+  });
 
-  const moneyVM = buildMoneySummaryVM(accounts, txList as any);
-  const budgetVM = buildBudgetOverviewVM(budgetList as any);
-  const recentVM = buildRecentTransactionsVM(txList as any, 3);
+  const moneyVM = homeContract.money;
+  const budgetVM = homeContract.budget;
+  const recentTransactions = homeContract.recentTransactions;
+  const mizanScore = homeContract.score.value;
+
+  if (loading && !isGuest && !dashboardData) {
+    return (
+      <AppScreenShell
+        title="Home"
+        variant="hero"
+        refreshing={refreshing}
+        onRefresh={loadData}
+        actions={
+          <TouchableOpacity onPress={() => router.push('/notifications')}>
+            <Bell color="#fff" size={24} />
+          </TouchableOpacity>
+        }
+      >
+        <MizanCard style={styles.stateCard}>
+          <ActivityIndicator color={MizanColors.mintPrimary} />
+          <Text style={styles.stateTitle}>{homeContract.states.loading.title}</Text>
+          <Text style={styles.stateDescription}>{homeContract.states.loading.description}</Text>
+        </MizanCard>
+        {[1, 2, 3].map(item => (
+          <MizanCard key={item} style={styles.skeletonCard}>
+            <View style={styles.skeletonTitle} />
+            <View style={styles.skeletonLine} />
+            <View style={[styles.skeletonLine, { width: '55%' }]} />
+          </MizanCard>
+        ))}
+      </AppScreenShell>
+    );
+  }
+
+  if (loadError && !dashboardData) {
+    return (
+      <AppScreenShell
+        title="Home"
+        variant="hero"
+        refreshing={refreshing}
+        onRefresh={loadData}
+        actions={
+          <TouchableOpacity onPress={() => router.push('/notifications')}>
+            <Bell color="#fff" size={24} />
+          </TouchableOpacity>
+        }
+      >
+        <MizanCard style={styles.stateCard}>
+          <Text style={styles.stateTitle}>{homeContract.states.error.title}</Text>
+          <Text style={styles.stateDescription}>{homeContract.states.error.description}</Text>
+          <TouchableOpacity style={styles.stateButton} onPress={loadData}>
+            <Text style={styles.stateButtonText}>{homeContract.states.error.actionLabel}</Text>
+          </TouchableOpacity>
+        </MizanCard>
+      </AppScreenShell>
+    );
+  }
 
   return (
     <AppScreenShell
@@ -98,7 +166,7 @@ export default function DashboardScreen() {
         </TouchableOpacity>
       }
     >
-      <ProfileCompleteness user={profile} />
+      <ProfileCompleteness user={screenProfile} />
       <SmartProfilePrompt />
       <SmsPermissionCard />
 
@@ -112,12 +180,12 @@ export default function DashboardScreen() {
               </View>
               <View>
                 <Text style={styles.cardTitle}>Mizan Score</Text>
-                <Text style={styles.scoreStatus}>Improving • Last updated today</Text>
+                <Text style={styles.scoreStatus}>{homeContract.score.status}</Text>
               </View>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
-              <Text style={{ fontSize: 24, fontFamily: 'Inter_900Black', color: MizanColors.mintDark }}>{dashboardData?.mizanScore ?? 720}</Text>
-              <Text style={{ fontSize: 10, fontFamily: 'Inter_700Bold', color: MizanColors.mintPrimary, textTransform: 'uppercase' }}>Good</Text>
+              <Text style={{ fontSize: 24, fontFamily: 'Inter_900Black', color: MizanColors.mintDark }}>{mizanScore}</Text>
+              <Text style={{ fontSize: 10, fontFamily: 'Inter_700Bold', color: MizanColors.mintPrimary, textTransform: 'uppercase' }}>{homeContract.score.label}</Text>
             </View>
           </View>
         </MizanCard>
@@ -125,10 +193,16 @@ export default function DashboardScreen() {
       
       {/* Quick Actions */}
       <View style={styles.quickActions}>
-        <QuickAction icon={ArrowUpRight} label="Send" color="#3B82F6" />
-        <QuickAction icon={ArrowDownLeft} label="Request" color="#10B981" />
-        <QuickAction icon={CreditCard} label="Pay" color="#8B5CF6" />
-        <QuickAction icon={Smartphone} label="Airtime" color="#F59E0B" />
+        {homeContract.quickActions.map(action => {
+          const iconMap = {
+            'arrow-up-right': ArrowUpRight,
+            'arrow-down-left': ArrowDownLeft,
+            'credit-card': CreditCard,
+            smartphone: Smartphone,
+          };
+          const Icon = iconMap[action.icon as keyof typeof iconMap] ?? ArrowUpRight;
+          return <QuickAction key={action.key} icon={Icon} label={action.label} color={action.color} />;
+        })}
       </View>
 
       {/* Insight Card */}
@@ -140,9 +214,7 @@ export default function DashboardScreen() {
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: T.insightCard.titleSize, fontFamily: 'Inter_700Bold', color: MizanColors.mintDark, marginBottom: 4 }}>Mizan Insight</Text>
             <Text style={{ fontSize: T.insightCard.bodySize, fontFamily: 'Inter_400Regular', color: MizanColors.textPrimary, lineHeight: T.insightCard.bodyLineHeight }}>
-              {moneyVM.monthlyOut > 20000
-                ? "Your spending is a bit high this month. Consider reviewing your Entertainment category."
-                : "You're doing great! Your spending is well under control this month."}
+              {homeContract.insights[1]?.text ?? homeContract.insights[0]?.text}
             </Text>
           </View>
         </View>
@@ -193,10 +265,13 @@ export default function DashboardScreen() {
             <ChevronRight size={14} color={MizanColors.mintPrimary} />
           </TouchableOpacity>
         </View>
-        {recentVM.transactions.length === 0 ? (
-          <Text style={{ fontSize: 13, fontFamily: 'Inter_400Regular', color: MizanColors.textMuted, marginTop: 8, textAlign: 'center', paddingVertical: 12 }}>No transactions yet.</Text>
+        {recentTransactions.length === 0 ? (
+          <View style={{ marginTop: 8, paddingVertical: 12 }}>
+            <Text style={{ fontSize: 13, fontFamily: 'Inter_700Bold', color: MizanColors.textPrimary, textAlign: 'center' }}>{homeContract.states.transactionsEmpty.title}</Text>
+            <Text style={{ fontSize: 12, fontFamily: 'Inter_400Regular', color: MizanColors.textMuted, marginTop: 4, textAlign: 'center' }}>{homeContract.states.transactionsEmpty.description}</Text>
+          </View>
         ) : (
-          recentVM.transactions.map((tx, idx) => (
+          recentTransactions.map((tx, idx) => (
             <View key={tx.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderTopWidth: idx > 0 ? 1 : 0, borderTopColor: T.transactionRow.borderColor }}>
               <View style={{ width: T.transactionRow.iconSize, height: T.transactionRow.iconSize, borderRadius: T.transactionRow.iconRadius, backgroundColor: tx.isIncome ? MizanColors.mintBg : '#F1F5F9', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
                 <Text style={{ fontSize: 16 }}>{tx.emoji}</Text>
@@ -246,6 +321,58 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
+  },
+  stateCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  stateTitle: {
+    fontSize: 16,
+    fontFamily: 'Inter_700Bold',
+    color: MizanColors.textPrimary,
+    textAlign: 'center',
+  },
+  stateDescription: {
+    fontSize: 13,
+    fontFamily: 'Inter_400Regular',
+    color: MizanColors.textMuted,
+    textAlign: 'center',
+    lineHeight: 19,
+  },
+  stateButton: {
+    marginTop: 12,
+    backgroundColor: MizanColors.mintPrimary,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  stateButtonText: {
+    color: '#fff',
+    fontSize: 13,
+    fontFamily: 'Inter_700Bold',
+  },
+  skeletonCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    gap: 10,
+    marginBottom: 12,
+  },
+  skeletonTitle: {
+    width: '45%',
+    height: 14,
+    borderRadius: 999,
+    backgroundColor: '#E2E8F0',
+  },
+  skeletonLine: {
+    width: '80%',
+    height: 10,
+    borderRadius: 999,
+    backgroundColor: '#F1F5F9',
   },
   cardHeader: {
     flexDirection: 'row',

@@ -13,9 +13,9 @@ import { performUpdateOnboardingPhase } from '@/app/onboarding/actions';
 import { toast } from 'sonner';
 import { AppPageShell } from '@/components/AppPageShell';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
-import { formatMoney, safePercent, toFiniteNumber, buildBudgetOverviewVM, buildGoalsVM, buildQuickStatsVM, buildForecastText } from '@mizan/shared';
+import { formatMoney, safePercent, toFiniteNumber, buildBudgetOverviewVM, buildGoalsVM, buildQuickStatsVM, buildForecastText, type GoalsScreenDataContract } from '@mizan/shared';
 
-export default function DreamsClient({ initialBudgets, initialGoals, initialBills }: { initialBudgets: any[], initialGoals: any[], initialBills: any[] }) {
+export default function DreamsClient({ initialBudgets, initialGoals, initialBills, goalsScreen }: { initialBudgets: any[], initialGoals: any[], initialBills: any[], goalsScreen?: GoalsScreenDataContract }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -84,7 +84,7 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
   
   const goalsVMData = buildGoalsVM(goalsState);
   const quickStatsVM = buildQuickStatsVM(budgetVM, goalsVMData);
-  const forecastText = buildForecastText(goalsVMData, budgetVM);
+  const forecastText = goalsScreen?.forecastText ?? buildForecastText(goalsVMData, budgetVM);
 
   const addGoalRef = useFocusTrap(showNewGoal, () => setShowNewGoal(false));
   const loggerRef = useFocusTrap(showExpenseLogger, () => setShowExpenseLogger(false));
@@ -402,13 +402,13 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
                 {goalsState.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-slate-300 bg-white p-6 text-center">
                     <Target className="mx-auto mb-3 h-8 w-8 text-slate-300" />
-                    <p className="text-sm font-bold text-slate-700">No savings goals yet</p>
-                    <p className="mt-1 text-xs text-slate-400">Create one simple target to make this screen useful.</p>
+                    <p className="text-sm font-bold text-slate-700">{goalsScreen?.states.goalsEmpty.title ?? 'No savings goals yet'}</p>
+                    <p className="mt-1 text-xs text-slate-400">{goalsScreen?.states.goalsEmpty.description ?? 'Create one simple target to make this screen useful.'}</p>
                     <button
                       onClick={openCreateGoal}
                       className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-[#0F172A] px-3 py-2 text-xs font-bold text-white"
                     >
-                      <Plus className="h-3.5 w-3.5" /> Add Goal
+                      <Plus className="h-3.5 w-3.5" /> {goalsScreen?.states.goalsEmpty.actionLabel ?? 'Add Goal'}
                     </button>
                   </div>
                 ) : goalsVMData.goals.map((goal: any) => {

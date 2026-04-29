@@ -2,12 +2,16 @@
 
 import { Settings, User as UserIcon, ShieldCheck, CreditCard, ChevronRight, PlusCircle, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { AppPageShell } from '@/components/AppPageShell';
-import { buildProfileVM, buildAccountsVM } from '@mizan/shared';
+import { buildProfileVM, buildAccountsVM, type ProfileScreenDataContract } from '@mizan/shared';
+import { appendParityQuery } from '@/lib/parity-query';
 
-export default function ProfileClient({ user, accounts }: { user: any, accounts: any[] }) {
-  const profileVM = buildProfileVM(user, accounts);
-  const accountsVM = buildAccountsVM(accounts);
+export default function ProfileClient({ user, accounts, profileScreen }: { user: any, accounts: any[], profileScreen?: ProfileScreenDataContract }) {
+  const profileVM = profileScreen?.profile ?? buildProfileVM(user, accounts);
+  const accountsVM = profileScreen?.accounts ?? buildAccountsVM(accounts);
+  const searchParams = useSearchParams();
+  const parityHref = (href: string) => appendParityQuery(href, searchParams);
 
   return (
     <AppPageShell
@@ -17,7 +21,7 @@ export default function ProfileClient({ user, accounts }: { user: any, accounts:
       actions={
         <>
           {/* SECTION: settings_links */}
-          <Link href="/settings" className="flex items-center gap-2 bg-white/20 text-white px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-white/30 transition-colors">
+          <Link href={parityHref('/settings')} className="flex items-center gap-2 bg-white/20 text-white px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-white/30 transition-colors">
             <Settings className="w-4 h-4" />
             Settings
           </Link>
@@ -35,7 +39,7 @@ export default function ProfileClient({ user, accounts }: { user: any, accounts:
             <h2 className="text-xl font-black text-slate-800">{profileVM.name}</h2>
             <p className="text-xs font-semibold text-slate-400 mb-6">{user.email}</p>
             
-            <Link href="/score?action=complete-profile" className="inline-flex items-center justify-center bg-[var(--color-mint-primary)] text-white px-6 py-3 rounded-2xl text-xs font-black w-full hover:opacity-90 transition-all shadow-md">
+            <Link href={parityHref('/score?action=complete-profile')} className="inline-flex items-center justify-center bg-[var(--color-mint-primary)] text-white px-6 py-3 rounded-2xl text-xs font-black w-full hover:opacity-90 transition-all shadow-md">
               {profileVM.isComplete ? 'Edit Profile' : 'Complete Profile Setup'}
             </Link>
           </div>
@@ -53,7 +57,7 @@ export default function ProfileClient({ user, accounts }: { user: any, accounts:
             </div>
           )}
 
-          <Link href="/score" className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 flex items-center gap-4 transition-all hover:shadow-md group">
+          <Link href={parityHref('/score')} className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 flex items-center gap-4 transition-all hover:shadow-md group">
             <div className="relative w-14 h-14 rounded-2xl bg-[#3EA63B]/10 text-[#3EA63B] flex items-center justify-center shrink-0">
               <TrendingUp className="w-6 h-6" />
             </div>
@@ -95,6 +99,12 @@ export default function ProfileClient({ user, accounts }: { user: any, accounts:
                   </div>
                 </div>
               ))}
+              {accountsVM.length === 0 && (
+                <div className="col-span-full rounded-2xl border border-dashed border-slate-200 p-6 text-center">
+                  <p className="text-sm font-bold text-slate-700">{profileScreen?.states.accountsEmpty.title ?? 'No accounts connected'}</p>
+                  <p className="mt-1 text-xs text-slate-400">{profileScreen?.states.accountsEmpty.description ?? 'Add your first account from Money.'}</p>
+                </div>
+              )}
             </div>
           </div>
           
@@ -107,7 +117,7 @@ export default function ProfileClient({ user, accounts }: { user: any, accounts:
             <div className="relative z-10 max-w-md">
               <h3 className="text-lg font-black mb-2">Security & Privacy</h3>
               <p className="text-xs text-slate-400 leading-relaxed mb-6">Your data is encrypted using bank-grade protocols. We never share your personal information with 3rd parties without your explicit consent.</p>
-              <Link href="/settings" className="inline-flex items-center gap-2 text-xs font-bold text-[var(--color-mint-primary)] hover:underline">
+              <Link href={parityHref('/settings')} className="inline-flex items-center gap-2 text-xs font-bold text-[var(--color-mint-primary)] hover:underline">
                 Review security settings <ChevronRight className="w-4 h-4" />
               </Link>
             </div>

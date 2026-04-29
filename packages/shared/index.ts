@@ -9,3 +9,5 @@ export * from './product-catalogue';
 export * from './engine/score';
 export * from './logic/profile';
 export * from './view-models';
+export * from './assets';
+export * from './contracts';

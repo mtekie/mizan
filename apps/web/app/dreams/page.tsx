@@ -1,31 +1,19 @@
 import { redirect } from 'next/navigation';
-import prisma from '@/lib/db';
 import DreamsClient from './DreamsClient';
-import { getOrCreateDbUser } from '@/lib/supabase/auth-adapter';
+import { isParityDemo } from '@/lib/parity-demo';
+import { buildGoalsScreenDataContract, demoBills, demoBudgets, demoGoals } from '@mizan/shared';
+import { getGoalsScreenApiResponse } from '@/lib/server/goals-contract';
 
-export default async function DreamsPage() {
-  const userContext = await getOrCreateDbUser();
-  const user = userContext?.dbUser;
+export default async function DreamsPage({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
+  if (await isParityDemo(searchParams)) {
+    const goalsScreen = buildGoalsScreenDataContract({ budgets: demoBudgets, goals: demoGoals, bills: demoBills });
+    return <DreamsClient initialBudgets={demoBudgets} initialGoals={demoGoals} initialBills={demoBills} goalsScreen={goalsScreen} />;
+  }
 
-  if (!user) {
+  const payload = await getGoalsScreenApiResponse();
+  if (!payload) {
     redirect('/login');
   }
 
-  const budgets = await prisma.budget.findMany({ 
-    where: { userId: user.id },
-    include: { categories: true },
-    orderBy: { createdAt: 'asc' }
-  });
-
-  const goals = await prisma.goal.findMany({ 
-    where: { userId: user.id },
-    orderBy: { createdAt: 'asc' }
-  });
-
-  const bills = await prisma.bill.findMany({
-    where: { userId: user.id },
-    orderBy: { dueDay: 'asc' }
-  });
-
-  return <DreamsClient initialBudgets={budgets} initialGoals={goals} initialBills={bills} />;
+  return <DreamsClient initialBudgets={payload.budgets} initialGoals={payload.goals} initialBills={payload.bills} goalsScreen={payload.goalsScreen} />;
 }

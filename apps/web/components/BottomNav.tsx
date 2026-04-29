@@ -1,10 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { Home, ReceiptText, Compass, Target, User, Gauge, Settings, Bell } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { appSections } from '@mizan/shared';
+import { appendParityQuery } from '@/lib/parity-query';
 
 const iconMap = {
   home: Home,
@@ -25,6 +26,7 @@ const navItems = appSections.map(s => ({
 
 export function BottomNav() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   return (
     <nav className="fixed bottom-0 w-full bg-white/80 backdrop-blur-lg border-t border-slate-100 py-3 px-4 flex justify-around items-center z-50 pb-safe md:hidden" role="navigation" aria-label="Bottom navigation">
@@ -35,7 +37,7 @@ export function BottomNav() {
         return (
           <Link
             key={item.name}
-            href={item.href}
+            href={appendParityQuery(item.href, searchParams)}
             aria-current={isActive ? 'page' : undefined}
             aria-label={item.name}
             className={cn(

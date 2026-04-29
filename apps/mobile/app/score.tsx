@@ -10,7 +10,7 @@ import { api } from '../lib/api';
 import { useStore } from '../lib/store';
 import { Analytics } from '../lib/monitoring';
 import Svg, { Circle } from 'react-native-svg';
-import { Eye, EyeOff, Share2, Globe, Lock } from 'lucide-react-native';
+import { Eye, EyeOff, Globe, Lock, Share2, X } from 'lucide-react-native';
 
 const getFactorIcon = (label: string) => {
   const lower = label.toLowerCase();
@@ -40,14 +40,17 @@ export default function ScoreScreen() {
         { label: 'Savings Consistency', score: 60, impact: 'neutral', message: 'Regular contributions help your score.' },
         { label: 'Bill Payment', score: 95, impact: 'positive', message: 'Excellent on-time payments.' },
       ]);
+      setTipLoading(false);
       return;
     }
     setLoading(true);
     try {
-      const data = await api.score.get();
-      setScore(data.score);
-      setFactors(data.factors);
-      Analytics.track('score_viewed', { score: data.score });
+      const data = await api.score.screen();
+      setScore(data.scoreScreen.value);
+      setFactors(data.scoreScreen.factors);
+      setTip(data.scoreScreen.tip);
+      setTipLoading(false);
+      Analytics.track('score_viewed', { score: data.scoreScreen.value });
     } catch (e) {
       console.error('Failed to load score:', e);
     } finally {
@@ -57,11 +60,6 @@ export default function ScoreScreen() {
 
   useEffect(() => {
     loadScore();
-    // Simulate AI tip
-    setTimeout(() => {
-      setTip('Your Equb consistency is excellent! Consider diversifying into a higher-interest savings account to optimize your idle cash.');
-      setTipLoading(false);
-    }, 1500);
   }, []);
 
   const radius = 80;

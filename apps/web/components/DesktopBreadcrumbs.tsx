@@ -1,8 +1,9 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronRight, Home } from 'lucide-react';
+import { appendParityQuery } from '@/lib/parity-query';
 
 /**
  * Maps static pathnames to readable breadcrumb labels.
@@ -19,6 +20,7 @@ const routeLabels: Record<string, string> = {
 
 export function DesktopBreadcrumbs() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   // Do not show on Home page
   if (!pathname || pathname === '/') return null;
@@ -32,7 +34,7 @@ export function DesktopBreadcrumbs() {
 
   return (
     <div className="hidden md:flex items-center gap-2 px-6 py-3 border-b border-[var(--border-muted)] bg-[var(--surface-bg)] text-xs text-slate-500 max-w-7xl mx-auto w-full">
-      <Link href="/" className="hover:text-[var(--text-primary)] transition-colors flex items-center gap-1">
+      <Link href={appendParityQuery('/', searchParams)} className="hover:text-[var(--text-primary)] transition-colors flex items-center gap-1">
         <Home className="w-3.5 h-3.5" /> Home
       </Link>
       <ChevronRight className="w-3 h-3 text-slate-400" />

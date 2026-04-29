@@ -1,20 +1,12 @@
 import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
-import prisma from '@/lib/db';
 import NotificationsClient from './NotificationsClient';
+import { getNotificationsScreenApiResponse } from '@/lib/server/notifications-contract';
 
 export default async function NotificationsPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
+  const payload = await getNotificationsScreenApiResponse();
+  if (!payload) {
     redirect('/login');
   }
 
-  const notifications = await prisma.notification.findMany({
-    where: { userId: user.id },
-    orderBy: { createdAt: 'desc' }
-  });
-
-  return <NotificationsClient initialNotifications={notifications} />;
+  return <NotificationsClient notificationsScreen={payload.notificationsScreen} />;
 }

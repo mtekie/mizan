@@ -8,6 +8,7 @@
 
 import type { Account, Transaction, Goal, Budget, Bill, User } from '../types';
 import { formatMoney, formatSignedMoney, toFiniteNumber, safePercent } from '../formatters';
+import { getAccountVisual } from '../assets';
 
 // ─── Category Emoji Map ───
 const CATEGORY_EMOJI: Record<string, string> = {
@@ -88,23 +89,30 @@ export interface AccountVM {
   balance: number;
   balanceFormatted: string;
   color: string;
+  textColor: string;
+  icon: string;
   bank: string;
   /** Short code for tile display, e.g. "SAVINGS", "WALLET" */
   typeLabel: string;
 }
 
 export function buildAccountsVM(accounts: Account[]): AccountVM[] {
-  return accounts.map(a => ({
-    id: a.id,
-    name: a.name,
-    type: a.type || 'Savings',
-    number: (a as any).number || 'N/A',
-    balance: toFiniteNumber(a.balance),
-    balanceFormatted: formatMoney(a.balance),
-    color: a.color || '#45BFA0',
-    bank: (a as any).bank || a.type || 'Bank',
-    typeLabel: (a.type || 'Savings').toUpperCase(),
-  }));
+  return accounts.map(a => {
+    const visual = getAccountVisual(a);
+    return {
+      id: a.id,
+      name: a.name,
+      type: a.type || 'Savings',
+      number: (a as any).number || 'N/A',
+      balance: toFiniteNumber(a.balance),
+      balanceFormatted: formatMoney(a.balance),
+      color: visual.color,
+      textColor: visual.textColor,
+      icon: visual.icon,
+      bank: (a as any).bank || a.type || 'Bank',
+      typeLabel: visual.shortLabel,
+    };
+  });
 }
 
 // ─── Spending Summary ───

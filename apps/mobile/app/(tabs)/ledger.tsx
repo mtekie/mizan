@@ -3,26 +3,35 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, ScrollView } from '
 import { MizanColors } from '@mizan/ui-tokens';
 import { MizanComponentTokens } from '@mizan/ui-tokens';
 import { MizanCard } from '../../components/ui/MizanCard';
-import { Plus, Filter, ArrowRightLeft, TrendingDown, Building2, TrendingUp } from 'lucide-react-native';
+import { Plus, Filter, ArrowRightLeft, TrendingDown, Building2, TrendingUp, CreditCard, Landmark, PiggyBank, Wallet } from 'lucide-react-native';
 import BottomSheet from '@gorhom/bottom-sheet';
 import { MintTransactionSheet } from '../../components/forms/MintTransactionSheet';
 import { MintAccountSheet } from '../../components/forms/MintAccountSheet';
 import { api } from '../../lib/api';
 import {
-  demoAccounts, demoTransactions, formatMoney, formatSignedMoney,
-  Transaction, buildMoneySummaryVM, buildAccountsVM,
-  buildSpendingSummaryVM, buildRecentTransactionsVM,
-  getCategoryEmoji,
+  demoAccounts,
+  demoTransactions,
+  Transaction,
+  buildMoneyScreenDataContract,
 } from '@mizan/shared';
 import { useStore } from '../../lib/store';
 import { AppScreenShell } from '../../components/ui/AppScreenShell';
 
 const T = MizanComponentTokens;
 
+const accountIconMap = {
+  building: Building2,
+  'credit-card': CreditCard,
+  landmark: Landmark,
+  'piggy-bank': PiggyBank,
+  wallet: Wallet,
+};
+
 export default function LedgerScreen() {
   const [transactions, setTransactions] = React.useState<Transaction[]>([]);
   const [accounts, setAccounts] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [loadError, setLoadError] = React.useState(false);
   const { isGuest } = useStore();
 
   const sheetRef = React.useRef<BottomSheet>(null);
@@ -30,6 +39,7 @@ export default function LedgerScreen() {
 
   const loadData = React.useCallback(async () => {
     setLoading(true);
+    setLoadError(false);
     if (isGuest) {
       setTransactions(demoTransactions);
       setAccounts(demoAccounts);
@@ -37,14 +47,12 @@ export default function LedgerScreen() {
       return;
     }
     try {
-      const [txData, accData] = await Promise.all([
-        api.transactions.list(),
-        api.accounts.list()
-      ]);
-      setTransactions(txData);
-      setAccounts(accData);
+      const ledgerData = await api.ledger.get();
+      setTransactions(ledgerData.transactions);
+      setAccounts(ledgerData.accounts);
     } catch (error) {
       console.error('Failed to load ledger data:', error);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -54,11 +62,17 @@ export default function LedgerScreen() {
     loadData();
   }, [loadData]);
 
-  // ═══ SHARED VIEW MODELS ═══
-  const summaryVM = buildMoneySummaryVM(accounts, transactions);
-  const accountsVM = buildAccountsVM(accounts);
-  const spendingVM = buildSpendingSummaryVM(transactions);
-  const recentVM = buildRecentTransactionsVM(transactions, 50);
+  // ═══ SHARED SCREEN CONTRACT ═══
+  const moneyContract = buildMoneyScreenDataContract({
+    accounts,
+    transactions,
+    recentTransactionLimit: 50,
+  });
+  const summaryVM = moneyContract.summary;
+  const accountsVM = moneyContract.accounts;
+  const spendingVM = moneyContract.spending;
+  const recentTransactions = moneyContract.recentTransactions;
+  const states = moneyContract.states;
 
   const renderHeader = () => (
     <View style={styles.headerSection}>
@@ -110,28 +124,32 @@ export default function LedgerScreen() {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.accountsStrip}
       >
-        {accountsVM.map((acc) => (
-          <TouchableOpacity
-            key={acc.id}
-            style={[styles.accountTile, { backgroundColor: acc.color }]}
-          >
-            <View style={styles.accountTileHeader}>
-              <View>
-                <Text style={styles.accountTileType}>{acc.typeLabel}</Text>
-                <Text style={styles.accountTileName}>{acc.bank}</Text>
+        {accountsVM.map((acc) => {
+          const AccountIcon = accountIconMap[acc.icon as keyof typeof accountIconMap] ?? CreditCard;
+
+          return (
+            <TouchableOpacity
+              key={acc.id}
+              style={[styles.accountTile, { backgroundColor: acc.color }]}
+            >
+              <View style={styles.accountTileHeader}>
+                <View>
+                  <Text style={styles.accountTileType}>{acc.typeLabel}</Text>
+                  <Text style={styles.accountTileName}>{acc.bank}</Text>
+                </View>
+                <View style={styles.accountTileActions}>
+                  <AccountIcon size={T.accountTile.iconSize} color="rgba(255,255,255,0.6)" />
+                </View>
               </View>
-              <View style={styles.accountTileActions}>
-                <Building2 size={T.accountTile.iconSize} color="rgba(255,255,255,0.6)" />
+              <View style={styles.accountTileFooter}>
+                <Text style={styles.accountTileBalance}>{acc.balanceFormatted}</Text>
+                {acc.number !== 'N/A' && (
+                  <Text style={styles.accountTileNumber}>Ending {acc.number.slice(-4)}</Text>
+                )}
               </View>
-            </View>
-            <View style={styles.accountTileFooter}>
-              <Text style={styles.accountTileBalance}>{acc.balanceFormatted}</Text>
-              {acc.number !== 'N/A' && (
-                <Text style={styles.accountTileNumber}>Ending {acc.number.slice(-4)}</Text>
-              )}
-            </View>
-          </TouchableOpacity>
-        ))}
+            </TouchableOpacity>
+          );
+        })}
         {accountsVM.length === 0 && !loading && (
           <TouchableOpacity
             style={[styles.accountTile, { backgroundColor: MizanColors.mintBg, borderWidth: 2, borderColor: MizanColors.mintPrimary, borderStyle: 'dashed' }]}
@@ -139,7 +157,8 @@ export default function LedgerScreen() {
           >
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
               <Plus size={24} color={MizanColors.mintPrimary} />
-              <Text style={{ fontSize: 13, fontFamily: 'Inter_700Bold', color: MizanColors.mintPrimary, marginTop: 8 }}>Add Account</Text>
+              <Text style={{ fontSize: 13, fontFamily: 'Inter_700Bold', color: MizanColors.mintPrimary, marginTop: 8 }}>{states.accountsEmpty.title}</Text>
+              <Text style={styles.emptyDescription}>{states.accountsEmpty.actionLabel}</Text>
             </View>
           </TouchableOpacity>
         )}
@@ -201,7 +220,7 @@ export default function LedgerScreen() {
     >
       {/* SECTION: recent_transactions */}
       <FlatList
-        data={recentVM.transactions}
+        data={recentTransactions}
         keyExtractor={(item) => item.id}
         ListHeaderComponent={renderHeader}
         contentContainerStyle={styles.listContent}
@@ -222,10 +241,10 @@ export default function LedgerScreen() {
         ListEmptyComponent={
           !loading ? (
             <View style={styles.emptyState}>
-              <Text style={{ fontSize: 32 }}>📭</Text>
-              <Text style={styles.emptyText}>No transactions yet</Text>
-              <TouchableOpacity style={styles.emptyButton} onPress={() => sheetRef.current?.expand()}>
-                <Text style={styles.emptyButtonText}>Log first transaction</Text>
+              <Text style={styles.emptyText}>{loadError ? states.error.title : states.transactionsEmpty.title}</Text>
+              <Text style={styles.emptyDescription}>{loadError ? states.error.description : states.transactionsEmpty.description}</Text>
+              <TouchableOpacity style={styles.emptyButton} onPress={loadError ? loadData : () => sheetRef.current?.expand()}>
+                <Text style={styles.emptyButtonText}>{loadError ? states.error.actionLabel : states.transactionsEmpty.actionLabel}</Text>
               </TouchableOpacity>
             </View>
           ) : null
@@ -545,8 +564,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   emptyText: {
+    fontFamily: 'Inter_700Bold',
+    color: MizanColors.textPrimary,
+    textAlign: 'center',
+  },
+  emptyDescription: {
     fontFamily: 'Inter_400Regular',
     color: MizanColors.textMuted,
+    fontSize: 12,
+    textAlign: 'center',
+    lineHeight: 18,
   },
   emptyButton: {
     marginTop: 12,

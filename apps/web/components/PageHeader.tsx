@@ -1,9 +1,10 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronRight, Home } from 'lucide-react';
 import { ReactNode } from 'react';
+import { appendParityQuery } from '@/lib/parity-query';
 
 /**
  * Maps static pathnames to readable breadcrumb labels.
@@ -27,6 +28,7 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, description, actions, showBreadcrumbs = true }: PageHeaderProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const paths = pathname.split('/').filter(Boolean);
   
   const baseKey = `/${paths[0]}`;
@@ -37,7 +39,7 @@ export function PageHeader({ title, description, actions, showBreadcrumbs = true
       <div className="max-w-7xl mx-auto">
         {showBreadcrumbs && pathname !== '/' && (
           <nav className="hidden md:flex items-center gap-2 mb-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-            <Link href="/" className="hover:text-slate-900 transition-colors flex items-center gap-1">
+            <Link href={appendParityQuery('/', searchParams)} className="hover:text-slate-900 transition-colors flex items-center gap-1">
               <Home className="w-3 h-3" /> Home
             </Link>
             <ChevronRight className="w-2.5 h-2.5" />

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { TrendingUp, Building2, Smartphone, Users, Filter, Coffee, ArrowDownToLine, ShoppingCart, Tv, X, ChevronDown, CircleDollarSign, Download, PieChart as PieChartIcon, Calendar, Plus, ArrowRight, ArrowLeft, ArrowRightLeft, Send, Wallet, Sparkles, ArrowUpRight, ArrowDownRight, CreditCard, CheckCircle2, Pencil, Trash2 } from 'lucide-react';
+import { TrendingUp, Building2, Smartphone, Users, Filter, Coffee, ArrowDownToLine, ShoppingCart, Tv, X, ChevronDown, CircleDollarSign, Download, PieChart as PieChartIcon, Calendar, Plus, ArrowRight, ArrowLeft, ArrowRightLeft, Send, Wallet, Sparkles, ArrowUpRight, ArrowDownRight, CreditCard, CheckCircle2, Pencil, Trash2, Landmark, PiggyBank, type LucideIcon } from 'lucide-react';
 
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
@@ -12,7 +12,7 @@ import { performUpdateOnboardingPhase } from '@/app/onboarding/actions';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/PageHeader';
 import { AppPageShell } from '@/components/AppPageShell';
-import { formatMoney, formatSignedMoney, safePercent, toFiniteNumber, buildMoneySummaryVM, buildAccountsVM, buildRecentTransactionsVM, buildSpendingSummaryVM } from '@mizan/shared';
+import { formatMoney, formatSignedMoney, safePercent, toFiniteNumber, buildMoneyScreenDataContract, type MoneyScreenDataContract } from '@mizan/shared';
 
 type AddMode = 'transaction' | 'transfer' | null;
 type TxType = 'expense' | 'income';
@@ -23,7 +23,15 @@ const ETB_TO_USD = 0.0071;
 const txCategories = ['Income', 'Food & Drink', 'Groceries', 'Entertainment', 'Transport', 'Utilities', 'Healthcare', 'Transfer'];
 const filterCategories = ['All', 'Income', 'Food & Drink', 'Groceries', 'Entertainment'];
 
-export default function LedgerClient({ accounts: initialAccounts, initialTransactions, summary: initialSummary }: { accounts: any[], initialTransactions: any[], summary: any }) {
+const accountIconMap: Record<string, LucideIcon> = {
+  building: Building2,
+  'credit-card': CreditCard,
+  landmark: Landmark,
+  'piggy-bank': PiggyBank,
+  wallet: Wallet,
+};
+
+export default function LedgerClient({ accounts: initialAccounts, initialTransactions, money: initialMoney }: { accounts: any[], initialTransactions: any[], money: MoneyScreenDataContract }) {
   const [showFilter, setShowFilter] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedSource, setSelectedSource] = useState('All');
@@ -41,7 +49,7 @@ export default function LedgerClient({ accounts: initialAccounts, initialTransac
   }, []);
 
   const summary = {
-    monthlyTrend: [
+    monthlyTrend: initialMoney?.monthlyTrend ?? [
       { month: 'Oct', income: 32000, expense: 21000 },
       { month: 'Nov', income: 31500, expense: 23500 },
       { month: 'Dec', income: 35000, expense: 28000 },
@@ -51,10 +59,15 @@ export default function LedgerClient({ accounts: initialAccounts, initialTransac
     ]
   };
 
-  const moneyVM = buildMoneySummaryVM(accounts, transactions);
-  const accountsVM = buildAccountsVM(accounts);
-  const recentVM = buildRecentTransactionsVM(transactions, displayCount);
-  const spendingVM = buildSpendingSummaryVM(transactions);
+  const moneyContract = buildMoneyScreenDataContract({
+    accounts,
+    transactions,
+    recentTransactionLimit: displayCount,
+  });
+  const moneyVM = moneyContract.summary;
+  const accountsVM = moneyContract.accounts;
+  const spendingVM = moneyContract.spending;
+  const states = moneyContract.states;
 
   // Add flow state
   const [addMode, setAddMode] = useState<AddMode>(null);
@@ -104,7 +117,11 @@ export default function LedgerClient({ accounts: initialAccounts, initialTransac
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  const displayed = buildRecentTransactionsVM(filtered, displayCount).transactions;
+  const displayed = buildMoneyScreenDataContract({
+    accounts,
+    transactions: filtered,
+    recentTransactionLimit: displayCount,
+  }).recentTransactions;
 
   const grouped = displayed.reduce((acc, tx) => {
     const formattedDate = getFormatDate(tx.date);
@@ -400,56 +417,60 @@ export default function LedgerClient({ accounts: initialAccounts, initialTransac
             {accounts.length === 0 ? (
               <div className="w-full rounded-lg border border-dashed border-slate-300 bg-white p-6 text-center">
                 <Wallet className="mx-auto mb-3 h-8 w-8 text-slate-300" />
-                <p className="text-sm font-bold text-slate-700">Add your first account</p>
-                <p className="mt-1 text-xs text-slate-400">Start with cash, telebirr, CBE, or any account you track manually.</p>
+                <p className="text-sm font-bold text-slate-700">{states.accountsEmpty.title}</p>
+                <p className="mt-1 text-xs text-slate-400">{states.accountsEmpty.description}</p>
                 <button onClick={openCreateAccount} className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-[#0F172A] px-3 py-2 text-xs font-bold text-white">
-                  <Plus className="h-3.5 w-3.5" /> Add Account
+                  <Plus className="h-3.5 w-3.5" /> {states.accountsEmpty.actionLabel}
                 </button>
               </div>
-            ) : accountsVM.map((account) => (
-              <div
-                key={account.id}
-                className="min-w-[220px] h-[130px] rounded-2xl p-4 text-white shadow-lg relative snap-center flex flex-col justify-between overflow-hidden shrink-0"
-                style={{ backgroundColor: account.color }}
-              >
-                <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white/10 rounded-full blur-xl" />
-                <div className="flex justify-between items-start z-10">
-                  <div>
-                    <p className="text-[10px] opacity-80 font-semibold uppercase tracking-widest">{account.typeLabel}</p>
-                    <p className="text-sm font-black">{account.name}</p>
+            ) : accountsVM.map((account) => {
+              const AccountIcon = accountIconMap[account.icon] ?? CreditCard;
+
+              return (
+                <div
+                  key={account.id}
+                  className="min-w-[220px] h-[130px] rounded-2xl p-4 text-white shadow-lg relative snap-center flex flex-col justify-between overflow-hidden shrink-0"
+                  style={{ backgroundColor: account.color }}
+                >
+                  <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white/10 rounded-full blur-xl" />
+                  <div className="flex justify-between items-start z-10">
+                    <div>
+                      <p className="text-[10px] opacity-80 font-semibold uppercase tracking-widest">{account.typeLabel}</p>
+                      <p className="text-sm font-black">{account.name}</p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const originalAccount = accounts.find(a => a.id === account.id);
+                          if (originalAccount) openEditAccount(originalAccount);
+                        }}
+                        className="rounded-full bg-white/15 p-1.5 text-white hover:bg-white/25"
+                        title="Edit account"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteAccount(account.id)}
+                        className="rounded-full bg-white/15 p-1.5 text-white hover:bg-white/25"
+                        title="Delete account"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                      <AccountIcon className="w-4 h-4 opacity-50" />
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const originalAccount = accounts.find(a => a.id === account.id);
-                        if (originalAccount) openEditAccount(originalAccount);
-                      }}
-                      className="rounded-full bg-white/15 p-1.5 text-white hover:bg-white/25"
-                      title="Edit account"
-                    >
-                      <Pencil className="h-3 w-3" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteAccount(account.id)}
-                      className="rounded-full bg-white/15 p-1.5 text-white hover:bg-white/25"
-                      title="Delete account"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </button>
-                    {account.type === 'Credit Card' ? <CreditCard className="w-4 h-4 opacity-50" /> : <Wallet className="w-4 h-4 opacity-50" />}
+                  <div className="z-10">
+                    <p className="text-xl font-black">{showUSD ? `$${(account.balance * ETB_TO_USD).toFixed(0)}` : account.balanceFormatted}</p>
+                    {account.type === 'Credit Card' && (
+                      <p className="text-[9px] opacity-60 font-bold">/ Limit</p>
+                    )}
+                    {account.number !== 'N/A' && <p className="text-[9px] opacity-60 mt-0.5">Ending {account.number.slice(-4)}</p>}
                   </div>
                 </div>
-                <div className="z-10">
-                  <p className="text-xl font-black">{showUSD ? `$${(account.balance * ETB_TO_USD).toFixed(0)}` : account.balanceFormatted}</p>
-                  {account.type === 'Credit Card' && (
-                    <p className="text-[9px] opacity-60 font-bold">/ Limit</p>
-                  )}
-                  {account.number !== 'N/A' && <p className="text-[9px] opacity-60 mt-0.5">Ending {account.number.slice(-4)}</p>}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
 
@@ -473,6 +494,7 @@ export default function LedgerClient({ accounts: initialAccounts, initialTransac
 
             {loading && (
               <div className="space-y-2">
+                <p className="sr-only">{states.loading.title}. {states.loading.description}</p>
                 {[1, 2, 3, 4, 5].map(i => (
                   <div key={i} className="bg-white rounded-xl p-4 animate-pulse flex items-center gap-4">
                     <div className="w-10 h-10 rounded-full bg-slate-200" />
@@ -630,10 +652,24 @@ export default function LedgerClient({ accounts: initialAccounts, initialTransac
               {filtered.length === 0 && !loading && (
                 <div className="text-center text-slate-400 py-12">
                   <CircleDollarSign className="w-12 h-12 mx-auto text-slate-200 mb-4" />
-                  <p className="font-bold text-slate-500 mb-2">No transactions yet.</p>
-                  <button onClick={() => openAdd('transaction')} className="text-[#3EA63B] text-sm font-bold flex items-center gap-1.5 mx-auto">
-                    <Plus className="w-4 h-4" /> Log your first transaction
-                  </button>
+                  <p className="font-bold text-slate-500 mb-2">
+                    {(activeFilters > 0 ? states.filteredTransactionsEmpty : states.transactionsEmpty).title}
+                  </p>
+                  <p className="mx-auto mb-4 max-w-xs text-xs text-slate-400">
+                    {(activeFilters > 0 ? states.filteredTransactionsEmpty : states.transactionsEmpty).description}
+                  </p>
+                  {activeFilters > 0 ? (
+                    <button
+                      onClick={() => { setSelectedCategory('All'); setSelectedSource('All'); }}
+                      className="text-[#3EA63B] text-sm font-bold flex items-center gap-1.5 mx-auto"
+                    >
+                      <Filter className="w-4 h-4" /> {states.filteredTransactionsEmpty.actionLabel}
+                    </button>
+                  ) : (
+                    <button onClick={() => openAdd('transaction')} className="text-[#3EA63B] text-sm font-bold flex items-center gap-1.5 mx-auto">
+                      <Plus className="w-4 h-4" /> {states.transactionsEmpty.actionLabel}
+                    </button>
+                  )}
                 </div>
               )}
             </div>

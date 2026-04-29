@@ -2,15 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { getOrCreateDbUser } from '@/lib/supabase/auth-adapter';
 import { z } from 'zod';
-
-const settingsSchema = z.object({
-    currency: z.string().length(3).optional(),
-    language: z.string().length(2).optional(),
-    onboardingPhase: z.string().optional(),
-    name: z.string().min(1).optional(),
-    theme: z.enum(['light', 'dark']).optional(),
-    notificationPreferences: z.record(z.string(), z.boolean()).optional(),
-});
+import { SettingsUpdateSchema, buildSettingsScreenDataContract } from '@mizan/shared';
 
 export async function GET(req: Request) {
     try {
@@ -24,6 +16,7 @@ export async function GET(req: Request) {
         const dbUser = await prisma.user.findUnique({
             where: { id: user.id },
             select: { 
+                id: true,
                 name: true, 
                 email: true, 
                 currency: true, 
@@ -35,7 +28,12 @@ export async function GET(req: Request) {
             }
         });
 
-        return NextResponse.json(dbUser);
+        if (!dbUser) {
+            return NextResponse.json({ error: 'User not found' }, { status: 404 });
+        }
+
+        const contract = buildSettingsScreenDataContract(dbUser);
+        return NextResponse.json(contract);
     } catch (e: any) {
         return NextResponse.json({ error: e.message }, { status: 500 });
     }
@@ -53,7 +51,7 @@ export async function PATCH(req: Request) {
         const body = await req.json();
         
         // 1. Validate input
-        const result = settingsSchema.safeParse(body);
+        const result = SettingsUpdateSchema.safeParse(body);
         if (!result.success) {
             return NextResponse.json({ error: 'Invalid input', details: result.error.format() }, { status: 400 });
         }
@@ -61,10 +59,22 @@ export async function PATCH(req: Request) {
         // 2. Only update allowed fields (already handled by Zod's safeParse data)
         const updatedUser = await prisma.user.update({
             where: { id: user.id },
-            data: result.data
+            data: result.data,
+            select: {
+                id: true,
+                name: true, 
+                email: true, 
+                currency: true, 
+                language: true, 
+                onboardingPhase: true,
+                theme: true,
+                notificationPreferences: true,
+                role: true
+            }
         });
 
-        return NextResponse.json(updatedUser);
+        const contract = buildSettingsScreenDataContract(updatedUser);
+        return NextResponse.json(contract);
     } catch (e: any) {
         return NextResponse.json({ error: e.message }, { status: 500 });
     }

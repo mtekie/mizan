@@ -73,12 +73,15 @@ export function SmartProfilePrompt() {
   const [showWhy, setShowWhy] = useState(false);
 
   useEffect(() => {
-    const nextQ = QUESTIONS.find(q => !profile[q.field]);
+    if (isGuest) return;
+
+    const profileFields = profile as Partial<Record<ProfilePromptField, unknown>>;
+    const nextQ = QUESTIONS.find(q => !profileFields[q.field]);
     if (nextQ) {
       setCurrentQuestion(nextQ);
       setTimeout(() => setIsVisible(true), 5000);
     }
-  }, [profile]);
+  }, [isGuest, profile]);
 
   const handleSave = async () => {
     if (!currentQuestion || !value) return;

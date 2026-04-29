@@ -14,7 +14,8 @@ import { MizanColors, MizanRadii, MizanComponentTokens } from '@mizan/ui-tokens'
 import { Search, SlidersHorizontal, Bell, Info } from 'lucide-react-native';
 import { api } from '../../lib/api';
 import { AppScreenShell } from '../../components/ui/AppScreenShell';
-import { productCategories } from '@mizan/shared';
+import { buildFindScreenDataContract, demoProducts, demoUser, getProfileCompletion, productCategories, type FindScreenDataContract } from '@mizan/shared';
+import { useStore } from '../../lib/store';
 
 // Marketplace Components
 import { CategoryPill } from '../../components/marketplace/CategoryPill';
@@ -52,6 +53,7 @@ export default function CatalogueScreen() {
   const [activeProvider, setActiveProvider] = useState<string | null>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
+  const [findContract, setFindContract] = useState<FindScreenDataContract>(() => buildFindScreenDataContract({ products: demoProducts }));
   const [completeness, setCompleteness] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -60,7 +62,48 @@ export default function CatalogueScreen() {
   const [skip, setSkip] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [productTotal, setProductTotal] = useState(0);
+  const { isGuest } = useStore();
   const PAGE_SIZE = 10;
+
+  const getDemoProviders = useCallback(() => {
+    const providerMap = new Map<string, { id: string; name: string }>();
+    for (const product of demoProducts) {
+      const id = product.bankId || (product as any).providerId || (product as any).instituteId;
+      if (id) providerMap.set(id, { id, name: product.bankName || (product as any).provider?.name || id });
+    }
+    return Array.from(providerMap.values());
+  }, []);
+
+  const getFilteredDemoProducts = useCallback((category: string, searchTerm: string, providerId: string | null) => {
+    let result = [...demoProducts];
+    if (category !== 'all') {
+      result = result.filter(p => (p as any).productClass === category || p.category === category);
+    }
+    if (providerId) {
+      result = result.filter(p => p.bankId === providerId || (p as any).providerId === providerId || (p as any).instituteId === providerId);
+    }
+    if (routeParams.providerIds) {
+      const ids = String(routeParams.providerIds).split(',');
+      result = result.filter(p => ids.includes(p.bankId || (p as any).providerId || (p as any).instituteId || ''));
+    }
+    if (routeParams.digital === 'true') result = result.filter(p => p.digital);
+    if (routeParams.interestFree === 'true') result = result.filter(p => p.interestFree);
+    if (routeParams.audience === 'student') {
+      result = result.filter(p => `${p.title} ${p.description}`.toLowerCase().includes('student'));
+    }
+    if (routeParams.audience === 'salaried') {
+      result = result.filter(p => `${p.title} ${p.description}`.toLowerCase().includes('salary'));
+    }
+    if (searchTerm.trim()) {
+      const q = searchTerm.toLowerCase();
+      result = result.filter(p =>
+        (p.title || '').toLowerCase().includes(q) ||
+        (p.bankName || '').toLowerCase().includes(q) ||
+        (p.description || '').toLowerCase().includes(q)
+      );
+    }
+    return result;
+  }, [routeParams.audience, routeParams.digital, routeParams.interestFree, routeParams.providerIds]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -70,27 +113,31 @@ export default function CatalogueScreen() {
 
   // Fetch profile + featured + providers once on mount
   const fetchInitialData = useCallback(async () => {
+    if (isGuest) {
+      setCompleteness(getProfileCompletion(demoUser).percentage / 100);
+      setFeaturedProducts(demoProducts.filter(product => (product as any).isFeatured));
+      setProviders(getDemoProviders());
+      setFindContract(buildFindScreenDataContract({ products: demoProducts, providers: getDemoProviders() }));
+      return;
+    }
+
     try {
-      const [profile, featured, allProviders] = await Promise.all([
-        api.profile.get().catch(() => null),
-        api.products.list({ take: '10' }).catch(() => []),
-        api.providers.list().catch(() => [])
-      ]);
+      const bootstrap = await api.catalogue.bootstrap();
+      const profile = bootstrap.profile;
 
       if (profile) {
-        const fields = ['gender', 'employmentStatus', 'monthlyIncomeRange', 'financialPriority'];
-        const filled = fields.filter(f => !!(profile as any)[f]).length;
-        setCompleteness(filled / fields.length);
+        setCompleteness(profile.isComplete ? 1 : 0);
       } else {
         setCompleteness(0);
       }
 
-      setFeaturedProducts(featured);
-      setProviders(allProviders);
+      setFeaturedProducts(bootstrap.featured);
+      setProviders(bootstrap.find.providers);
+      setFindContract(bootstrap.find);
     } catch (e) {
       console.error('Failed to fetch initial catalogue data:', e);
     }
-  }, []);
+  }, [getDemoProviders, isGuest]);
 
   // Fetch filtered products whenever category, search, or provider changes
   const fetchProducts = useCallback(async (category: string, searchTerm: string, providerId: string | null, currentSkip: number = 0) => {
@@ -100,6 +147,20 @@ export default function CatalogueScreen() {
         setError(null);
       } else {
         setLoadingMore(true);
+      }
+
+      if (isGuest) {
+        const filtered = getFilteredDemoProducts(category, searchTerm, providerId);
+        const nextPage = filtered.slice(currentSkip, currentSkip + PAGE_SIZE);
+        if (currentSkip === 0) {
+          setProducts(nextPage);
+        } else {
+          setProducts(prev => [...(Array.isArray(prev) ? prev : []), ...nextPage]);
+        }
+        setHasMore(currentSkip + PAGE_SIZE < filtered.length);
+        setProductTotal(filtered.length);
+        setSkip(currentSkip);
+        return;
       }
 
       const params: Record<string, string> = {
@@ -132,7 +193,7 @@ export default function CatalogueScreen() {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [routeParams.audience, routeParams.digital, routeParams.interestFree, routeParams.providerIds]);
+  }, [getFilteredDemoProducts, isGuest, routeParams.audience, routeParams.digital, routeParams.interestFree, routeParams.providerIds]);
 
   // Initial load
   useEffect(() => {
@@ -296,7 +357,7 @@ export default function CatalogueScreen() {
         <Text style={styles.sectionTitle}>
           {activeCategory === 'all' ? 'All Products' : CATEGORIES.find(c => c.id === activeCategory)?.label || 'Products'}
         </Text>
-        <Text style={styles.countText}>{productTotal || products.length} found</Text>
+        <Text style={styles.countText}>{productTotal || findContract.productCount || products.length} found</Text>
       </View>
       {error && (
         <View style={styles.errorBanner}>
@@ -354,11 +415,11 @@ export default function CatalogueScreen() {
           ) : (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyEmoji}>🔍</Text>
-              <Text style={styles.emptyTitle}>No Products Found</Text>
+              <Text style={styles.emptyTitle}>{findContract.states.empty.title}</Text>
               <Text style={styles.emptyText}>
                 {activeCategory !== 'all' 
                   ? `No ${CATEGORIES.find(c => c.id === activeCategory)?.label || ''} products available yet.`
-                  : 'No products matching your criteria. Try a provider name, product type, or a broader filter.'}
+                  : findContract.states.empty.description}
               </Text>
               {(activeCategory !== 'all' || activeProvider || search) && (
                 <TouchableOpacity
@@ -370,7 +431,7 @@ export default function CatalogueScreen() {
                     fetchProducts('all', '', null, 0);
                   }}
                 >
-                  <Text style={styles.clearButtonText}>Clear filters</Text>
+                  <Text style={styles.clearButtonText}>{findContract.states.empty.actionLabel}</Text>
                 </TouchableOpacity>
               )}
             </View>

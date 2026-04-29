@@ -34,12 +34,12 @@ export default function SettingsPage() {
         fetch('/api/v1/settings')
             .then(res => res.json())
             .then(data => {
-                if (data) {
+                if (data && data.user) {
                     setUserData(data);
-                    if (data.currency) setCurrency(data.currency);
-                    if (data.language) setLanguage(data.language);
-                    if (data.theme) setThemeState(data.theme);
-                    if (data.notificationPreferences) setNotifs(data.notificationPreferences as any);
+                    if (data.preferences?.currency) setCurrency(data.preferences.currency);
+                    if (data.preferences?.language) setLanguage(data.preferences.language);
+                    if (data.preferences?.theme) setThemeState(data.preferences.theme);
+                    if (data.notifications) setNotifs(data.notifications as any);
                 }
             })
             .catch(() => {});
@@ -56,9 +56,9 @@ export default function SettingsPage() {
         await updateSetting('notificationPreferences', newNotifs as any);
     };
 
-    const userDisplayName = userData?.name || 'User';
-    const userInitial = userDisplayName[0] || 'U';
-    const userEmail = userData?.email || 'user@mizan.et';
+    const userDisplayName = userData?.user?.name || 'User';
+    const userInitial = userData?.user?.initial || 'U';
+    const userEmail = userData?.user?.email || 'user@mizan.et';
 
     const updateSetting = async (key: string, value: any) => {
         setIsSaving(true);

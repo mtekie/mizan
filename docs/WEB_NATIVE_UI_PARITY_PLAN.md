@@ -61,6 +61,24 @@ Existing analysis to read first:
 
 ## Target Architecture
 
+## Current Demo Comparison Mode
+
+As of the 2026-04-28 repair pass, the main web tabs support an explicit shared-fixture comparison mode:
+
+- `/?demo=1` or `/?parity=1` for Home
+- `/ledger?demo=1` for Money
+- `/catalogue?demo=1` for Find
+- `/dreams?demo=1` for Goals
+- `/profile?demo=1` for Me
+
+These routes bypass authenticated database data only when the query flag is present and render from `packages/shared/fixtures/demo.ts`. Use this mode for web/native screenshot comparisons so both platforms are judged against the same demo user, accounts, transactions, budgets, bills, and goals. Normal authenticated routes are unchanged.
+
+The web shell preserves `demo=1` and `parity=1` across primary navigation, breadcrumbs, nudges, and tab links so QA comparisons do not accidentally fall back to live authenticated data mid-flow.
+
+## Cross-Platform Standards
+
+The current UI contract lives in `docs/CROSS_PLATFORM_UI_STANDARDS.md`. Treat it as the first release checklist for shared tokens, screen order, data formatting, state handling, and QA parity.
+
 ### Layer 1: Shared Product Contract
 
 Create a shared contract that defines each user-facing tab independently from React or React Native components.

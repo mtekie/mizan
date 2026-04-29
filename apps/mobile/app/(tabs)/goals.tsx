@@ -7,7 +7,18 @@ import { MintGoalSheet } from '../../components/forms/MintGoalSheet';
 import { MizanCard } from '../../components/ui/MizanCard';
 import { api } from '../../lib/api';
 import { useStore } from '../../lib/store';
-import { demoBills, demoBudgets, demoGoals, formatMoney, safePercent, buildBudgetOverviewVM, buildGoalsVM } from '@mizan/shared';
+import {
+  demoBills,
+  demoBudgets,
+  demoGoals,
+  buildBudgetOverviewVM,
+  buildGoalsScreenDataContract,
+  buildForecastText,
+  buildGoalsVM,
+  buildQuickStatsVM,
+  formatMoney,
+  type GoalsScreenDataContract,
+} from '@mizan/shared';
 
 import { AppScreenShell } from '../../components/ui/AppScreenShell';
 
@@ -17,6 +28,7 @@ export default function GoalsScreen() {
   const [goals, setGoals] = useState<any[]>([]);
   const [budgets, setBudgets] = useState<any[]>([]);
   const [bills, setBills] = useState<any[]>([]);
+  const [goalsScreen, setGoalsScreen] = useState<GoalsScreenDataContract>(() => buildGoalsScreenDataContract({ budgets: demoBudgets, goals: demoGoals, bills: demoBills }));
   const [loading, setLoading] = useState(true);
   const [showBillModal, setShowBillModal] = useState(false);
   const [billForm, setBillForm] = useState({ name: '', amount: '', dueDay: '', category: 'Bills' });
@@ -38,18 +50,16 @@ export default function GoalsScreen() {
       setGoals(demoGoals);
       setBudgets(demoBudgets);
       setBills(demoBills);
+      setGoalsScreen(buildGoalsScreenDataContract({ budgets: demoBudgets, goals: demoGoals, bills: demoBills }));
       setLoading(false);
       return;
     }
     try {
-      const [goalData, budgetData, billData] = await Promise.all([
-        api.goals.list().catch(() => []),
-        api.budgets.list().catch(() => []),
-        api.bills.list().catch(() => [])
-      ]);
-      setGoals(goalData);
-      setBudgets(budgetData);
-      setBills(billData);
+      const data = await api.goals.screen();
+      setGoals(data.goals);
+      setBudgets(data.budgets);
+      setBills(data.bills);
+      setGoalsScreen(data.goalsScreen);
     } catch (e) {
       console.error(e);
     } finally {
@@ -168,6 +178,8 @@ export default function GoalsScreen() {
 
   const budgetVM = buildBudgetOverviewVM(budgets);
   const goalsVMData = buildGoalsVM(goals);
+  const quickStatsVM = buildQuickStatsVM(budgetVM, goalsVMData);
+  const forecastText = goalsScreen.forecastText || buildForecastText(goalsVMData, budgetVM);
 
   const renderHeader = () => (
     <View style={styles.headerSection}>
@@ -203,8 +215,8 @@ export default function GoalsScreen() {
               <Calendar size={18} color={MizanColors.textSecondary} />
             </View>
             <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={styles.billTitle}>No bills yet</Text>
-              <Text style={styles.billDue}>Tap Bill to add your first reminder.</Text>
+              <Text style={styles.billTitle}>{goalsScreen.states.billsEmpty.title}</Text>
+              <Text style={styles.billDue}>{goalsScreen.states.billsEmpty.description}</Text>
             </View>
           </MizanCard>
         ) : bills.map(bill => {
@@ -247,7 +259,7 @@ export default function GoalsScreen() {
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 13, fontFamily: 'Inter_700Bold', color: MizanColors.mintDark, marginBottom: 4 }}>Plan Insight</Text>
             <Text style={{ fontSize: 12, fontFamily: 'Inter_400Regular', color: MizanColors.textPrimary, lineHeight: 18 }}>
-              {budgetVM.forecastText}
+              {forecastText}
             </Text>
           </View>
         </View>
@@ -285,8 +297,8 @@ export default function GoalsScreen() {
         ListEmptyComponent={
           !loading ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyTitle}>No Goals Yet</Text>
-              <Text style={styles.emptySubtitle}>Tap the plus icon to start saving.</Text>
+              <Text style={styles.emptyTitle}>{goalsScreen.states.goalsEmpty.title}</Text>
+              <Text style={styles.emptySubtitle}>{goalsScreen.states.goalsEmpty.description}</Text>
             </View>
           ) : null
         }
@@ -321,12 +333,12 @@ export default function GoalsScreen() {
       <View style={{ flexDirection: 'row', gap: 12, marginTop: 16, paddingHorizontal: 4 }}>
         <MizanCard style={{ flex: 1, padding: 14, alignItems: 'center' }}>
           <Text style={{ fontSize: 10, fontFamily: 'Inter_700Bold', color: MizanColors.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>Avg. Monthly Save</Text>
-          <Text style={{ fontSize: 18, fontFamily: 'Inter_900Black', color: MizanColors.mintPrimary }}>{formatMoney(Math.max(0, totalBudget - totalSpent))}</Text>
+          <Text style={{ fontSize: 18, fontFamily: 'Inter_900Black', color: MizanColors.mintPrimary }}>{quickStatsVM.avgMonthlySaveFormatted}</Text>
         </MizanCard>
         <MizanCard style={{ flex: 1, padding: 14, alignItems: 'center' }}>
           <Text style={{ fontSize: 10, fontFamily: 'Inter_700Bold', color: MizanColors.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>Goals On Track</Text>
           <Text style={{ fontSize: 18, fontFamily: 'Inter_900Black', color: MizanColors.textPrimary }}>
-            {goals.filter((g: any) => safePercent(g.saved, g.target) >= 50).length} / {goals.length}
+            {quickStatsVM.goalsOnTrack}
           </Text>
         </MizanCard>
       </View>

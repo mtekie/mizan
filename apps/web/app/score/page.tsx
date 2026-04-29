@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation';
+import { getScoreScreenApiResponse } from '@/lib/server/score-contract';
+import ScoreClient from './ScoreClient';
 import { createClient } from '@/lib/supabase/server';
 import prisma from '@/lib/db';
-import ScoreClient from './ScoreClient';
 
 export default async function ScorePage() {
   const supabase = await createClient();
@@ -11,10 +12,14 @@ export default async function ScorePage() {
     redirect('/login');
   }
 
+  const payload = await getScoreScreenApiResponse();
+  if (!payload) {
+    redirect('/login');
+  }
+
   const user = await prisma.user.findUnique({
     where: { id: authUser.id },
     select: {
-      mizanScore: true,
       gender: true,
       monthlyIncomeRange: true,
       educationLevel: true,
@@ -32,9 +37,5 @@ export default async function ScorePage() {
     }
   });
 
-  if (!user) {
-    redirect('/login');
-  }
-
-  return <ScoreClient initialScore={user.mizanScore} initialProfile={user} />;
+  return <ScoreClient scoreScreen={payload.scoreScreen} initialProfile={user || {}} />;
 }

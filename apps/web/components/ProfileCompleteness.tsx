@@ -3,15 +3,18 @@
 import { motion } from 'framer-motion';
 import { ShieldCheck, ChevronRight, Trophy } from 'lucide-react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { getProfileCompletion } from '@mizan/shared';
+import { appendParityQuery } from '@/lib/parity-query';
 
 export function ProfileCompleteness({ user }: { user: any }) {
   const { percentage } = getProfileCompletion(user || {});
+  const searchParams = useSearchParams();
   
   if (percentage === 100) return null;
 
   return (
-    <Link href="/onboarding" className="block">
+    <Link href={appendParityQuery('/onboarding', searchParams)} className="block">
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}

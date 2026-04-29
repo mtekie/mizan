@@ -16,6 +16,8 @@
   },
   "dependencies": {
     "@google/genai": "^1.17.0",
+    "@mizan/ui": "*",
+    "@mizan/ui-tokens": "*",
     "@hookform/resolvers": "^5.2.1",
     "@prisma/client": "^6.19.2",
     "@supabase/ssr": "^0.10.2",

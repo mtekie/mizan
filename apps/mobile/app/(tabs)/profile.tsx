@@ -9,22 +9,25 @@ import { supabase } from '../../lib/auth';
 import { router } from 'expo-router';
 import { AppScreenShell } from '../../components/ui/AppScreenShell';
 import { api } from '../../lib/api';
-import { demoAccounts, formatMoney, buildProfileVM, buildAccountsVM } from '@mizan/shared';
+import { buildProfileScreenDataContract, demoAccounts, demoUser, buildProfileVM, buildAccountsVM, type ProfileScreenDataContract } from '@mizan/shared';
 
 const T = MizanComponentTokens;
 
 export default function ProfileScreen() {
   const { profile, isGuest, setGuest, setProfile } = useStore();
   const [accounts, setAccounts] = React.useState<any[]>([]);
+  const [profileScreen, setProfileScreen] = React.useState<ProfileScreenDataContract | null>(null);
 
   const fetchAccounts = React.useCallback(async () => {
     if (isGuest) {
       setAccounts(demoAccounts);
+      setProfileScreen(buildProfileScreenDataContract({ user: demoUser, accounts: demoAccounts }));
       return;
     }
     try {
-      const data = await api.accounts.list();
-      setAccounts(data);
+      const data = await api.profile.screen();
+      setAccounts(data.accounts);
+      setProfileScreen(data.profileScreen);
     } catch (e) {
       console.error(e);
     }
@@ -44,9 +47,18 @@ export default function ProfileScreen() {
     router.replace('/(auth)/login');
   };
 
-  const score = (profile as any)?.mizanScore ?? 690;
+  const screenUser = isGuest
+    ? demoUser
+    : {
+        name: profile.fullName || 'User',
+        email: (profile as any).email || '',
+        mizanScore: (profile as any).mizanScore ?? 690,
+        isProfileComplete: profile.isComplete,
+      };
+  const profileVM = profileScreen?.profile ?? buildProfileVM(screenUser, accounts);
+  const score = profileVM.score;
   const scoreLabel = score > 750 ? 'Excellent' : score > 600 ? 'Good' : 'Fair';
-  const accountsVM = buildAccountsVM(accounts);
+  const accountsVM = profileScreen?.accounts ?? buildAccountsVM(accounts);
 
   return (
     <AppScreenShell
@@ -71,8 +83,8 @@ export default function ProfileScreen() {
           </View>
         </View>
         <View style={styles.headerText}>
-          <Text style={styles.name}>{isGuest ? 'Guest User' : (profile.fullName || 'User')}</Text>
-          <Text style={styles.email}>{isGuest ? 'Limited Preview Mode' : `@${profile.username || 'username'}`}</Text>
+          <Text style={styles.name}>{profileVM.name}</Text>
+          <Text style={styles.email}>{isGuest ? profileVM.email : `@${profile.username || 'username'}`}</Text>
         </View>
         <TouchableOpacity
           style={styles.editProfileBtn}
@@ -145,7 +157,7 @@ export default function ProfileScreen() {
           </View>
         ))}
         {accountsVM.length === 0 && (
-          <Text style={styles.emptyAccounts}>No accounts connected.</Text>
+          <Text style={styles.emptyAccounts}>{profileScreen?.states.accountsEmpty.title ?? 'No accounts connected.'}</Text>
         )}
       </MizanCard>
 

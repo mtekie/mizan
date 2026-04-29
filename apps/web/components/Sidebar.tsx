@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { 
     Home, 
     ReceiptText, 
@@ -21,6 +21,7 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { motion, AnimatePresence } from 'motion/react';
 import { appSections, secondarySections } from '@mizan/shared';
+import { appendParityQuery } from '@/lib/parity-query';
 
 const iconMap = {
     home: Home,
@@ -41,6 +42,7 @@ const navItems = appSections.map(s => ({
 
 export function Sidebar() {
     const pathname = usePathname();
+    const searchParams = useSearchParams();
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [userName, setUserName] = useState('User');
     const [userEmail, setUserEmail] = useState('');
@@ -74,7 +76,7 @@ export function Sidebar() {
 
             {/* Logo */}
             <div className={cn("h-20 flex items-center mb-6 px-6", isCollapsed && "justify-center px-0")}>
-                <Link href="/" className="flex items-center gap-3 group">
+                <Link href={appendParityQuery('/', searchParams)} className="flex items-center gap-3 group">
                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--color-mint-primary)] to-[var(--color-mint-deep)] flex items-center justify-center text-white font-black text-lg shadow-lg shadow-[var(--color-mint-primary)]/20 transition-transform group-hover:scale-105">
                         M
                     </div>
@@ -94,7 +96,7 @@ export function Sidebar() {
                     return (
                         <Link
                             key={item.name}
-                            href={item.href}
+                            href={appendParityQuery(item.href, searchParams)}
                             title={isCollapsed ? item.name : ''}
                             className={cn(
                                 "flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-bold transition-all group relative",
@@ -125,11 +127,11 @@ export function Sidebar() {
             )}>
                 {!isCollapsed && (
                     <div className="flex items-center gap-3 mb-4 px-2">
-                        <Link href="/notifications" className="relative text-slate-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-slate-800" aria-label="Notifications">
+                        <Link href={appendParityQuery('/notifications', searchParams)} className="relative text-slate-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-slate-800" aria-label="Notifications">
                             <Bell className="w-5 h-5" />
                             <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-[#0f172a]" />
                         </Link>
-                        <Link href="/settings" className="text-slate-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-slate-800" aria-label="Settings">
+                        <Link href={appendParityQuery('/settings', searchParams)} className="text-slate-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-slate-800" aria-label="Settings">
                             <Settings className="w-5 h-5" />
                         </Link>
                         <button className="text-slate-400 hover:text-red-400 transition-colors p-2 rounded-lg hover:bg-red-400/10 ml-auto" title="Sign Out">
@@ -139,7 +141,7 @@ export function Sidebar() {
                 )}
 
                 <Link 
-                    href="/profile" 
+                    href={appendParityQuery('/profile', searchParams)}
                     className={cn(
                         "flex items-center gap-3 p-2 rounded-2xl transition-all hover:bg-slate-800 group",
                         isCollapsed && "justify-center"

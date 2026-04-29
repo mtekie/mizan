@@ -26,13 +26,13 @@ import {
 } from 'lucide-react-native';
 import { api } from '../../lib/api';
 import { ScoreBadge } from '../../components/marketplace/ScoreBadge';
-import { getMatchExplanation, getProductFacts, getProductProviderName, getProductTitle, getProductTrustMeta } from '@mizan/shared';
+import { ProductDetailDataContract } from '@mizan/shared';
 
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [product, setProduct] = useState<any>(null);
+  const [product, setProduct] = useState<ProductDetailDataContract | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isBookmarked, setIsBookmarked] = useState(false);
@@ -44,10 +44,10 @@ export default function ProductDetailScreen() {
         setLoading(true);
         setError(null);
         console.log('Fetching product detail for:', id);
-        const data = await api.products.get(id as string);
-        if (!data) throw new Error('No product data returned');
-        setProduct(data);
-        setIsBookmarked(data.isBookmarked);
+        const data = await api.products.screen(id as string);
+        if (!data || !data.productDetail) throw new Error('No product data returned');
+        setProduct(data.productDetail);
+        setIsBookmarked(data.productDetail.isBookmarked);
       } catch (err: any) {
         console.error(`Failed to fetch product detail for ID ${id}:`, err);
         setError(err.message || `Failed to load product details for ${id}`);
@@ -84,7 +84,7 @@ export default function ProductDetailScreen() {
   const handleShare = async () => {
     try {
       await Share.share({
-        message: `Check out ${getProductTitle(product)} from ${getProductProviderName(product)} on Mizan!`,
+        message: `Check out ${product.title} from ${product.provider.name} on Mizan!`,
       });
     } catch (error) {
       console.error('Sharing failed:', error);
@@ -92,7 +92,7 @@ export default function ProductDetailScreen() {
   };
 
   const handleReport = () => {
-    const subject = encodeURIComponent(`Incorrect product info: ${getProductTitle(product)}`);
+    const subject = encodeURIComponent(`Incorrect product info: ${product.title}`);
     Linking.openURL(`mailto:support@mizan.app?subject=${subject}`);
   };
 
@@ -119,10 +119,6 @@ export default function ProductDetailScreen() {
       </View>
     );
   }
-
-  const facts = getProductFacts(product);
-  const trust = getProductTrustMeta(product);
-  const matchExplanation = getMatchExplanation(product);
 
   return (
     <View style={styles.container}>
@@ -153,28 +149,28 @@ export default function ProductDetailScreen() {
              {product.provider?.logoUrl && (
                <Image source={{ uri: product.provider.logoUrl }} style={styles.providerLogo} />
              )}
-             <Text style={styles.providerName}>{getProductProviderName(product)}</Text>
+             <Text style={styles.providerName}>{product.provider.name}</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>{getProductTitle(product)}</Text>
+          <Text style={styles.title}>{product.title}</Text>
           
           <View style={styles.badgeRow}>
-            <ScoreBadge score={product.personalizedScore} />
-               <View style={[styles.verifiedBadge, trust.tone === 'warn' && styles.reviewBadge]}>
-                 {trust.tone === 'good' ? (
+            {product.personalizedScore !== undefined && <ScoreBadge score={product.personalizedScore} />}
+               <View style={[styles.verifiedBadge, product.trust.tone === 'warn' && styles.reviewBadge]}>
+                 {product.trust.tone === 'good' ? (
                    <CheckCircle2 size={14} color={MizanColors.mintPrimary} />
                  ) : (
                    <Info size={14} color="#B45309" />
                  )}
-                 <Text style={[styles.verifiedText, trust.tone === 'warn' && styles.reviewText]}>{trust.label}</Text>
+                 <Text style={[styles.verifiedText, product.trust.tone === 'warn' && styles.reviewText]}>{product.trust.label}</Text>
                </View>
           </View>
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Why This May Fit</Text>
-          <Text style={styles.description}>{matchExplanation}</Text>
+          <Text style={styles.description}>{product.matchExplanation}</Text>
           <View style={styles.factWrap}>
-            {facts.map(fact => (
+            {product.facts.map(fact => (
               <View key={`${fact.label}-${fact.value}`} style={[styles.factChip, fact.positive && styles.factChipPositive]}>
                 <Text style={[styles.factChipText, fact.positive && styles.factChipTextPositive]}>{fact.label}: {fact.value}</Text>
               </View>
@@ -188,21 +184,21 @@ export default function ProductDetailScreen() {
               <Percent size={18} color={MizanColors.mintPrimary} />
             </View>
             <Text style={styles.metricLabel}>Rate</Text>
-            <Text style={styles.metricValue} numberOfLines={1}>{facts[0]?.value || 'Variable'}</Text>
+            <Text style={styles.metricValue} numberOfLines={1}>{product.metrics.interestDisplay || 'Variable'}</Text>
           </View>
           <View style={styles.metricCard}>
             <View style={styles.metricIconBox}>
               <Calendar size={18} color={MizanColors.mintPrimary} />
             </View>
             <Text style={styles.metricLabel}>Term</Text>
-            <Text style={styles.metricValue} numberOfLines={1}>{product.term || product.attributes?.term || 'Flexible'}</Text>
+            <Text style={styles.metricValue} numberOfLines={1}>{product.metrics.termDisplay || 'Flexible'}</Text>
           </View>
           <View style={styles.metricCard}>
             <View style={styles.metricIconBox}>
               <Wallet size={18} color={MizanColors.mintPrimary} />
             </View>
-            <Text style={styles.metricLabel}>Amount</Text>
-            <Text style={styles.metricValue} numberOfLines={1}>{product.maxAmount || product.attributes?.maxAmount || product.minBalance || 'Varies'}</Text>
+            <Text style={styles.metricLabel}>{product.metrics.amountLabel}</Text>
+            <Text style={styles.metricValue} numberOfLines={1}>{product.metrics.amountDisplay}</Text>
           </View>
         </View>
 
@@ -213,13 +209,13 @@ export default function ProductDetailScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Requirements</Text>
-          {(product.eligibility?.length ? product.eligibility : product.requirements || []).map((item: string, idx: number) => (
+          {product.details.requirements.map((item: string, idx: number) => (
             <View key={idx} style={styles.requirementRow}>
               <CheckCircle2 size={16} color={MizanColors.textMuted} />
               <Text style={styles.requirementText}>{item}</Text>
             </View>
           ))}
-          {!product.eligibility?.length && !product.requirements?.length && (
+          {product.details.requirements.length === 0 && (
             <Text style={styles.description}>Requirements are still being cleaned up for this product. Check with the provider before applying.</Text>
           )}
         </View>
@@ -229,19 +225,19 @@ export default function ProductDetailScreen() {
           <View style={styles.qualityCard}>
             <View>
               <Text style={styles.qualityLabel}>Status</Text>
-              <Text style={[styles.qualityValue, trust.tone === 'warn' && styles.qualityValueWarn]}>{trust.label}</Text>
+              <Text style={[styles.qualityValue, product.trust.tone === 'warn' && styles.qualityValueWarn]}>{product.trust.label}</Text>
             </View>
             <View>
               <Text style={styles.qualityLabel}>Freshness</Text>
-              <Text style={styles.qualityValue}>{trust.freshness}</Text>
+              <Text style={styles.qualityValue}>{product.trust.freshness}</Text>
             </View>
             <View>
               <Text style={styles.qualityLabel}>Source</Text>
-              <Text style={styles.qualityValue}>{trust.source}</Text>
+              <Text style={styles.qualityValue}>{product.trust.source}</Text>
             </View>
             <View>
               <Text style={styles.qualityLabel}>Confidence</Text>
-              <Text style={styles.qualityValue}>{product.dataConfidence != null ? `${product.dataConfidence}%` : 'Pending'}</Text>
+              <Text style={styles.qualityValue}>{product.dataQuality.confidence != null ? `${product.dataQuality.confidence}%` : 'Pending'}</Text>
             </View>
             <TouchableOpacity style={styles.reportButton} onPress={handleReport}>
               <Text style={styles.reportText}>Report incorrect information</Text>
@@ -250,12 +246,12 @@ export default function ProductDetailScreen() {
         </View>
 
         <View style={styles.providerSection}>
-           <Text style={styles.sectionTitle}>About {product.provider?.name}</Text>
+           <Text style={styles.sectionTitle}>About {product.provider.name}</Text>
            <View style={styles.providerCard}>
              <Building2 size={24} color={MizanColors.textMuted} />
              <View style={styles.providerInfo}>
-               <Text style={styles.providerTier}>{product.provider?.tier || 'Tier 1'} Bank</Text>
-               <Text style={styles.providerDesc}>{product.provider?.description || 'Leading financial institution in Ethiopia.'}</Text>
+               <Text style={styles.providerTier}>{product.provider.tier || 'Tier 1'} Bank</Text>
+               <Text style={styles.providerDesc}>{product.provider.description || 'Leading financial institution in Ethiopia.'}</Text>
              </View>
            </View>
         </View>

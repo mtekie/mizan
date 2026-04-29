@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react';
 import { X, ArrowRight, LucideIcon, Sparkles } from 'lucide-react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import { appendParityQuery } from '@/lib/parity-query';
 
 export type NudgeVariant = 'card' | 'snap';
 
@@ -31,6 +33,7 @@ export function Nudge({
     onDismiss
 }: NudgeProps) {
     const [isVisible, setIsVisible] = useState(true);
+    const searchParams = useSearchParams();
 
     const handleDismiss = () => {
         setIsVisible(false);
@@ -66,7 +69,7 @@ export function Nudge({
                     </p>
                     
                     <Link 
-                        href={link} 
+                        href={appendParityQuery(link, searchParams)}
                         className="flex items-center justify-between w-full bg-white/10 hover:bg-white/20 px-3 py-2 rounded-xl text-[10px] font-bold transition-colors group"
                     >
                         {btnText}
@@ -105,7 +108,7 @@ export function Nudge({
                         <p className="text-xs text-slate-500 leading-relaxed mb-3">{description}</p>
                         
                         <Link 
-                            href={link} 
+                            href={appendParityQuery(link, searchParams)}
                             className="inline-flex items-center gap-1.5 text-xs font-bold text-[#3EA63B] hover:text-[#2e7d2c] transition-all group/btn"
                         >
                             {btnText} 

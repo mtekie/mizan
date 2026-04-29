@@ -2,9 +2,11 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { PageHeader } from './PageHeader';
 import { cn } from '@/lib/utils';
+import { appendParityQuery } from '@/lib/parity-query';
 
 export interface AppPageShellProps {
   title: string;
@@ -37,6 +39,7 @@ export function AppPageShell({
   children,
   maxWidth = '7xl',
 }: AppPageShellProps) {
+  const searchParams = useSearchParams();
   const headerActions = actions || (
     primaryAction || secondaryActions ? (
       <>
@@ -76,7 +79,7 @@ export function AppPageShell({
         <div className="flex items-center gap-3">
           {showBack && (
             <Link
-              href={backHref}
+              href={appendParityQuery(backHref, searchParams)}
               className={cn(
                 "w-10 h-10 rounded-full flex items-center justify-center transition-colors",
                 variant === 'hero' ? "bg-white/20 hover:bg-white/30" : "bg-slate-100 hover:bg-slate-200"

@@ -1,28 +1,19 @@
 import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
-import prisma from '@/lib/db';
 import ProfileClient from './ProfileClient';
+import { demoWebUser, isParityDemo } from '@/lib/parity-demo';
+import { buildProfileScreenDataContract, demoAccounts } from '@mizan/shared';
+import { getProfileScreenApiResponse } from '@/lib/server/profile-contract';
 
-export default async function ProfilePage() {
-  const supabase = await createClient();
-  const { data: { user: authUser } } = await supabase.auth.getUser();
+export default async function ProfilePage({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
+  if (await isParityDemo(searchParams)) {
+    const profileScreen = buildProfileScreenDataContract({ user: demoWebUser, accounts: demoAccounts });
+    return <ProfileClient user={demoWebUser} accounts={demoAccounts} profileScreen={profileScreen} />;
+  }
 
-  if (!authUser) {
+  const payload = await getProfileScreenApiResponse();
+  if (!payload) {
     redirect('/login');
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: authUser.id }
-  });
-
-  if (!user) {
-    redirect('/login');
-  }
-
-  const accounts = await prisma.account.findMany({
-    where: { userId: user.id },
-    orderBy: { createdAt: 'asc' }
-  });
-
-  return <ProfileClient user={user} accounts={accounts} />;
+  return <ProfileClient user={payload.user} accounts={payload.accounts} profileScreen={payload.profileScreen} />;
 }

@@ -2,15 +2,17 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Bell, Lightbulb, Plus, TrendingUp, ArrowDownLeft, ArrowUpRight, ChevronRight, Sparkles, Send, CreditCard, Smartphone } from 'lucide-react';
 import { AppPageShell } from '@/components/AppPageShell';
 import { OnboardingPrompt } from '@/components/OnboardingPrompt';
 import { Nudge } from '@/components/Nudge';
 import { useNudges } from '@/hooks/useNudges';
-import { MintDonutChart, MintBudgetBar } from '@/components/MintCharts';
+import { MintDonutChart } from '@/components/MintCharts';
 import { SmartProfilePrompt } from '@/components/SmartProfilePrompt';
 import { ProfileCompleteness } from '@/components/ProfileCompleteness';
-import { formatMoney, formatSignedMoney, safePercent, getCategoryEmoji, buildRecentTransactionsVM } from '@mizan/shared';
+import { type HomeScreenDataContract } from '@mizan/shared';
+import { appendParityQuery } from '@/lib/parity-query';
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -21,8 +23,17 @@ function getGreeting() {
 
 
 
-export default function DashboardClient({ user, accounts, transactions, summary, featuredProducts }: { user: any, accounts: any[], transactions: any[], summary: any, featuredProducts: any[] }) {
+const quickActionIconMap = {
+  'arrow-up-right': ArrowUpRight,
+  'arrow-down-left': ArrowDownLeft,
+  'credit-card': CreditCard,
+  smartphone: Smartphone,
+};
+
+export default function DashboardClient({ user, accounts, home }: { user: any, accounts: any[], home: HomeScreenDataContract }) {
   const [tipIndex, setTipIndex] = useState(0);
+  const searchParams = useSearchParams();
+  const parityHref = (href: string) => appendParityQuery(href, searchParams);
   const { activeNudge } = useNudges({ 
     user, 
     accounts, 
@@ -30,12 +41,12 @@ export default function DashboardClient({ user, accounts, transactions, summary,
     mizanScore: user?.score || 600 
   });
 
-  const aiTips = [
-    { text: `You're saving ${summary.savingsRate}% of your income this month — that's excellent! Keep it up.`, emoji: '🎯' },
-    { text: summary.monthlyOut > 20000 ? "Your spending is a bit high this week. Try checking your 'Entertainment' category." : "Your coffee spend is down 12% from last month. Small wins add up!", emoji: '☕' },
-    { text: "Tip: Setting aside 500 ETB weekly builds an emergency fund faster than monthly lump sums.", emoji: '💡' },
-    { text: `Your net worth is now ${formatMoney(summary.netWorth)}. You're making great progress!`, emoji: '📈' },
-  ];
+  const aiTips = home.insights;
+  const spendingData = home.spending.categories.map(category => ({
+    name: category.name,
+    value: category.amount,
+    color: category.color,
+  }));
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -52,7 +63,7 @@ export default function DashboardClient({ user, accounts, transactions, summary,
       title="Home"
       variant="hero"
       actions={
-        <Link href="/notifications" className="relative p-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/10">
+        <Link href={parityHref('/notifications')} className="relative p-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/10">
           <Bell className="w-5 h-5 text-white" />
           <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-[var(--color-mint-deep)]"></span>
         </Link>
@@ -75,18 +86,18 @@ export default function DashboardClient({ user, accounts, transactions, summary,
             )}
 
             {/* Mizan Score Preview */}
-            <Link href="/score" className="mint-card animate-slide-up flex items-center gap-4 group hover:shadow-md transition-shadow" style={{ animationDelay: '0.1s' }}>
+            <Link href={parityHref('/score')} className="mint-card animate-slide-up flex items-center gap-4 group hover:shadow-md transition-shadow" style={{ animationDelay: '0.1s' }}>
               <div className="w-12 h-12 rounded-2xl bg-[var(--color-mint-primary)]/10 flex items-center justify-center shrink-0">
                 <TrendingUp className="w-5 h-5 text-[var(--color-mint-primary)]" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-[var(--color-mint-text)]">Mizan Score</p>
-                <p className="text-[11px] text-[var(--color-mint-text-muted)]">Improving • Last updated today</p>
+                <p className="text-[11px] text-[var(--color-mint-text-muted)]">{home.score.status}</p>
               </div>
               <div className="text-right">
-                <p className="text-2xl font-black text-[var(--color-mint-deep)]">{user?.score || user?.mizanScore || 720}</p>
+                <p className="text-2xl font-black text-[var(--color-mint-deep)]">{home.score.value}</p>
                 <p className="text-[10px] font-bold text-[var(--color-mint-primary)] uppercase">
-                  {(user?.score || user?.mizanScore || 720) > 750 ? 'Excellent' : (user?.score || user?.mizanScore || 720) > 600 ? 'Good' : 'Fair'}
+                  {home.score.label}
                 </p>
               </div>
               <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-[var(--color-mint-primary)] transition-colors" />
@@ -94,19 +105,18 @@ export default function DashboardClient({ user, accounts, transactions, summary,
 
             {/* Quick Actions */}
             <div className="grid grid-cols-4 gap-3 animate-slide-up" style={{ animationDelay: '0.15s' }}>
-              {[
-                { icon: ArrowUpRight, label: 'Send', color: '#3B82F6', bg: 'bg-blue-500/10' },
-                { icon: ArrowDownLeft, label: 'Request', color: '#10B981', bg: 'bg-emerald-500/10' },
-                { icon: CreditCard, label: 'Pay', color: '#8B5CF6', bg: 'bg-purple-500/10' },
-                { icon: Smartphone, label: 'Airtime', color: '#F59E0B', bg: 'bg-amber-500/10' },
-              ].map(action => (
-                <button key={action.label} className="flex flex-col items-center gap-2 group transition-transform hover:scale-105">
-                  <div className={`w-14 h-14 rounded-[20px] ${action.bg} flex items-center justify-center`}>
-                    <action.icon className="w-6 h-6" style={{ color: action.color }} />
+              {home.quickActions.map(action => {
+                const ActionIcon = quickActionIconMap[action.icon as keyof typeof quickActionIconMap] ?? ArrowUpRight;
+
+                return (
+                <Link key={action.key} href={parityHref(action.href)} className="flex flex-col items-center gap-2 group transition-transform hover:scale-105">
+                  <div className="w-14 h-14 rounded-[20px] flex items-center justify-center" style={{ backgroundColor: `${action.color}1A` }}>
+                    <ActionIcon className="w-6 h-6" style={{ color: action.color }} />
                   </div>
                   <span className="text-xs font-bold text-slate-600">{action.label}</span>
-                </button>
-              ))}
+                </Link>
+                );
+              })}
             </div>
 
             {/* AI Insight Card */}
@@ -135,18 +145,19 @@ export default function DashboardClient({ user, accounts, transactions, summary,
             <div className="mint-card animate-slide-up" style={{ animationDelay: '0.3s' }}>
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-sm font-bold text-[var(--color-mint-text)]">Recent Transactions</h3>
-                <Link href="/ledger" className="text-xs font-bold text-[var(--color-mint-primary)] flex items-center gap-0.5 hover:underline">
+                <Link href={parityHref('/ledger')} className="text-xs font-bold text-[var(--color-mint-primary)] flex items-center gap-0.5 hover:underline">
                   See all <ChevronRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
 
-              {!transactions || transactions.length === 0 ? (
+              {home.recentTransactions.length === 0 ? (
                 <div className="pt-2 pb-4 text-center">
-                  <p className="text-xs text-[var(--color-mint-text-muted)]">No transactions found.</p>
+                  <p className="text-xs font-bold text-[var(--color-mint-text)]">{home.states.transactionsEmpty.title}</p>
+                  <p className="mt-1 text-xs text-[var(--color-mint-text-muted)]">{home.states.transactionsEmpty.description}</p>
                 </div>
               ) : (
                 <div className="divide-y divide-slate-50">
-                  {buildRecentTransactionsVM(transactions, 3).transactions.map((tx) => (
+                  {home.recentTransactions.map((tx) => (
                     <div key={tx.id} className="flex items-center gap-4 py-3">
                       <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-lg">
                         {tx.emoji}
@@ -172,33 +183,33 @@ export default function DashboardClient({ user, accounts, transactions, summary,
             <div className="mint-card animate-slide-up" style={{ animationDelay: '0.25s' }}>
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-sm font-bold text-[var(--color-mint-text)]">Spending Insights</h3>
-                <Link href="/ledger" className="text-xs font-bold text-[var(--color-mint-primary)] flex items-center gap-0.5 hover:underline">
+                <Link href={parityHref('/ledger')} className="text-xs font-bold text-[var(--color-mint-primary)] flex items-center gap-0.5 hover:underline">
                   Details <ChevronRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
-              <MintDonutChart data={summary.spendingData || []} totalSpent={summary.monthlyOut} />
+              <MintDonutChart data={spendingData} totalSpent={home.money.monthlyOut} />
             </div>
 
             {/* Savings Goal Peek */}
             <div className="mint-card animate-slide-up" style={{ animationDelay: '0.5s' }}>
               <div className="flex justify-between items-center mb-3">
                 <h3 className="text-sm font-bold text-[var(--color-mint-text)]">Savings Goal</h3>
-                <Link href="/dreams" className="text-xs font-bold text-[var(--color-mint-primary)] flex items-center gap-0.5 hover:underline">
+                <Link href={parityHref('/dreams')} className="text-xs font-bold text-[var(--color-mint-primary)] flex items-center gap-0.5 hover:underline">
                   View all <ChevronRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
               <div className="flex items-center gap-3">
-                <div className="text-2xl">{summary.topGoal?.emoji || '🎯'}</div>
+                <div className="text-2xl">{home.topGoal?.emoji || '🎯'}</div>
                 <div className="flex-1 min-w-0">
-                  <h4 className="text-sm font-bold text-[var(--color-mint-text)]">{summary.topGoal?.name || 'My Savings'}</h4>
+                  <h4 className="text-sm font-bold text-[var(--color-mint-text)]">{home.topGoal?.name || 'My Savings'}</h4>
                   <p className="text-[11px] text-[var(--color-mint-text-muted)]">
-                    {summary.topGoal ? `${formatMoney(summary.topGoal.saved)} / ${formatMoney(summary.topGoal.target)}` : 'No goal yet'}
+                    {home.topGoal ? `${home.topGoal.savedFormatted} / ${home.topGoal.targetFormatted}` : 'No goal yet'}
                   </p>
                   <div className="flex items-center gap-2 mt-1.5">
                     <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full bg-[var(--color-mint-primary)]"
-                        style={{ width: `${summary.topGoal ? Math.min(100, safePercent(summary.topGoal.saved, summary.topGoal.target)) : 0}%` }}
+                        style={{ width: `${home.topGoal ? Math.min(100, home.topGoal.percent) : 0}%` }}
                       />
                     </div>
                   </div>

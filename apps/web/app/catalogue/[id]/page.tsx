@@ -1,5 +1,4 @@
 import { notFound } from 'next/navigation';
-import prisma from '@/lib/db';
 import Link from 'next/link';
 import { ArrowLeft, CheckCircle2, ShieldCheck, Building2, Calendar, FileText, BadgePercent, Zap, Globe, AlertTriangle, Clock, Banknote } from 'lucide-react';
 import ApplyButton from '@/components/CatalogueApplyButton';
@@ -7,44 +6,18 @@ import { ProductBookmarkButton } from '@/components/ProductBookmarkButton';
 import { ProductRatings } from '@/components/ProductRatings';
 import { LoanSuitability } from '@/components/LoanSuitability';
 import { LoanCalculator } from '@/components/LoanCalculator';
-import { getAuthUser } from '@/lib/supabase/auth-adapter';
-import { getMatchExplanation, getProductFacts, getProductTrustMeta } from '@mizan/shared';
+import { getProductDetailApiResponse } from '@/lib/server/catalogue-contract';
 
 export default async function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const resolvedParams = await params;
+    const response = await getProductDetailApiResponse(resolvedParams.id);
     
-    const product = await prisma.product.findUnique({
-        where: { id: resolvedParams.id },
-        include: { provider: true }
-    });
-    
-    if (!product) {
+    if (!response || !response.productDetail) {
         notFound();
     }
 
-    const provider = product.provider ?? (product.bankId
-        ? await prisma.provider.findUnique({ where: { slug: product.bankId } })
-        : null);
-    const authUser = await getAuthUser().catch(() => null);
-    const bookmark = authUser ? await prisma.productBookmark.findUnique({
-        where: {
-            userId_productId: {
-                userId: authUser.id,
-                productId: product.id
-            }
-        }
-    }) : null;
-    const providerHref = provider?.slug ? `/catalogue/bank/${provider.slug}` : '/catalogue';
-    const facts = getProductFacts(product);
-    const trust = getProductTrustMeta(product);
-    const matchExplanation = getMatchExplanation(product);
-
-    const formatInterest = (val: number) => val < 1 ? (val * 100).toFixed(0) : val.toFixed(0);
-    const interestDisplay = product.interestMax && product.interestMax > (product.interestRate || 0)
-        ? `${formatInterest(product.interestRate || 0)}–${formatInterest(product.interestMax)}%`
-        : `${formatInterest(product.interestRate || 0)}%`;
-    const isCreditProduct = product.productClass === 'CREDIT' || Boolean(product.loanCategory || product.maxAmount);
-    const productKind = isCreditProduct ? 'Loan' : product.productClass === 'SAVINGS' ? 'Savings' : product.productType || product.productClass || 'Product';
+    const product = response.productDetail;
+    const providerHref = `/catalogue/bank/${product.provider.id}`;
 
     return (
         <div className="flex flex-col min-h-screen bg-slate-50 md:bg-transparent md:py-8">
@@ -55,20 +28,20 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                         <ArrowLeft className="w-5 h-5" />
                     </Link>
                     <div className="flex items-center gap-2">
-                        {product.digital && (
+                        {product.badges.isDigital && (
                             <span className="bg-amber-50 text-amber-700 px-2 py-1 rounded-full text-[10px] font-black flex items-center gap-1">
                                 <Zap className="w-3 h-3" /> Digital
                             </span>
                         )}
-                        {product.interestFree && (
+                        {product.badges.isInterestFree && (
                             <span className="bg-emerald-50 text-emerald-700 px-2 py-1 rounded-full text-[10px] font-black">
                                 Interest‑Free
                             </span>
                         )}
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 ${trust.tone === 'good' ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'}`}>
-                            {trust.tone === 'good' ? <ShieldCheck className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />} {trust.label}
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 ${product.trust.tone === 'good' ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'}`}>
+                            {product.trust.tone === 'good' ? <ShieldCheck className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />} {product.trust.label}
                         </span>
-                        <ProductBookmarkButton productId={product.id} initialBookmarked={Boolean(bookmark)} />
+                        <ProductBookmarkButton productId={product.id} initialBookmarked={product.isBookmarked} />
                     </div>
                 </div>
             </header>
@@ -79,28 +52,28 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                     <Link href={providerHref} className="flex items-center gap-2 mb-3 group">
                         <div
                             className="w-10 h-10 rounded-xl bg-slate-600 text-white flex items-center justify-center font-bold text-sm shadow-sm"
-                            style={provider?.brandColor ? { backgroundColor: provider.brandColor } : undefined}
+                            style={product.provider.brandColor ? { backgroundColor: product.provider.brandColor } : undefined}
                         >
-                            {provider?.shortCode || product.bankLogo || 'FI'}
+                            {product.provider.shortCode || 'FI'}
                         </div>
                         <div>
                             <span className="text-sm font-semibold text-slate-600 group-hover:text-[#3EA63B] transition-colors">
-                                {provider?.name || product.bankName || 'Financial Institution'}
+                                {product.provider.name}
                             </span>
-                            {provider?.nameAmh && <span className="text-xs text-slate-400 ml-2 font-ethiopic">{provider.nameAmh}</span>}
+                            {product.provider.nameAmh && <span className="text-xs text-slate-400 ml-2 font-ethiopic">{product.provider.nameAmh}</span>}
                         </div>
                     </Link>
-                    <h1 className="text-3xl font-black text-slate-900 leading-tight mb-2">{product.title || product.name}</h1>
+                    <h1 className="text-3xl font-black text-slate-900 leading-tight mb-2">{product.title}</h1>
                     <p className="text-slate-500 text-sm leading-relaxed">{product.description}</p>
                     <div className="mt-4 flex flex-wrap gap-2">
-                        <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wider ${trust.tone === 'good' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
-                            {trust.label}
+                        <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wider ${product.trust.tone === 'good' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                            {product.trust.label}
                         </span>
                         <span className="rounded-full bg-white px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500 border border-slate-100">
-                            {trust.freshness}
+                            {product.trust.freshness}
                         </span>
                     </div>
-                    {product.genderBased && (
+                    {product.badges.isGenderFocused && (
                         <span className="inline-block mt-3 bg-pink-50 text-pink-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
                             Gender-Focused Product
                         </span>
@@ -109,9 +82,9 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
 
                 <section className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm mb-8">
                     <h2 className="text-sm font-black text-slate-900 mb-4 uppercase tracking-wide">Why This May Fit</h2>
-                    <p className="text-sm text-slate-600 leading-relaxed mb-4">{matchExplanation}</p>
+                    <p className="text-sm text-slate-600 leading-relaxed mb-4">{product.matchExplanation}</p>
                     <div className="flex flex-wrap gap-2">
-                        {facts.map((fact) => (
+                        {product.facts.map((fact) => (
                             <span key={`${fact.label}-${fact.value}`} className={`text-[10px] font-bold px-2.5 py-1 rounded-md ${fact.positive ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-50 text-slate-600'}`}>
                                 {fact.label}: {fact.value}
                             </span>
@@ -126,52 +99,48 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                             <BadgePercent className="w-4 h-4 text-[#3EA63B]" />
                             <span className="text-[10px] font-bold uppercase tracking-wider">Interest</span>
                         </div>
-                        <div className="text-xl font-black text-slate-900">{interestDisplay} <span className="text-xs font-medium text-slate-400">p.a</span></div>
+                        <div className="text-xl font-black text-slate-900">{product.metrics.interestDisplay} <span className="text-xs font-medium text-slate-400">p.a</span></div>
                     </div>
                     <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
                         <div className="flex items-center gap-1.5 text-slate-400 mb-1">
                             <Banknote className="w-4 h-4 text-blue-500" />
                             <span className="text-[10px] font-bold uppercase tracking-wider">
-                                {isCreditProduct ? 'Max Loan' : 'Min Balance'}
+                                {product.metrics.amountLabel}
                             </span>
                         </div>
                         <div className="text-xl font-black text-slate-900">
-                            {isCreditProduct
-                                ? (product.maxAmount ? `${product.maxAmount.toLocaleString()}` : 'N/A')
-                                : (product.minBalance ? `${product.minBalance.toLocaleString()}` : '0')
-                            }
-                            <span className="text-xs font-medium text-slate-400 ml-1">ETB</span>
+                            {product.metrics.amountDisplay}
                         </div>
                     </div>
-                    {product.term && (
+                    {product.metrics.termDisplay && (
                         <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
                             <div className="flex items-center gap-1.5 text-slate-400 mb-1">
                                 <Calendar className="w-4 h-4 text-purple-500" />
                                 <span className="text-[10px] font-bold uppercase tracking-wider">Term</span>
                             </div>
-                            <div className="text-xl font-black text-slate-900">{product.term}</div>
+                            <div className="text-xl font-black text-slate-900">{product.metrics.termDisplay}</div>
                         </div>
                     )}
-                    {product.currency && (
+                    {product.metrics.currencyDisplay && (
                         <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
                             <div className="flex items-center gap-1.5 text-slate-400 mb-1">
                                 <Globe className="w-4 h-4 text-cyan-500" />
                                 <span className="text-[10px] font-bold uppercase tracking-wider">Currency</span>
                             </div>
-                            <div className="text-xl font-black text-slate-900">{product.currency}</div>
+                            <div className="text-xl font-black text-slate-900">{product.metrics.currencyDisplay}</div>
                         </div>
                     )}
                 </section>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Features */}
-                    {(product.features || []).length > 0 && (
+                    {product.details.features.length > 0 && (
                         <section className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
                             <h3 className="text-sm font-black text-slate-900 mb-4 flex items-center gap-2 uppercase tracking-wide">
                                 <CheckCircle2 className="w-4 h-4 text-[#3EA63B]" /> Features
                             </h3>
                             <ul className="space-y-3">
-                                {(product.features || []).map((feature: string, i: number) => (
+                                {product.details.features.map((feature: string, i: number) => (
                                     <li key={i} className="flex items-start gap-3 text-xs text-slate-600">
                                         <div className="mt-0.5 w-1.5 h-1.5 rounded-full bg-[#3EA63B] shrink-0" />
                                         <span>{feature}</span>
@@ -187,39 +156,39 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                                 <FileText className="w-4 h-4 text-slate-400" /> Requirements
                         </h3>
                         <div className="space-y-4">
-                            {product.eligibility && (Array.isArray(product.eligibility) ? product.eligibility.length > 0 : true) && (
+                            {product.details.eligibility.length > 0 && (
                                 <div>
                                     <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">Eligibility</h4>
                                     <ul className="space-y-2">
-                                        {(Array.isArray(product.eligibility) ? product.eligibility : [product.eligibility]).map((item: any, i: number) => (
+                                        {product.details.eligibility.map((item: any, i: number) => (
                                             <li key={i} className="text-xs text-slate-600 border-l-2 border-[#3EA63B] pl-3 py-1">{item}</li>
                                         ))}
                                     </ul>
                                 </div>
                             )}
-                            {(!product.eligibility || (Array.isArray(product.eligibility) && product.eligibility.length === 0)) && (!product.requirements || (Array.isArray(product.requirements) && product.requirements.length === 0)) && (
+                            {product.details.eligibility.length === 0 && product.details.requirements.length === 0 && (
                                 <p className="text-xs text-slate-500">Requirements are still being cleaned up for this product. Check with the provider before applying.</p>
                             )}
-                            {product.requirements && (Array.isArray(product.requirements) ? product.requirements.length > 0 : true) && (
+                            {product.details.requirements.length > 0 && (
                                 <div>
                                     <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">Documents</h4>
                                     <ul className="space-y-2">
-                                        {(Array.isArray(product.requirements) ? product.requirements : [product.requirements]).map((item: any, i: number) => (
+                                        {product.details.requirements.map((item: any, i: number) => (
                                             <li key={i} className="text-xs text-slate-600 border-l-2 border-blue-300 pl-3 py-1">{item}</li>
                                         ))}
                                     </ul>
                                 </div>
                             )}
-                            {product.collateralRequirements && (
+                            {product.details.collateralRequirements && (
                                 <div>
                                     <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">Collateral</h4>
-                                    <p className="text-xs text-slate-600 border-l-2 border-amber-300 pl-3 py-1">{product.collateralRequirements}</p>
+                                    <p className="text-xs text-slate-600 border-l-2 border-amber-300 pl-3 py-1">{product.details.collateralRequirements}</p>
                                 </div>
                             )}
-                            {product.insuranceRequirements && (
+                            {product.details.insuranceRequirements && (
                                 <div>
                                     <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">Insurance</h4>
-                                    <p className="text-xs text-slate-600 border-l-2 border-purple-300 pl-3 py-1">{product.insuranceRequirements}</p>
+                                    <p className="text-xs text-slate-600 border-l-2 border-purple-300 pl-3 py-1">{product.details.insuranceRequirements}</p>
                                 </div>
                             )}
                         </div>
@@ -227,42 +196,42 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                 </div>
 
                 {/* Fees & Penalties (if any) */}
-                {(product.fees || product.prepaymentPenalties || product.latePaymentPenalties || product.repaymentFrequency || product.disbursementTime) && (
+                {product.feesAndTerms && (
                     <section className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm mt-6">
                         <h3 className="text-sm font-black text-slate-900 mb-4 flex items-center gap-2 uppercase tracking-wide">
                             <AlertTriangle className="w-4 h-4 text-orange-400" /> Fees & Terms
                         </h3>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                            {product.fees && (
+                            {product.feesAndTerms.processingFee && (
                                 <div>
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Processing Fee</p>
-                                    <p className="text-sm font-bold text-slate-900">{product.fees}</p>
+                                    <p className="text-sm font-bold text-slate-900">{product.feesAndTerms.processingFee}</p>
                                 </div>
                             )}
-                            {product.repaymentFrequency && (
+                            {product.feesAndTerms.repaymentFrequency && (
                                 <div>
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Repayment</p>
-                                    <p className="text-sm font-bold text-slate-900">{product.repaymentFrequency}</p>
+                                    <p className="text-sm font-bold text-slate-900">{product.feesAndTerms.repaymentFrequency}</p>
                                 </div>
                             )}
-                            {product.disbursementTime && (
+                            {product.feesAndTerms.disbursementTime && (
                                 <div>
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Disbursement</p>
                                     <p className="text-sm font-bold text-slate-900 flex items-center gap-1">
-                                        <Clock className="w-3 h-3 text-slate-400" /> {product.disbursementTime}
+                                        <Clock className="w-3 h-3 text-slate-400" /> {product.feesAndTerms.disbursementTime}
                                     </p>
                                 </div>
                             )}
-                            {product.prepaymentPenalties && (
+                            {product.feesAndTerms.prepaymentPenalties && (
                                 <div>
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Prepayment Penalty</p>
-                                    <p className="text-sm font-bold text-red-600">{product.prepaymentPenalties}</p>
+                                    <p className="text-sm font-bold text-red-600">{product.feesAndTerms.prepaymentPenalties}</p>
                                 </div>
                             )}
-                            {product.latePaymentPenalties && (
+                            {product.feesAndTerms.latePaymentPenalties && (
                                 <div>
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Late Payment Penalty</p>
-                                    <p className="text-sm font-bold text-red-600">{product.latePaymentPenalties}</p>
+                                    <p className="text-sm font-bold text-red-600">{product.feesAndTerms.latePaymentPenalties}</p>
                                 </div>
                             )}
                         </div>
@@ -275,61 +244,62 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                     <div className="grid gap-3 md:grid-cols-3">
                         <div>
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Status</p>
-                            <p className={`text-sm font-bold ${trust.tone === 'good' ? 'text-[#3EA63B]' : 'text-amber-700'}`}>{trust.label}</p>
+                            <p className={`text-sm font-bold ${product.trust.tone === 'good' ? 'text-[#3EA63B]' : 'text-amber-700'}`}>{product.trust.label}</p>
                         </div>
                         <div>
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Freshness</p>
-                            <p className="text-sm font-bold text-slate-900">{trust.freshness}</p>
+                            <p className="text-sm font-bold text-slate-900">{product.trust.freshness}</p>
                         </div>
                         <div>
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Source</p>
-                            {product.sourceUrl ? (
-                                <a href={product.sourceUrl} target="_blank" rel="noreferrer" className="text-sm font-bold text-[#3EA63B] hover:underline">
-                                    {product.sourceName || product.sourceUrl}
+                            {product.dataQuality.sourceUrl ? (
+                                <a href={product.dataQuality.sourceUrl} target="_blank" rel="noreferrer" className="text-sm font-bold text-[#3EA63B] hover:underline">
+                                    Provider Website
                                 </a>
                             ) : (
-                                <p className="text-sm font-bold text-slate-900">{trust.source}</p>
+                                <p className="text-sm font-bold text-slate-900">{product.trust.source}</p>
                             )}
                         </div>
                         <div>
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Confidence</p>
-                            <p className="text-sm font-bold text-slate-900">{product.dataConfidence != null ? `${product.dataConfidence}%` : 'Pending'}</p>
+                            <p className="text-sm font-bold text-slate-900">{product.dataQuality.confidence != null ? `${product.dataQuality.confidence}%` : 'Pending'}</p>
                         </div>
                     </div>
-                    <a href={`mailto:support@mizan.app?subject=Incorrect product info: ${encodeURIComponent(product.title || product.name || product.id)}`} className="mt-4 inline-flex text-xs font-black text-[#3EA63B] hover:underline">
+                    <a href={`mailto:support@mizan.app?subject=Incorrect product info: ${encodeURIComponent(product.title)}`} className="mt-4 inline-flex text-xs font-black text-[#3EA63B] hover:underline">
                         Report incorrect information
                     </a>
                 </section>
+                
                 {/* Loan Calculator — only for loan products */}
-                {isCreditProduct && (
+                {product.isCreditProduct && product.rawCalculatorData && (
                     <LoanCalculator
-                        interestRate={product.interestRate ?? undefined}
-                        interestMax={product.interestMax ?? undefined}
-                        maxAmount={product.maxAmount ?? undefined}
-                        term={product.term ?? undefined}
-                        fees={product.fees ?? undefined}
-                        repaymentFrequency={product.repaymentFrequency ?? undefined}
-                        disbursementTime={product.disbursementTime ?? undefined}
-                        collateralRequirements={product.collateralRequirements ?? undefined}
-                        prepaymentPenalties={product.prepaymentPenalties ?? undefined}
-                        productName={product.title || product.name || 'This Product'}
+                        interestRate={product.rawCalculatorData.interestRate}
+                        interestMax={product.rawCalculatorData.interestMax}
+                        maxAmount={product.rawCalculatorData.maxAmount}
+                        term={product.metrics.termDisplay}
+                        fees={product.feesAndTerms?.processingFee}
+                        repaymentFrequency={product.feesAndTerms?.repaymentFrequency}
+                        disbursementTime={product.feesAndTerms?.disbursementTime}
+                        collateralRequirements={product.details.collateralRequirements}
+                        prepaymentPenalties={product.feesAndTerms?.prepaymentPenalties}
+                        productName={product.title}
                     />
                 )}
 
                 {/* Suitability Check */}
                 <LoanSuitability
-                    productType={productKind}
-                    productName={product.title || product.name || 'This Product'}
-                    interestRate={product.interestRate ?? undefined}
+                    productType={product.productKind}
+                    productName={product.title}
+                    interestRate={product.rawCalculatorData?.interestRate}
                 />
 
                 {/* Community Voice */}
-                <ProductRatings productName={product.title || product.name || 'This Product'} />
+                <ProductRatings productId={product.id} productName={product.title} />
             </main>
 
             {/* Fixed Call to Action */}
             <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-100 md:bg-transparent md:border-none md:static md:p-0 md:max-w-3xl md:mx-auto md:w-full md:mt-6">
-                <ApplyButton productType={productKind} />
+                <ApplyButton productType={product.productKind} />
             </div>
         </div>
     );

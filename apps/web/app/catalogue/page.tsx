@@ -1,54 +1,15 @@
-import prisma from '@/lib/db';
 import { CatalogueClient } from './CatalogueClient';
-import { productCategories } from '@mizan/shared';
+import { buildFindScreenDataContract, demoProducts } from '@mizan/shared';
+import { isParityDemo } from '@/lib/parity-demo';
+import { getFindScreenApiResponse } from '@/lib/server/find-contract';
 
-export default async function Catalogue() {
-  const products = await prisma.product.findMany({
-    where: { isActive: true },
-    select: {
-      id: true,
-      name: true,
-      title: true,
-      bankName: true,
-      productClass: true,
-      productType: true,
-      minBalance: true,
-      maxAmount: true,
-      interestRate: true,
-      interestMax: true,
-      term: true,
-      matchScore: true,
-      isFeatured: true,
-      isVerified: true,
-      updatedAt: true,
-      currency: true,
-      digital: true,
-      interestFree: true,
-      genderBased: true,
-      sourceName: true,
-      sourceUrl: true,
-      sourceType: true,
-      lastReviewedAt: true,
-      reviewedBy: true,
-      dataConfidence: true,
-      features: true,
-      eligibility: true,
-      requirements: true,
-      description: true,
-      provider: {
-        select: {
-          id: true,
-          name: true,
-          logoUrl: true
-        }
-      }
-    },
-    take: 50,
-    orderBy: [
-      { isFeatured: 'desc' },
-      { matchScore: 'desc' },
-    ]
-  });
+export default async function Catalogue({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
+  if (await isParityDemo(searchParams)) {
+    const find = buildFindScreenDataContract({ products: demoProducts });
+    return <CatalogueClient products={demoProducts} find={find} />;
+  }
 
-  return <CatalogueClient products={products} categories={productCategories} />;
+  const payload = await getFindScreenApiResponse(undefined, 50);
+
+  return <CatalogueClient products={payload.products} find={payload.find} />;
 }

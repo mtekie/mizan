@@ -23,12 +23,12 @@ import {
   Users
 } from 'lucide-react-native';
 import { api } from '../../lib/api';
-import { ProductCard } from '../../components/marketplace/ProductCard';
+import { CatalogueProductCardVM, ProviderDetailDataContract } from '@mizan/shared';
 
 export default function ProviderDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const [provider, setProvider] = useState<any>(null);
+  const [provider, setProvider] = useState<ProviderDetailDataContract | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,8 +37,8 @@ export default function ProviderDetailScreen() {
       try {
         setLoading(true);
         setError(null);
-        const data = await api.providers.get(id as string);
-        setProvider(data);
+        const data = await api.providers.screen(id as string);
+        setProvider(data.providerDetail);
       } catch (err: any) {
         console.error('Failed to fetch provider detail:', err);
         setError('Failed to load institution details');
@@ -80,83 +80,90 @@ export default function ProviderDetailScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <FlatList
-        data={provider.products}
-        keyExtractor={(item) => item.id}
-        ListHeaderComponent={(
-          <View style={styles.header}>
-            <View style={styles.heroCard}>
-              <View style={styles.brandRow}>
-                {provider.logoUrl ? (
-                  <Image source={{ uri: provider.logoUrl }} style={styles.logo} />
-                ) : (
-                  <View style={[styles.logoPlaceholder, { backgroundColor: provider.brandColor || MizanColors.mintPrimary }]}>
-                    <Building2 color="#fff" size={32} />
-                  </View>
-                )}
-                <View style={styles.brandInfo}>
-                  <Text style={styles.name}>{provider.name}</Text>
-                  <Text style={styles.type}>{provider.type} • {provider.tier || 'Tier 1'}</Text>
-                </View>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.header}>
+          <View style={styles.heroCard}>
+            <View style={styles.brandRow}>
+              <View style={[styles.logoPlaceholder, { backgroundColor: provider.brandColor || MizanColors.mintPrimary }]}>
+                <Building2 color="#fff" size={32} />
               </View>
-
-              <View style={styles.statsRow}>
-                <View style={styles.statItem}>
-                  <Trophy size={18} color={MizanColors.mintPrimary} />
-                  <Text style={styles.statValue}>{provider._count?.products || 0}</Text>
-                  <Text style={styles.statLabel}>Products</Text>
-                </View>
-                <View style={styles.statDivider} />
-                <View style={styles.statItem}>
-                  <Users size={18} color={MizanColors.mintPrimary} />
-                  <Text style={styles.statValue}>4.8</Text>
-                  <Text style={styles.statLabel}>Rating</Text>
-                </View>
+              <View style={styles.brandInfo}>
+                <Text style={styles.name}>{provider.name}</Text>
+                {provider.nameAmh && <Text style={styles.nameAmh}>{provider.nameAmh}</Text>}
               </View>
             </View>
 
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>About</Text>
-              <Text style={styles.description}>
-                {provider.description || 'A leading financial institution dedicated to providing innovative solutions to the Ethiopian market.'}
-              </Text>
+            <View style={styles.statsRow}>
+              <View style={styles.statItem}>
+                <Building2 size={18} color={MizanColors.mintPrimary} />
+                <Text style={styles.statValue}>{provider.stats.productCount}</Text>
+                <Text style={styles.statLabel}>Products</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Trophy size={18} color={MizanColors.mintPrimary} />
+                <Text style={styles.statValue}>{provider.stats.interestRange}</Text>
+                <Text style={styles.statLabel}>Interest Range</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Globe size={18} color={MizanColors.mintPrimary} />
+                <Text style={styles.statValue}>{provider.stats.hasDigital ? 'Yes' : 'No'}</Text>
+                <Text style={styles.statLabel}>Digital Access</Text>
+              </View>
             </View>
+          </View>
 
-            <View style={styles.contactSection}>
-               {provider.website && (
-                 <View style={styles.contactItem}>
-                   <Globe size={16} color={MizanColors.textMuted} />
-                   <Text style={styles.contactText}>{provider.website}</Text>
-                 </View>
-               )}
-               {provider.address && (
-                 <View style={styles.contactItem}>
-                   <MapPin size={16} color={MizanColors.textMuted} />
-                   <Text style={styles.contactText}>{provider.address}</Text>
-                 </View>
-               )}
-            </View>
+          <View style={styles.badgesRow}>
+             {provider.badges.isEsxListed && <Text style={styles.badgeText}>ESX Listed</Text>}
+             {provider.badges.hasInterestFree && <Text style={styles.badgeText}>Interest-Free Available</Text>}
+             {provider.badges.isMfi && <Text style={styles.badgeText}>MFI</Text>}
+          </View>
 
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>About</Text>
+            <Text style={styles.description}>{provider.description}</Text>
+          </View>
+
+          {provider.creditProducts.length > 0 && (
             <View style={styles.productsHeader}>
-              <Text style={styles.sectionTitle}>Offered Products</Text>
+              <Text style={styles.sectionTitle}>Credit Products ({provider.creditProducts.length})</Text>
+              {provider.creditProducts.map((item: CatalogueProductCardVM) => (
+                <TouchableOpacity key={item.id} style={styles.simpleCard} onPress={() => router.push(`/product/${item.id}`)}>
+                   <View style={styles.cardHeader}>
+                     <Text style={styles.cardTitle}>{item.title}</Text>
+                     {item.highlight && <Text style={styles.cardHighlight}>{item.highlight}</Text>}
+                   </View>
+                   <Text style={styles.cardDesc} numberOfLines={2}>{item.description}</Text>
+                   <View style={styles.cardFooter}>
+                     <Text style={styles.cardInterest}>Interest: {item.interestDisplay}</Text>
+                     {item.maxAmountDisplay && <Text style={styles.cardMetric}>{item.maxAmountDisplay}</Text>}
+                   </View>
+                </TouchableOpacity>
+              ))}
             </View>
-          </View>
-        )}
-        renderItem={({ item }) => (
-          <View style={styles.productItem}>
-            <ProductCard 
-              product={item} 
-              onPress={() => router.push(`/product/${item.id}`)}
-            />
-          </View>
-        )}
-        contentContainerStyle={styles.scrollContent}
-        ListEmptyComponent={(
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No products listed for this institution yet.</Text>
-          </View>
-        )}
-      />
+          )}
+
+          {provider.savingsProducts.length > 0 && (
+            <View style={styles.productsHeader}>
+              <Text style={styles.sectionTitle}>Savings Products ({provider.savingsProducts.length})</Text>
+              {provider.savingsProducts.map((item: CatalogueProductCardVM) => (
+                <TouchableOpacity key={item.id} style={styles.simpleCard} onPress={() => router.push(`/product/${item.id}`)}>
+                   <View style={styles.cardHeader}>
+                     <Text style={styles.cardTitle}>{item.title}</Text>
+                     {item.isInterestFree && <Text style={styles.cardHighlight}>Interest-Free</Text>}
+                   </View>
+                   <Text style={styles.cardDesc} numberOfLines={2}>{item.description}</Text>
+                   <View style={styles.cardFooter}>
+                     <Text style={styles.cardInterest}>Interest: {item.interestDisplay}</Text>
+                     {item.minBalanceDisplay && <Text style={styles.cardMetric}>{item.minBalanceDisplay}</Text>}
+                   </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -341,5 +348,79 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontFamily: 'Inter_700Bold',
     fontSize: 14,
+  },
+  nameAmh: {
+    fontSize: 14,
+    color: MizanColors.textSecondary,
+    marginTop: 2,
+  },
+  badgesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 24,
+  },
+  badgeText: {
+    backgroundColor: MizanColors.mintBg,
+    color: MizanColors.mintPrimary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    fontSize: 12,
+    fontFamily: 'Inter_700Bold',
+    overflow: 'hidden',
+  },
+  simpleCard: {
+    backgroundColor: '#fff',
+    borderRadius: MizanRadii.lg,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: MizanColors.borderMuted,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontFamily: 'Inter_700Bold',
+    color: MizanColors.textPrimary,
+    flex: 1,
+  },
+  cardHighlight: {
+    fontSize: 10,
+    backgroundColor: MizanColors.mintPrimary + '20',
+    color: MizanColors.mintPrimary,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    fontFamily: 'Inter_700Bold',
+    overflow: 'hidden',
+  },
+  cardDesc: {
+    fontSize: 13,
+    color: MizanColors.textSecondary,
+    marginBottom: 12,
+    lineHeight: 18,
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    borderTopWidth: 1,
+    borderTopColor: MizanColors.borderMuted,
+    paddingTop: 12,
+  },
+  cardInterest: {
+    fontSize: 12,
+    color: MizanColors.mintPrimary,
+    fontFamily: 'Inter_700Bold',
+  },
+  cardMetric: {
+    fontSize: 12,
+    color: MizanColors.textPrimary,
+    fontFamily: 'Inter_600SemiBold',
   }
 });
