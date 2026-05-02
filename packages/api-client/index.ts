@@ -152,6 +152,7 @@ export class MizanAPI {
   // Settings
   settings = {
     screen: () => this.fetch<SettingsScreenDataContract>('/api/v1/settings'),
+    get: () => this.fetch<SettingsScreenDataContract>('/api/v1/settings'),
     update: (data: Partial<SettingsUpdateRequest>) => this.fetch<SettingsScreenDataContract>('/api/v1/settings', { method: 'PATCH', body: JSON.stringify(data) }),
   };
 
@@ -187,10 +188,5 @@ export class MizanAPI {
     screen: () => this.fetch<ProfileScreenApiResponse>('/api/v1/profile-screen'),
     get: () => this.fetch<User>('/api/v1/profile'),
     update: (data: Partial<User>) => this.fetch<User>('/api/v1/profile', { method: 'PATCH', body: JSON.stringify(data) }),
-  };
-
-  // Settings
-  settings = {
-    get: () => this.fetch<any>('/api/v1/settings'),
   };
 }

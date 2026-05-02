@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Bell, Calendar, Check, ChevronDown, ChevronUp, Home, Phone, Shield, Zap, Wifi, CreditCard, Plus, X, Trash2 } from 'lucide-react';
-import { createBill, markBillPaid, deleteBill, skipBillThisMonth } from '@/app/dreams/actions';
+import { Bell, Calendar, Check, ChevronDown, ChevronUp, Home, Phone, Shield, Zap, Wifi, CreditCard, Plus, X } from 'lucide-react';
+import { createBill, markBillPaid, skipBillThisMonth } from '@/app/dreams/actions';
 import { toast } from 'sonner';
 import { formatMoney } from '@mizan/shared';
 
@@ -95,19 +95,6 @@ export function BillReminders({ initialBills }: { initialBills?: any[] }) {
         }
     };
 
-    const removeBill = async (id: string) => {
-        const deleted = bills.find(b => b.id === id);
-        if (!deleted) return;
-        setBills(bs => bs.filter(b => b.id !== id));
-        try {
-            await deleteBill(id);
-            toast.success('Bill removed');
-        } catch (e: any) {
-            toast.error('Failed to remove bill');
-            setBills(bs => [...bs, deleted]);
-        }
-    };
-
     const handleAdd = async () => {
         if (!newBill.name || !newBill.amount || !newBill.category || !newBill.dueDay) return;
         const cat = categoryMap.find(c => c.label === newBill.category);
@@ -156,7 +143,7 @@ export function BillReminders({ initialBills }: { initialBills?: any[] }) {
                             <p className="text-[9px] font-black text-red-500 uppercase tracking-widest mb-2">⚠ Overdue</p>
                             <div className="space-y-2">
                                 {overdue.map(bill => (
-                                    <BillRow key={bill.id} bill={bill} today={today} onPay={markPaid} onSkip={skipMonth} onRemove={removeBill} isOverdue />
+                                    <BillRow key={bill.id} bill={bill} today={today} onPay={markPaid} onSkip={skipMonth} isOverdue />
                                 ))}
                             </div>
                         </div>
@@ -168,7 +155,7 @@ export function BillReminders({ initialBills }: { initialBills?: any[] }) {
                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Upcoming</p>
                             <div className="space-y-2">
                                 {upcoming.map(bill => (
-                                    <BillRow key={bill.id} bill={bill} today={today} onPay={markPaid} onSkip={skipMonth} onRemove={removeBill} />
+                                    <BillRow key={bill.id} bill={bill} today={today} onPay={markPaid} onSkip={skipMonth} />
                                 ))}
                             </div>
                         </div>
@@ -180,7 +167,7 @@ export function BillReminders({ initialBills }: { initialBills?: any[] }) {
                             <p className="text-[9px] font-black text-[#3EA63B] uppercase tracking-widest mb-2">✓ Paid This Month</p>
                             <div className="space-y-2">
                                 {paid.map(bill => (
-                                    <BillRow key={bill.id} bill={bill} today={today} onPay={markPaid} onRemove={removeBill} isPaid />
+                                    <BillRow key={bill.id} bill={bill} today={today} onPay={markPaid} isPaid />
                                 ))}
                             </div>
                         </div>
@@ -191,7 +178,7 @@ export function BillReminders({ initialBills }: { initialBills?: any[] }) {
                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Skipped This Month</p>
                             <div className="space-y-2">
                                 {skipped.map(bill => (
-                                    <BillRow key={bill.id} bill={bill} today={today} onPay={markPaid} onSkip={skipMonth} onRemove={removeBill} isSkipped />
+                                    <BillRow key={bill.id} bill={bill} today={today} onPay={markPaid} onSkip={skipMonth} isSkipped />
                                 ))}
                             </div>
                         </div>
@@ -239,8 +226,8 @@ export function BillReminders({ initialBills }: { initialBills?: any[] }) {
     );
 }
 
-function BillRow({ bill, today, onPay, onSkip, onRemove, isOverdue, isPaid, isSkipped }: {
-    bill: Bill; today: number; onPay: (id: string) => void; onSkip?: (id: string) => void; onRemove: (id: string) => void; isOverdue?: boolean; isPaid?: boolean; isSkipped?: boolean;
+function BillRow({ bill, today, onPay, onSkip, isOverdue, isPaid, isSkipped }: {
+    bill: Bill; today: number; onPay: (id: string) => void; onSkip?: (id: string) => void; isOverdue?: boolean; isPaid?: boolean; isSkipped?: boolean;
 }) {
     const Icon = bill.icon;
     const daysUntil = bill.dueDay - today;
@@ -267,9 +254,6 @@ function BillRow({ bill, today, onPay, onSkip, onRemove, isOverdue, isPaid, isSk
                     Skip
                 </button>
             )}
-            <button onClick={() => onRemove(bill.id)} className="text-slate-300 hover:text-red-400 transition">
-                <Trash2 className="w-3 h-3" />
-            </button>
         </div>
     );
 }

@@ -82,6 +82,7 @@ export default function ProductDetailScreen() {
   };
 
   const handleShare = async () => {
+    if (!product) return;
     try {
       await Share.share({
         message: `Check out ${product.title} from ${product.provider.name} on Mizan!`,
@@ -92,6 +93,7 @@ export default function ProductDetailScreen() {
   };
 
   const handleReport = () => {
+    if (!product) return;
     const subject = encodeURIComponent(`Incorrect product info: ${product.title}`);
     Linking.openURL(`mailto:support@mizan.app?subject=${subject}`);
   };

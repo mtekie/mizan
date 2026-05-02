@@ -294,7 +294,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                 />
 
                 {/* Community Voice */}
-                <ProductRatings productId={product.id} productName={product.title} />
+                <ProductRatings productName={product.title} />
             </main>
 
             {/* Fixed Call to Action */}

@@ -1,8 +1,8 @@
 # Mizan Handoff
 
-Last updated: 2026-04-26
+Last updated: 2026-05-02
 
-This handoff summarizes the current Sprint 1-3 implementation state.
+This handoff summarizes the current implementation state and the move from parity work into backend foundation work.
 
 ## Current State
 
@@ -18,6 +18,9 @@ This handoff summarizes the current Sprint 1-3 implementation state.
 - `docs/SPRINT_SCHEDULE.md`: sprint-by-sprint plan and current completion state.
 - `docs/BETA_SMOKE_CHECKLIST.md`: short beta smoke checklist.
 - `docs/BILL_PAYMENTS.md`: bill payment, ledger-link, skip-this-month, and notification design behavior.
+- `docs/WEB_NATIVE_UI_PARITY_PLAN.md`: parity strategy and section-order checklist.
+- `docs/ANTIGRAVITY_HANDOFF.md`: parity foundation and follow-up audit notes.
+- `docs/BACKEND_FOUNDATION_ROADMAP.md`: next workstream for auth, persistence, API contracts, tests, and product functionality.
 
 ## Database Migrations Applied
 
@@ -73,12 +76,14 @@ Known lint warning:
 
 - Some beta verification checklist items remain manual because they require an authenticated browser/mobile session.
 - Mobile viewport browser verification for Find still needs a proper visual pass.
-- `docs/.ROADMAP.md.swp` and `docs/.CONSISTENCY_PERFORMANCE_AUDIT.md.swp` are editor swap-file noise and should not be part of the handoff commit.
+- Parity is now a baseline to preserve rather than the primary workstream. Remaining parity work should be targeted visual QA, not broad rewrites.
+- Editor swap-file noise should not be recreated or treated as product code.
 - The GitHub repository being private does not affect local development, but deployment or GitHub App access may need permission checks.
 
 ## Recommended Next Work
 
-1. Run the beta smoke checklist with a real user account on web and Expo.
-2. Resolve any remaining mobile viewport browser verification issues.
-3. Begin Sprint 5: Verification Prototype (Self-declared vs. Linked vs. Photo).
-4. Add automated API tests for the Mizan Score engine and profile completion logic.
+1. Use `docs/BACKEND_FOUNDATION_ROADMAP.md` as the next sprint anchor.
+2. Stabilize auth/user bootstrap across web cookies and mobile Bearer tokens.
+3. Add API contract tests for Home, Money, Find, Goals, Me/Profile, Settings, Score, and Notifications.
+4. Harden real Money and Goals mutation flows before returning to visual polish.
+5. Begin the verification prototype once core persistence is dependable.

@@ -1,8 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Bell, Stars, PlusCircle, Wallet, ShoppingBasket, Home, Car, X, Target, Calendar, TrendingUp, Lightbulb, Plus, ReceiptText, Coffee, Smartphone, Heart, GraduationCap, Zap, CheckCircle2, LayoutTemplate, Camera, Pencil, Trash2 } from 'lucide-react';
-import { AIBudgetForecast } from '@/components/AIBudgetForecast';
+import { Bell, Stars, PlusCircle, Wallet, ShoppingBasket, Home, Car, X, Target, Calendar, TrendingUp, Lightbulb, Plus, ReceiptText, Coffee, Smartphone, Heart, GraduationCap, Zap, CheckCircle2, LayoutTemplate, Camera } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { budgetTemplates } from '@/lib/data/budgetTemplates';
 import { BillReminders } from '@/components/BillReminders';
@@ -129,16 +128,6 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
     setShowBudgetCategory(true);
   };
 
-  const openEditBudgetCategory = (category: any) => {
-    setEditingBudgetCategoryId(category.id);
-    setBudgetCategoryForm({
-      name: category.name || '',
-      allocated: String(toFiniteNumber(category.total)),
-      spent: String(toFiniteNumber(category.spent)),
-    });
-    setShowBudgetCategory(true);
-  };
-
   const handleSaveBudgetCategory = async (event: React.FormEvent) => {
     event.preventDefault();
     const allocated = Number(budgetCategoryForm.allocated);
@@ -179,28 +168,9 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
     }
   };
 
-  const handleDeleteBudgetCategory = async (categoryId: string) => {
-    const previousCategories = budgets;
-    const nextCategories = budgets.filter((category: any) => category.id !== categoryId);
-    setBudgets(nextCategories);
-    try {
-      await persistBudgetCategories(nextCategories);
-      toast.success('Budget category deleted');
-    } catch (err: any) {
-      setBudgets(previousCategories);
-      toast.error(err.message || 'Failed to delete budget category');
-    }
-  };
-
   const openCreateGoal = () => {
     setEditingGoalId(null);
     setNewGoal({ name: '', target: '' });
-    setShowNewGoal(true);
-  };
-
-  const openEditGoal = (goal: any) => {
-    setEditingGoalId(goal.id);
-    setNewGoal({ name: goal.name || '', target: String(toFiniteNumber(goal.target)) });
     setShowNewGoal(true);
   };
 
@@ -233,18 +203,6 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
     }
   };
 
-  const handleDeleteGoal = async (goalId: string) => {
-    try {
-      const res = await fetch(`/api/v1/goals?id=${encodeURIComponent(goalId)}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Failed to delete goal');
-      setGoals((goals: any[]) => goals.filter(goal => goal.id !== goalId));
-      toast.success('Goal deleted');
-      router.refresh();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to delete goal');
-    }
-  };
-
   const handleContributeGoal = async (goal: any) => {
     const rawAmount = window.prompt(`Add contribution to ${goal.name}`, '1000');
     if (!rawAmount) return;
@@ -272,20 +230,17 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
   };
 
   const content = (
-    <div className="flex-1 px-4 md:px-8 py-6 pb-24 md:pb-12 max-w-7xl mx-auto w-full">
-        {/* Desktop: 12-col grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* This Month (Left) */}
-          <div className="lg:col-span-8 space-y-8">
+    <div className="flex-1 px-4 md:px-8 py-6 pb-24 md:pb-12 max-w-3xl mx-auto w-full">
+        <div className="space-y-8">
             {/* Monthly Overview */}
             {/* SECTION: budget_overview */}
             <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-4">
+                <div className="min-w-0">
                   <p className="text-[10px] font-black text-[#3EA63B] uppercase tracking-widest mb-1">This Month</p>
                   <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">{new Date().toLocaleString('default', { month: 'long' })} Budget</h2>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                   <button
                     onClick={() => setShowTemplates(true)}
                     className="flex items-center gap-1 text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded-lg hover:bg-slate-200 transition"
@@ -298,14 +253,14 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
                   >
                     <Plus className="w-3 h-3" /> Category
                   </button>
-                  <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
+                  <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1 whitespace-nowrap">
                     <Calendar className="w-3 h-3" /> 3 days left
                   </span>
                 </div>
               </div>
               {/* Overall progress ring */}
-              <div className="flex items-center gap-6 mb-6">
-                <div className="relative w-24 h-24 shrink-0">
+              <div className="flex items-center gap-4 sm:gap-6 mb-6">
+                <div className="relative w-20 h-20 sm:w-24 sm:h-24 shrink-0">
                   <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
                     <circle cx="50" cy="50" r="40" fill="none" stroke="#e2e8f0" strokeWidth="8" />
                     <circle cx="50" cy="50" r="40" fill="none" stroke={budgetVM.percent > 90 ? '#ef4444' : '#3EA63B'} strokeWidth="8" strokeLinecap="round" strokeDasharray={`${budgetVM.percent * 2.51} 251`} />
@@ -315,10 +270,10 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
                     <span className="text-[8px] font-bold text-slate-400 uppercase">Used</span>
                   </div>
                 </div>
-                <div>
-                  <p className="text-2xl font-black text-slate-900">{budgetVM.totalSpentFormatted}</p>
-                  <p className="text-xs text-slate-400 font-semibold">of {budgetVM.totalBudgetFormatted} budget</p>
-                  <p className="text-xs text-[#3EA63B] font-bold mt-1">
+                <div className="min-w-0">
+                  <p className="text-xl sm:text-2xl font-black text-slate-900 whitespace-nowrap">{budgetVM.totalSpentFormatted}</p>
+                  <p className="text-xs text-slate-400 font-semibold leading-snug">of {budgetVM.totalBudgetFormatted} budget</p>
+                  <p className="text-xs text-[#3EA63B] font-bold mt-1 leading-snug">
                     {budgetVM.remainingFormatted} remaining
                   </p>
                 </div>
@@ -351,27 +306,9 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
                           </div>
                           <span className="text-sm font-bold text-slate-900">{budget.name}</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <div className="text-right">
-                            <span className="text-xs font-bold text-slate-900">{budget.spentFormatted}</span>
-                            <span className="text-[10px] text-slate-400 font-semibold"> / {budget.allocatedFormatted}</span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => openEditBudgetCategory(budget)}
-                            className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200"
-                            title="Edit budget category"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteBudgetCategory(budget.id)}
-                            className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-red-50 text-red-500 hover:bg-red-100"
-                            title="Delete budget category"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
+                        <div className="text-right">
+                          <span className="text-xs font-bold text-slate-900">{budget.spentFormatted}</span>
+                          <span className="text-[10px] text-slate-400 font-semibold"> / {budget.allocatedFormatted}</span>
                         </div>
                       </div>
                       <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
@@ -387,16 +324,28 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
             {/* Bill Reminders */}
             <BillReminders initialBills={initialBills} />
 
-            {/* AI Forecast */}
-            <AIBudgetForecast />
-          </div>
+            {/* Insight */}
+            <section className="bg-[#F0FDF4] rounded-2xl p-5 border border-[#BBF7D0] relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-3 opacity-10">
+                <Lightbulb className="w-16 h-16 text-[#3EA63B]" />
+              </div>
+              <div className="flex items-start gap-3 relative z-10">
+                <div className="w-10 h-10 rounded-full bg-[#3EA63B] text-white flex items-center justify-center shadow-lg shadow-[#3EA63B]/30 shrink-0">
+                  <Lightbulb className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 mb-1">Mizan Insight</h3>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    {forecastText}
+                  </p>
+                </div>
+              </div>
+            </section>
 
-          {/* Goals & Tips (Right) */}
-          <div className="lg:col-span-4 space-y-8">
             {/* Savings Goals */}
             <section className="mb-6">
-              <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider mb-4 flex items-center gap-2">
-                <Target className="w-4 h-4 text-[#3EA63B]" /> Goals
+              <h2 className="text-lg font-black text-slate-900 mb-4 flex items-center gap-2">
+                Savings Goals
               </h2>
               <div className="space-y-3">
                 {goalsState.length === 0 ? (
@@ -414,10 +363,10 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
                 ) : goalsVMData.goals.map((goal: any) => {
                   return (
                     <div key={goal.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-                      <div className="flex items-center gap-3 mb-3">
-                        <span className="text-2xl">{goal.emoji}</span>
+                      <div className="flex items-center gap-4 mb-3">
+                        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#ECFDF5] text-3xl">{goal.emoji}</span>
                         <div className="flex-1">
-                          <h3 className="text-sm font-bold text-slate-900">{goal.name}</h3>
+                          <h3 className="text-base font-bold text-slate-900">{goal.name}</h3>
                           <p className="text-[10px] text-slate-400 font-semibold">Target: {goal.deadline}</p>
                         </div>
                         <div className="flex items-center gap-1">
@@ -429,24 +378,8 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
                           >
                             Add
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => openEditGoal(goal)}
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200"
-                            title="Edit goal"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteGoal(goal.id)}
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-500 hover:bg-red-100"
-                            title="Delete goal"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
                         </div>
-                        <div className="relative w-12 h-12">
+                        <div className="relative hidden sm:block w-12 h-12">
                           <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
                             <circle cx="50" cy="50" r="40" fill="none" stroke="#e2e8f0" strokeWidth="10" />
                             <circle cx="50" cy="50" r="40" fill="none" stroke="#3EA63B" strokeWidth="10" strokeLinecap="round" strokeDasharray={`${goal.percent * 2.51} 251`} />
@@ -463,27 +396,12 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
                           {goal.remainingFormatted} to go
                         </p>
                       </div>
+                      <div className="mt-3 h-2 bg-[#ECFDF5] rounded-full overflow-hidden">
+                        <div className="h-full rounded-full bg-[#00C2A8] transition-all" style={{ width: `${goal.percent}%` }} />
+                      </div>
                     </div>
                   );
                 })}
-              </div>
-            </section>
-
-            {/* AI Tip */}
-            <section className="bg-gradient-to-br from-[#6ED063]/10 to-[#3EA63B]/5 rounded-2xl p-5 border border-[#6ED063]/20 relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-3 opacity-10">
-                <Lightbulb className="w-16 h-16 text-[#3EA63B]" />
-              </div>
-              <div className="flex items-start gap-3 relative z-10">
-                <div className="w-10 h-10 rounded-full bg-[#3EA63B] text-white flex items-center justify-center shadow-lg shadow-[#3EA63B]/30 shrink-0">
-                  <Lightbulb className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900 mb-1">Mizan Insight</h3>
-                  <p className="text-[11px] text-slate-600 leading-relaxed">
-                    {forecastText}
-                  </p>
-                </div>
               </div>
             </section>
 
@@ -491,14 +409,13 @@ export default function DreamsClient({ initialBudgets, initialGoals, initialBill
             <section className="mt-6 grid grid-cols-2 gap-3">
               <div className="bg-white rounded-xl border border-slate-100 p-4 text-center">
                 <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Avg. Monthly Save</p>
-                <p className="text-xl font-black text-[#3EA63B]">{quickStatsVM.avgMonthlySave}</p>
+                <p className="text-xl font-black text-[#3EA63B]">{quickStatsVM.avgMonthlySaveFormatted}</p>
               </div>
               <div className="bg-white rounded-xl border border-slate-100 p-4 text-center">
                 <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Goals On Track</p>
                 <p className="text-xl font-black text-slate-900">{quickStatsVM.goalsOnTrack}</p>
               </div>
             </section>
-          </div>
         </div>
       </div>
   );

@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, Modal, TextInput } from 'react-native';
+import Svg, { Circle } from 'react-native-svg';
 import { MizanColors, MizanSpacing, MizanRadii } from '@mizan/ui-tokens';
-import { Check, Plus, Lightbulb, ReceiptText } from 'lucide-react-native';
+import { Check, Plus, Lightbulb, ReceiptText, ShoppingBasket, LayoutTemplate } from 'lucide-react-native';
 import BottomSheet from '@gorhom/bottom-sheet';
 import { MintGoalSheet } from '../../components/forms/MintGoalSheet';
 import { MizanCard } from '../../components/ui/MizanCard';
@@ -22,7 +23,7 @@ import {
 
 import { AppScreenShell } from '../../components/ui/AppScreenShell';
 
-import { Calendar, TrendingDown } from 'lucide-react-native';
+import { Calendar } from 'lucide-react-native';
 
 export default function GoalsScreen() {
   const [goals, setGoals] = useState<any[]>([]);
@@ -177,6 +178,8 @@ export default function GoalsScreen() {
   };
 
   const budgetVM = buildBudgetOverviewVM(budgets);
+  const budgetRing = 2 * Math.PI * 40;
+  const budgetStroke = `${(budgetVM.percent / 100) * budgetRing} ${budgetRing}`;
   const goalsVMData = buildGoalsVM(goals);
   const quickStatsVM = buildQuickStatsVM(budgetVM, goalsVMData);
   const forecastText = goalsScreen.forecastText || buildForecastText(goalsVMData, budgetVM);
@@ -187,17 +190,66 @@ export default function GoalsScreen() {
       <MizanCard style={styles.budgetCard}>
         <View style={styles.budgetHeader}>
           <View>
-            <Text style={styles.budgetLabel}>Monthly Budget</Text>
-            <Text style={styles.budgetAmount}>{budgetVM.totalSpentFormatted} / {budgetVM.totalBudgetFormatted}</Text>
+            <Text style={styles.budgetKicker}>This Month</Text>
+            <Text style={styles.budgetTitle}>{budgetVM.monthLabel} Budget</Text>
           </View>
-          <TrendingDown size={24} color={budgetVM.isOverBudget ? '#EF4444' : MizanColors.mintPrimary} />
+          <View style={styles.budgetChips}>
+            <TouchableOpacity style={styles.budgetChip}>
+              <LayoutTemplate size={13} color={MizanColors.textSecondary} />
+              <Text style={styles.budgetChipText}>Templates</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.budgetChip, styles.categoryChip]}>
+              <Plus size={13} color="#3EA63B" />
+              <Text style={[styles.budgetChipText, { color: '#3EA63B' }]}>Category</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-        <View style={styles.budgetBarBg}>
-          <View style={[styles.budgetBarFill, { width: `${budgetVM.percent}%`, backgroundColor: budgetVM.isOverBudget ? '#EF4444' : MizanColors.mintPrimary }]} />
+        <View style={styles.budgetSummaryRow}>
+          <View style={styles.budgetRing}>
+            <Svg width={92} height={92} viewBox="0 0 100 100">
+              <Circle cx="50" cy="50" r="40" fill="none" stroke="#E2E8F0" strokeWidth="8" />
+              <Circle
+                cx="50"
+                cy="50"
+                r="40"
+                fill="none"
+                stroke={budgetVM.isOverBudget ? '#EF4444' : '#3EA63B'}
+                strokeWidth="8"
+                strokeLinecap="round"
+                strokeDasharray={budgetStroke}
+                rotation="-90"
+                origin="50,50"
+              />
+            </Svg>
+            <View style={styles.budgetRingLabel}>
+              <Text style={styles.budgetPercent}>{budgetVM.percent}%</Text>
+              <Text style={styles.budgetUsed}>Used</Text>
+            </View>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.budgetAmount}>{budgetVM.totalSpentFormatted}</Text>
+            <Text style={styles.budgetSubAmount}>of {budgetVM.totalBudgetFormatted} budget</Text>
+            <Text style={styles.budgetRemaining}>{budgetVM.remainingFormatted} remaining</Text>
+          </View>
         </View>
-        <Text style={styles.budgetMessage}>
-          {budgetVM.isOverBudget ? 'Careful! You are close to your limit.' : 'You are on track this month.'}
-        </Text>
+        <View style={styles.budgetCategories}>
+          {budgetVM.categories.map((category) => (
+            <View key={category.id} style={styles.budgetCategoryRow}>
+              <View style={styles.categoryIconBox}>
+                <ShoppingBasket size={18} color={MizanColors.textSecondary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={styles.categoryTextRow}>
+                  <Text style={styles.categoryName}>{category.name}</Text>
+                  <Text style={styles.categoryAmount}>{category.spentFormatted} <Text style={styles.categoryAllocated}>/ {category.allocatedFormatted}</Text></Text>
+                </View>
+                <View style={styles.budgetBarBg}>
+                  <View style={[styles.budgetBarFill, { width: `${category.percent}%`, backgroundColor: category.isOverBudget ? '#EF4444' : MizanColors.mintPrimary }]} />
+                </View>
+              </View>
+            </View>
+          ))}
+        </View>
       </MizanCard>
 
       {/* Bill Reminders */}
@@ -276,6 +328,7 @@ export default function GoalsScreen() {
       title="Goals"
       subtitle="Budgets, bills, and savings goals"
       variant="plain"
+      scrollable={false}
       onRefresh={loadData}
       refreshing={loading}
       actions={
@@ -293,6 +346,18 @@ export default function GoalsScreen() {
         data={goalsVMData.goals}
         keyExtractor={item => item.id || Math.random().toString()}
         ListHeaderComponent={renderHeader}
+        ListFooterComponent={
+          <View style={styles.quickStats}>
+            <MizanCard style={styles.quickStatCard}>
+              <Text style={styles.quickStatLabel}>Avg. Monthly Save</Text>
+              <Text style={styles.quickStatPrimary}>{quickStatsVM.avgMonthlySaveFormatted}</Text>
+            </MizanCard>
+            <MizanCard style={styles.quickStatCard}>
+              <Text style={styles.quickStatLabel}>Goals On Track</Text>
+              <Text style={styles.quickStatValue}>{quickStatsVM.goalsOnTrack}</Text>
+            </MizanCard>
+          </View>
+        }
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
           !loading ? (
@@ -328,20 +393,6 @@ export default function GoalsScreen() {
           );
         }}
       />
-
-      {/* Quick Stats */}
-      <View style={{ flexDirection: 'row', gap: 12, marginTop: 16, paddingHorizontal: 4 }}>
-        <MizanCard style={{ flex: 1, padding: 14, alignItems: 'center' }}>
-          <Text style={{ fontSize: 10, fontFamily: 'Inter_700Bold', color: MizanColors.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>Avg. Monthly Save</Text>
-          <Text style={{ fontSize: 18, fontFamily: 'Inter_900Black', color: MizanColors.mintPrimary }}>{quickStatsVM.avgMonthlySaveFormatted}</Text>
-        </MizanCard>
-        <MizanCard style={{ flex: 1, padding: 14, alignItems: 'center' }}>
-          <Text style={{ fontSize: 10, fontFamily: 'Inter_700Bold', color: MizanColors.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>Goals On Track</Text>
-          <Text style={{ fontSize: 18, fontFamily: 'Inter_900Black', color: MizanColors.textPrimary }}>
-            {quickStatsVM.goalsOnTrack}
-          </Text>
-        </MizanCard>
-      </View>
 
       <MintGoalSheet sheetRef={sheetRef} onClose={() => sheetRef.current?.close()} onSave={handleSaveGoal} />
       <Modal visible={showBillModal} transparent animationType="slide" onRequestClose={() => setShowBillModal(false)}>
@@ -428,34 +479,141 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 16,
   },
-  budgetLabel: {
+  budgetKicker: {
     fontSize: 13,
-    fontFamily: 'Inter_600SemiBold',
-    color: MizanColors.textMuted,
+    fontFamily: 'Inter_700Bold',
+    color: '#3EA63B',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
   },
-  budgetAmount: {
+  budgetTitle: {
+    fontSize: 19,
+    fontFamily: 'Inter_900Black',
+    color: MizanColors.textPrimary,
+    textTransform: 'uppercase',
+    marginTop: 4,
+  },
+  budgetChips: {
+    flexDirection: 'row',
+    gap: 6,
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
+    flex: 1,
+    marginLeft: 12,
+  },
+  budgetChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    minHeight: 32,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+  },
+  categoryChip: {
+    backgroundColor: '#EAF7E8',
+  },
+  budgetChipText: {
+    fontSize: 12,
+    fontFamily: 'Inter_700Bold',
+    color: MizanColors.textSecondary,
+  },
+  budgetSummaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 18,
+    marginBottom: 18,
+  },
+  budgetRing: {
+    width: 92,
+    height: 92,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  budgetRingLabel: {
+    position: 'absolute',
+    alignItems: 'center',
+  },
+  budgetPercent: {
     fontSize: 20,
     fontFamily: 'Inter_900Black',
     color: MizanColors.textPrimary,
+  },
+  budgetUsed: {
+    marginTop: 2,
+    fontSize: 9,
+    fontFamily: 'Inter_700Bold',
+    textTransform: 'uppercase',
+    color: MizanColors.textMuted,
+  },
+  budgetAmount: {
+    fontSize: 26,
+    fontFamily: 'Inter_900Black',
+    color: MizanColors.textPrimary,
+  },
+  budgetSubAmount: {
+    fontSize: 14,
+    fontFamily: 'Inter_700Bold',
+    color: MizanColors.textMuted,
+    marginTop: 2,
+  },
+  budgetRemaining: {
+    fontSize: 14,
+    fontFamily: 'Inter_700Bold',
+    color: '#3EA63B',
     marginTop: 4,
   },
+  budgetCategories: {
+    gap: 12,
+  },
+  budgetCategoryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: MizanColors.borderLight,
+    borderRadius: 16,
+  },
+  categoryIconBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  categoryTextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginBottom: 8,
+  },
+  categoryName: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: 'Inter_700Bold',
+    color: MizanColors.textPrimary,
+  },
+  categoryAmount: {
+    fontSize: 12,
+    fontFamily: 'Inter_900Black',
+    color: MizanColors.textPrimary,
+  },
+  categoryAllocated: {
+    color: MizanColors.textMuted,
+    fontFamily: 'Inter_700Bold',
+  },
   budgetBarBg: {
-    height: 10,
-    backgroundColor: MizanColors.mintBg,
+    height: 8,
+    backgroundColor: '#F1F5F9',
     borderRadius: 5,
     overflow: 'hidden',
-    marginBottom: 12,
   },
   budgetBarFill: {
     height: '100%',
     borderRadius: 5,
-  },
-  budgetMessage: {
-    fontSize: 13,
-    fontFamily: 'Inter_400Regular',
-    color: MizanColors.textSecondary,
   },
   section: {
     marginTop: 8,
@@ -563,8 +721,43 @@ const styles = StyleSheet.create({
   goalCard: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginHorizontal: 24,
     marginBottom: MizanSpacing.md,
     padding: 16,
+  },
+  quickStats: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
+    paddingHorizontal: 24,
+  },
+  quickStatCard: {
+    flex: 1,
+    padding: 14,
+    alignItems: 'center',
+    minHeight: 76,
+    justifyContent: 'center',
+  },
+  quickStatLabel: {
+    fontSize: 10,
+    fontFamily: 'Inter_700Bold',
+    color: MizanColors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  quickStatPrimary: {
+    fontSize: 18,
+    fontFamily: 'Inter_900Black',
+    color: MizanColors.mintPrimary,
+    textAlign: 'center',
+  },
+  quickStatValue: {
+    fontSize: 18,
+    fontFamily: 'Inter_900Black',
+    color: MizanColors.textPrimary,
+    textAlign: 'center',
   },
   goalEmojiContainer: {
     width: 60,

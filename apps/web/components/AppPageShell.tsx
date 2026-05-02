@@ -89,7 +89,17 @@ export function AppPageShell({
               <ArrowLeft className="w-5 h-5" />
             </Link>
           )}
-          <h1 className="text-xl font-black tracking-tight">{title}</h1>
+          <div>
+            <h1 className="text-xl font-black tracking-tight">{title}</h1>
+            {subtitle && (
+              <p className={cn(
+                "text-[12px] mt-1",
+                variant === 'hero' ? "text-white/80" : "text-slate-500"
+              )}>
+                {subtitle}
+              </p>
+            )}
+          </div>
         </div>
         {headerActions && (
           <div className="flex items-center gap-2">

@@ -5,6 +5,8 @@ import { User, Shield, Bell, Globe, Moon, Sun, Download, Trash2, LogOut, Chevron
 import Link from 'next/link';
 import { signOut, deleteAccount, exportData } from './actions';
 import { PageHeader } from '@/components/PageHeader';
+import { useSearchParams } from 'next/navigation';
+import { appendParityQuery } from '@/lib/parity-query';
 
 type ToggleProps = { enabled: boolean; onToggle: () => void };
 function Toggle({ enabled, onToggle }: ToggleProps) {
@@ -21,6 +23,8 @@ function Toggle({ enabled, onToggle }: ToggleProps) {
 
 
 export default function SettingsPage() {
+    const searchParams = useSearchParams();
+    const profileHref = appendParityQuery('/profile', searchParams);
     const [currency, setCurrency] = useState('ETB');
     const [language, setLanguage] = useState('en');
     const [theme, setThemeState] = useState<'light' | 'dark'>('light');
@@ -101,10 +105,10 @@ export default function SettingsPage() {
             {/* Desktop Header */}
             <PageHeader 
                 title="Me Settings"
-                description="Preferences, security, and data"
+                description="Preferences & Security"
                 actions={
-                    <Link href="/profile" className="flex items-center gap-2 bg-slate-100 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-slate-200 transition-colors">
-                        <User className="w-4 h-4" /> View Profile
+                    <Link href={profileHref} className="flex items-center gap-2 border border-[#3EA63B]/30 bg-[#3EA63B]/5 px-4 py-2.5 rounded-xl text-sm font-bold text-[#3EA63B] hover:bg-[#3EA63B]/10 transition-colors">
+                        <User className="w-4 h-4" /> Me
                     </Link>
                 }
             />
@@ -115,7 +119,7 @@ export default function SettingsPage() {
                     <h1 className="text-xl font-black text-slate-900">Me Settings</h1>
                     <p className="text-[10px] text-slate-500">Preferences & Security</p>
                 </div>
-                <Link href="/profile" className="text-xs font-bold text-[#3EA63B] border border-[#3EA63B]/30 bg-[#3EA63B]/5 px-3 py-1.5 rounded-lg hover:bg-[#3EA63B]/10 transition">
+                <Link href={profileHref} className="text-xs font-bold text-[#3EA63B] border border-[#3EA63B]/30 bg-[#3EA63B]/5 px-3 py-1.5 rounded-lg hover:bg-[#3EA63B]/10 transition">
                     Me
                 </Link>
             </header>
